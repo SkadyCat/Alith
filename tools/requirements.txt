@@ -1,0 +1,16 @@
+# DocSpace Python 工具环境依赖
+# 安装命令: pip install -r tools/requirements.txt
+
+# HTTP 客户端（网络请求）
+requests>=2.31.0
+
+# 数据处理
+pandas>=2.0.0
+numpy>=1.24.0
+
+# 文本处理
+Markdown>=3.5.0
+PyYAML>=6.0.0
+
+# 实用工具
+python-dotenv>=1.0.0

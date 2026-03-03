@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎨 3D 模型展示 — MagicWorld</title>
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d1a;
+    --bg2: #13132a;
+    --bg3: #1a1a35;
+    --border: #2a2a4a;
+    --accent: #6c8fff;
+    --accent2: #a78bfa;
+    --text: #dde1ff;
+    --text2: #8892b0;
+    --green: #4ade80;
+    --purple: #c084fc;
+    --gold: #fbbf24;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #0d0d1a 0%, #1a0d35 50%, #0d1a2a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text2);
+    text-decoration: none;
+    font-size: 0.85rem;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    transition: all 0.2s;
+  }
+  .back-btn:hover { color: var(--text); border-color: var(--accent); }
+  .header-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header-badge {
+    font-size: 0.75rem;
+    color: var(--text2);
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    text-align: center;
+    padding: 60px 32px 40px;
+    background: radial-gradient(ellipse at 50% 0%, rgba(108,143,255,0.08) 0%, transparent 70%);
+  }
+  .hero-icon { font-size: 3.5rem; margin-bottom: 16px; display: block; }
+  .hero h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, #fff 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero p { color: var(--text2); font-size: 1rem; max-width: 500px; margin: 0 auto 24px; line-height: 1.7; }
+  .hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+  }
+  .stat { text-align: center; }
+  .stat-num { font-size: 1.8rem; font-weight: 700; color: var(--accent); line-height: 1; }
+  .stat-label { font-size: 0.75rem; color: var(--text2); margin-top: 4px; }
+
+  /* ── Notice ── */
+  .notice {
+    max-width: 900px;
+    margin: 0 auto 32px;
+    padding: 14px 20px;
+    background: rgba(167,139,250,0.08);
+    border: 1px solid rgba(167,139,250,0.25);
+    border-radius: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.875rem;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+  .notice-icon { color: var(--accent2); font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── Grid ── */
+  .grid {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 0 32px 60px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 28px;
+  }
+
+  /* ── Card ── */
+  .model-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  }
+  .model-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(108,143,255,0.15);
+  }
+
+  /* viewer */
+  .viewer-wrap {
+    position: relative;
+    height: 300px;
+    background: linear-gradient(135deg, #0a0a1f 0%, #12122a 100%);
+  }
+  model-viewer {
+    width: 100%;
+    height: 100%;
+    --progress-bar-color: var(--accent);
+    --progress-bar-height: 2px;
+  }
+  .viewer-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    gap: 6px;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .tag {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  .tag-api   { background: rgba(74,222,128,0.15); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+  .tag-py    { background: rgba(108,143,255,0.15); color: var(--accent); border: 1px solid rgba(108,143,255,0.3); }
+  .tag-dark  { background: rgba(192,132,252,0.15); color: var(--purple); border: 1px solid rgba(192,132,252,0.3); }
+  .tag-tex   { background: rgba(251,191,36,0.12); color: var(--gold); border: 1px solid rgba(251,191,36,0.3); }
+
+  /* card body */
+  .card-body { padding: 20px; flex: 1; }
+  .card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-subtitle {
+    font-size: 0.8rem;
+    color: var(--text2);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  /* meta grid */
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .meta-item { background: var(--bg3); border-radius: 8px; padding: 10px 12px; }
+  .meta-label { font-size: 0.68rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; }
+  .meta-val { font-size: 0.85rem; color: var(--text); font-weight: 500; }
+
+  /* features */
+  .features { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .feature {
+    font-size: 0.72rem;
+    color: var(--text2);
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+  }
+
+  /* card footer */
+  .card-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+  }
+  .btn {
+    flex: 1;
+    text-align: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #7a9dff; }
+  .btn-outline {
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+  .btn-outline:hover { color: var(--text); border-color: var(--accent); }
+
+  /* ── Method compare section ── */
+  .section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 32px 60px;
+  }
+  .section-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .compare-table th {
+    text-align: left;
+    padding: 10px 16px;
+    background: var(--bg3);
+    color: var(--text2);
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .compare-table th:first-child { border-radius: 8px 0 0 8px; }
+  .compare-table th:last-child { border-radius: 0 8px 8px 0; }
+  .compare-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table tr:hover td { background: rgba(108,143,255,0.04); }
+
+  /* ── Image-to-3D Upload Section ── */
+  .upload-section {
+    max-width: 900px;
+    margin: 0 auto 48px;
+    padding: 0 32px;
+  }
+  .upload-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+  }
+  .upload-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .upload-desc {
+    color: var(--text2);
+    font-size: 0.875rem;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+  .upload-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(108,143,255,0.04);
+  }
+  .drop-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .drop-icon { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+  .drop-text { color: var(--text2); font-size: 0.875rem; }
+  .drop-text strong { color: var(--accent); }
+  .preview-img {
+    max-height: 200px;
+    max-width: 100%;
+    border-radius: 8px;
+    display: none;
+    margin: 0 auto;
+  }
+  .prompt-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .prompt-input {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 14px;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .prompt-input:focus { border-color: var(--accent); }
+  .prompt-input::placeholder { color: var(--text2); }
+  .btn-generate {
+    padding: 10px 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+  .btn-generate:hover { opacity: 0.85; }
+  .btn-generate:disabled { opacity: 0.4; cursor: not-allowed; }
+  .progress-area {
+    display: none;
+    background: var(--bg3);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .progress-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(108,143,255,0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .progress-bar-wrap {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.4s;
+    width: 0%;
+  }
+  .progress-log {
+    font-size: 0.78rem;
+    color: var(--text2);
+    line-height: 1.6;
+    font-family: monospace;
+  }
+  .result-viewer {
+    display: none;
+    background: var(--bg3);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .result-viewer model-viewer {
+    width: 100%;
+    height: 360px;
+  }
+  .result-actions {
+    padding: 12px 16px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .generated-grid {
+    margin-top: 24px;
+  }
+  .gen-grid-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text2);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.75rem;
+  }
+  .gen-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .gen-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .gen-card model-viewer { width: 100%; height: 200px; }
+  .gen-card-info {
+    padding: 10px 12px;
+    font-size: 0.78rem;
+    color: var(--text2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* ── Tabs ── */
+  .tab-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .tab-btn {
+    padding: 10px 22px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: -1px;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn:hover:not(.active) { color: var(--text); }
+  .tab-content { display: none; }
+  .tab-content.active { display: flex; flex-direction: column; gap: 16px; }
+
+  /* ── T2I form ── */
+  .t2i-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+  .t2i-select {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 9px 14px;
+    font-size: 0.875rem;
+    outline: none;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .t2i-select:focus { border-color: var(--accent); }
+  .t2i-textarea {
+    flex: 1;
+    min-width: 220px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 14px;
+    font-size: 0.875rem;
+    outline: none;
+    resize: vertical;
+    min-height: 68px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  .t2i-textarea:focus { border-color: var(--accent); }
+  .t2i-textarea::placeholder { color: var(--text2); }
+  .t2i-img-wrap {
+    display: none;
+    background: var(--bg3);
+    border-radius: 10px;
+    padding: 16px;
+    gap: 12px;
+    flex-direction: column;
+  }
+  .t2i-img-wrap.show { display: flex; }
+  .t2i-img-wrap img { max-height: 260px; border-radius: 8px; object-fit: contain; width: 100%; }
+  .t2i-img-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  /* responsive */
+  @media (max-width: 700px) {
+    .grid { grid-template-columns: 1fr; padding: 0 16px 40px; }
+    .hero { padding: 40px 16px 28px; }
+    .hero h1 { font-size: 1.6rem; }
+    .hero-stats { gap: 20px; }
+    .header { padding: 0 16px; }
+    .section { padding: 0 16px 40px; }
+    .meta-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-left">
+    <a href="/" class="back-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      返回文档中心
+    </a>
+    <span class="header-title">🎨 MagicWorld 3D 展示馆</span>
+  </div>
+  <span class="header-badge">3 个模型</span>
+</header>
+
+<!-- Hero -->
+<section class="hero">
+  <span class="hero-icon">🏛️</span>
+  <h1>3D 模型展示馆</h1>
+  <p>由 GitHub Copilot CLI 创建的 3D 模型。可拖拽旋转、滚轮缩放进行交互预览。</p>
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-num">3</div>
+      <div class="stat-label">模型数量</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">678</div>
+      <div class="stat-label">总大小 KB</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">7+</div>
+      <div class="stat-label">材质种类</div>
+    </div>
+  </div>
+</section>
+
+<!-- Notice -->
+<div style="max-width:1300px;margin:0 auto;padding:0 32px">
+  <div class="notice">
+    <span class="notice-icon">ℹ️</span>
+    <div>
+      <strong style="color:var(--text)">关于图生3D</strong>：本次所有模型均 <strong style="color:var(--accent2)">未使用图生3D</strong>。
+      青蛙v1 使用 <strong>腾讯混元文生3D API</strong>（文字 prompt → 3D），但生成质量较差，故后续改用纯 Python 程序化建模。
+      青蛙v2 和骷髅均为 <strong>程序化生成</strong>（numpy 构建顶点/法线/UV，内嵌 PNG 贴图），没有输入图片。
+      若需图生3D，可在混元生3D页面上传一张参考图。
+    </div>
+  </div>
+</div>
+
+<!-- Model Grid -->
+<div class="grid">
+
+  <!-- 青蛙 v1 -->
+  <div class="model-card">
+    <div class="viewer-wrap">
+      <model-viewer
+        src="/models3d/frog_model.glb"
+        alt="青蛙 v1"
+        auto-rotate
+        camera-controls
+        shadow-intensity="1"
+        environment-image="neutral"
+        exposure="1.2"
+      ></model-viewer>
+      <div class="viewer-badge">
+        <span class="tag tag-api">文生3D API</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-title">🐸 青蛙 v1 <span style="font-size:0.75rem;color:var(--text2);font-weight:400">原始版</span></div>
+      <div class="card-subtitle">腾讯混元 Hunyuan3D-2 API 生成。平面法线、单色材质，外观偏多边形。</div>
+      <div class="meta-grid">
+        <div class="meta-item"><div class="meta-label">文件大小</div><div class="meta-val">201.8 KB</div></div>
+        <div class="meta-item"><div class="meta-label">生成方式</div><div class="meta-val">混元API</div></div>
+        <div class="meta-item"><div class="meta-label">材质数量</div><div class="meta-val">1 种</div></div>
+        <div class="meta-item"><div class="meta-label">创建时间</div><div class="meta-val">2026-03-03</div></div>
+      </div>
+      <div class="features">
+        <span class="feature">单色材质</span>
+        <span class="feature">平面法线</span>
+        <span class="feature">无UV贴图</span>
+        <span class="feature">多边形感</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <a class="btn btn-primary" href="https://magicworld-1304036735.cos.ap-guangzhou.myqcloud.com/hunyuan3d/frog_model.glb" target="_blank">⬇ 下载 GLB</a>
+      <a class="btn btn-outline" href="https://gltf.report" target="_blank">🔍 在线检视</a>
+    </div>
+  </div>
+
+  <!-- 青蛙 v2 -->
+  <div class="model-card">
+    <div class="viewer-wrap">
+      <model-viewer
+        src="/models3d/frog_v2.glb"
+        alt="青蛙 v2"
+        auto-rotate
+        camera-controls
+        shadow-intensity="1.2"
+        environment-image="neutral"
+        exposure="1.3"
+      ></model-viewer>
+      <div class="viewer-badge">
+        <span class="tag tag-py">程序化</span>
+        <span class="tag tag-tex">UV贴图</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-title">🐸 青蛙 v2 <span style="font-size:0.75rem;color:var(--green);font-weight:400">✨ 改进版</span></div>
+      <div class="card-subtitle">纯 Python 程序化建模。平滑法线 + 512×512 内嵌 PNG 贴图（背部深绿→腹部奶黄，含随机斑点）。</div>
+      <div class="meta-grid">
+        <div class="meta-item"><div class="meta-label">文件大小</div><div class="meta-val">169.8 KB</div></div>
+        <div class="meta-item"><div class="meta-label">生成方式</div><div class="meta-val">Python numpy</div></div>
+        <div class="meta-item"><div class="meta-label">材质数量</div><div class="meta-val">6 种</div></div>
+        <div class="meta-item"><div class="meta-label">Primitive数</div><div class="meta-val">21 个</div></div>
+      </div>
+      <div class="features">
+        <span class="feature">平滑法线</span>
+        <span class="feature">512×512 PNG贴图</span>
+        <span class="feature">UV坐标</span>
+        <span class="feature">6种材质</span>
+        <span class="feature">眼睛三层</span>
+        <span class="feature">腿部分段</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <a class="btn btn-primary" href="https://magicworld-1304036735.cos.ap-guangzhou.myqcloud.com/hunyuan3d/frog_v2.glb" target="_blank">⬇ 下载 GLB</a>
+      <a class="btn btn-outline" href="https://gltf.report" target="_blank">🔍 在线检视</a>
+    </div>
+  </div>
+
+  <!-- 骷髅 -->
+  <div class="model-card">
+    <div class="viewer-wrap" style="background:linear-gradient(135deg,#08080f 0%,#100820 100%)">
+      <model-viewer
+        src="/models3d/skeleton_dark.glb"
+        alt="暗黑骷髅"
+        auto-rotate
+        camera-controls
+        shadow-intensity="0.8"
+        environment-image="neutral"
+        exposure="0.9"
+      ></model-viewer>
+      <div class="viewer-badge">
+        <span class="tag tag-py">程序化</span>
+        <span class="tag tag-dark">暗黑风格</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-title">💀 暗黑小骷髅</div>
+      <div class="card-subtitle">Q版大头骷髅，骨头质感贴图（泛黄+裂纹+污垢）+ 发光紫色眼睛（emissive）。</div>
+      <div class="meta-grid">
+        <div class="meta-item"><div class="meta-label">文件大小</div><div class="meta-val">307.0 KB</div></div>
+        <div class="meta-item"><div class="meta-label">生成方式</div><div class="meta-val">Python numpy</div></div>
+        <div class="meta-item"><div class="meta-label">材质数量</div><div class="meta-val">7 种</div></div>
+        <div class="meta-item"><div class="meta-label">创建时间</div><div class="meta-val">2026-03-03</div></div>
+      </div>
+      <div class="features">
+        <span class="feature">256×256 骨头贴图</span>
+        <span class="feature">发光紫眼</span>
+        <span class="feature">裂纹纹理</span>
+        <span class="feature">肋骨+脊椎</span>
+        <span class="feature">手指/脚趾骨</span>
+        <span class="feature">Q版大头</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <a class="btn btn-primary" href="https://magicworld-1304036735.cos.ap-guangzhou.myqcloud.com/hunyuan3d/skeleton_dark.glb" target="_blank">⬇ 下载 GLB</a>
+      <a class="btn btn-outline" href="https://gltf.report" target="_blank">🔍 在线检视</a>
+    </div>
+  </div>
+
+</div>
+
+<!-- Image-to-3D Upload Section -->
+<div class="upload-section">
+  <div class="upload-box">
+    <div class="upload-title">
+      <span>🤖</span> AI 生成 3D 模型
+    </div>
+    <p class="upload-desc">两种方式生成 3D 模型：输入提示词让 AI 画图再生成 3D，或直接上传参考图生成 3D。生成时间约 1~3 分钟。</p>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tabT2I" onclick="switchTab('t2i')">✍️ 文生图 → 3D</button>
+      <button class="tab-btn" id="tabUpload" onclick="switchTab('upload')">🖼️ 上传图 → 3D</button>
+    </div>
+
+    <!-- Tab 1: 文生图→3D -->
+    <div id="panelT2I" class="tab-content active">
+      <!-- Model + Resolution -->
+      <div class="t2i-row">
+        <select class="t2i-select" id="t2iModel">
+          <option value="hunyuan-standard">混元标准版</option>
+          <option value="hunyuan-standard-v2">混元标准 v2</option>
+          <option value="hunyuan-pro">混元高质量版</option>
+          <option value="hunyuan-anime">混元动漫风</option>
+        </select>
+        <select class="t2i-select" id="t2iResolution">
+          <option value="1:1">1:1 正方形</option>
+          <option value="3:4">3:4 竖向</option>
+          <option value="4:3">4:3 横向</option>
+          <option value="16:9">16:9 宽屏</option>
+          <option value="9:16">9:16 竖屏</option>
+        </select>
+      </div>
+      <!-- Prompt -->
+      <textarea class="t2i-textarea" id="t2iPrompt" placeholder="输入提示词（例：一只可爱的Q版卡通青蛙，绿色，大眼睛，正面视角，白色背景，高清）"></textarea>
+      <!-- Negative prompt -->
+      <textarea class="t2i-textarea" id="t2iNeg" style="min-height:44px" placeholder="反向提示词（可选，例：低质量, 模糊, 水印）"></textarea>
+      <!-- Generate button -->
+      <div class="t2i-row">
+        <button class="btn-generate" id="t2iGenBtn" onclick="generateImage()">🎨 生成图片</button>
+      </div>
+      <!-- Progress for t2i -->
+      <div class="progress-area" id="t2iProgressArea">
+        <div class="progress-title">
+          <div class="spinner" id="t2iSpinner"></div>
+          <span id="t2iProgressTitle">正在生成图片…</span>
+        </div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="t2iProgressBar"></div></div>
+        <div class="progress-log" id="t2iProgressLog"></div>
+      </div>
+      <!-- Generated image preview -->
+      <div class="t2i-img-wrap" id="t2iImgWrap">
+        <img id="t2iImg" src="" alt="生成的图片">
+        <div class="t2i-img-actions">
+          <span style="font-size:0.8rem;color:var(--green);font-weight:600">✅ 图片生成成功！</span>
+          <button class="btn-generate" id="t2iTo3DBtn" onclick="submitT2ITo3D()" style="padding:8px 20px;font-size:0.8rem">🎲 生成 3D 模型</button>
+          <a id="t2iDownloadImg" class="btn btn-outline" style="padding:7px 14px;font-size:0.78rem" download="generated.jpg">⬇ 下载图片</a>
+          <button onclick="resetT2I()" class="btn btn-outline" style="padding:7px 14px;font-size:0.78rem">🔄 重新生成</button>
+        </div>
+      </div>
+      <!-- 3D generation progress (reuse same elements as tab2 but separate IDs) -->
+      <div class="progress-area" id="t2i3dProgressArea">
+        <div class="progress-title">
+          <div class="spinner" id="t2i3dSpinner"></div>
+          <span id="t2i3dProgressTitle">正在提交3D生成任务…</span>
+        </div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="t2i3dProgressBar"></div></div>
+        <div class="progress-log" id="t2i3dProgressLog"></div>
+      </div>
+      <!-- 3D result viewer for t2i -->
+      <div class="result-viewer" id="t2iResultViewer">
+        <model-viewer
+          id="t2iResultModelViewer"
+          alt="生成的3D模型"
+          auto-rotate
+          camera-controls
+          shadow-intensity="1"
+          environment-image="neutral"
+          exposure="1.2"
+          style="width:100%;height:360px"
+        ></model-viewer>
+        <div class="result-actions">
+          <span style="font-size:0.8rem;color:var(--green);font-weight:600">✅ 3D 模型生成成功！</span>
+          <a id="t2iDownloadBtn" class="btn btn-primary" style="flex:0;padding:7px 18px;font-size:0.8rem" href="#" download>⬇ 下载 GLB</a>
+          <button onclick="resetT2I()" class="btn btn-outline" style="flex:0;padding:7px 18px;font-size:0.8rem">🔄 再生成</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: 上传图→3D -->
+    <div id="panelUpload" class="tab-content">
+      <div class="upload-form">
+        <!-- Drop zone -->
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" accept="image/*">
+          <span class="drop-icon">📸</span>
+          <div class="drop-text">拖拽图片到此处，或 <strong>点击选择</strong></div>
+          <div style="font-size:0.75rem;color:var(--text2);margin-top:6px">支持 JPG / PNG / WEBP，最大 10MB</div>
+        </div>
+        <img id="previewImg" class="preview-img" alt="预览">
+
+        <!-- AI image-to-text describe button -->
+        <div id="i2tRow" style="display:none;align-items:center;gap:10px;margin:8px 0">
+          <button class="btn btn-outline" id="i2tBtn" onclick="describeImage()" style="padding:7px 16px;font-size:0.82rem;flex-shrink:0">🔍 AI 识别图片内容</button>
+          <span id="i2tStatus" style="font-size:0.78rem;color:var(--text2)"></span>
+        </div>
+
+        <!-- Prompt + submit -->
+        <div class="prompt-row">
+          <input type="text" class="prompt-input" id="promptInput" placeholder="可选：补充描述（例：Q版卡通风格，绿色，大眼睛）">
+          <button class="btn-generate" id="submitBtn" disabled>✨ 开始生成</button>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-area" id="progressArea">
+          <div class="progress-title">
+            <div class="spinner" id="spinner"></div>
+            <span id="progressTitle">正在提交任务…</span>
+          </div>
+          <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar"></div></div>
+          <div class="progress-log" id="progressLog"></div>
+        </div>
+
+        <!-- Result viewer -->
+        <div class="result-viewer" id="resultViewer">
+          <model-viewer
+            id="resultModelViewer"
+            alt="生成的3D模型"
+            auto-rotate
+            camera-controls
+            shadow-intensity="1"
+            environment-image="neutral"
+            exposure="1.2"
+            style="width:100%;height:360px"
+          ></model-viewer>
+          <div class="result-actions">
+            <span style="font-size:0.8rem;color:var(--green);font-weight:600">✅ 生成成功！</span>
+            <a id="downloadBtn" class="btn btn-primary" style="flex:0;padding:7px 18px;font-size:0.8rem" href="#" download>⬇ 下载 GLB</a>
+            <button onclick="resetForm()" class="btn btn-outline" style="flex:0;padding:7px 18px;font-size:0.8rem">🔄 再生成</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Previously generated models -->
+    <div class="generated-grid" id="genHistorySection" style="display:none">
+      <div class="gen-grid-title">📂 历史生成记录</div>
+      <div class="gen-grid" id="genGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Compare Section -->
+<div class="section">
+  <div class="section-title">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
+      <line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/>
+    </svg>
+    生成方式对比
+  </div>
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>模型</th>
+        <th>方式</th>
+        <th>法线</th>
+        <th>贴图</th>
+        <th>材质数</th>
+        <th>备注</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>🐸 青蛙 v1</td>
+        <td><span class="tag tag-api" style="border-radius:4px">混元API</span></td>
+        <td>平面法线</td>
+        <td>❌ 无</td>
+        <td>1</td>
+        <td>多边形感，质量较低</td>
+      </tr>
+      <tr>
+        <td>🐸 青蛙 v2</td>
+        <td><span class="tag tag-py" style="border-radius:4px">程序化</span></td>
+        <td>✅ 平滑</td>
+        <td>✅ 512×512 PNG</td>
+        <td>6</td>
+        <td>圆润自然，渐变贴图</td>
+      </tr>
+      <tr>
+        <td>💀 骷髅</td>
+        <td><span class="tag tag-py" style="border-radius:4px">程序化</span></td>
+        <td>✅ 平滑</td>
+        <td>✅ 256×256 PNG</td>
+        <td>7</td>
+        <td>发光眼睛，骨头裂纹</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top:28px;padding:20px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;font-size:0.875rem;color:var(--text2);line-height:1.8">
+    <strong style="color:var(--text)">💡 下一步</strong>：想用图生3D？在
+    <a href="http://localhost:8044" style="color:var(--accent)">混元生3D页面 (port 8044)</a>
+    上传一张参考图，即可生成对应3D模型并自动上传到COS，然后在这里展示。
+  </div>
+</div>
+<script>
+// ── Tab Switching ──────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('tabT2I').classList.toggle('active', tab === 't2i');
+  document.getElementById('tabUpload').classList.toggle('active', tab === 'upload');
+  document.getElementById('panelT2I').classList.toggle('active', tab === 't2i');
+  document.getElementById('panelUpload').classList.toggle('active', tab === 'upload');
+}
+
+// ── Text-to-Image Logic ────────────────────────────────────────
+let t2iBase64 = null;
+let t2i3dPollTimer = null;
+
+function resetT2I() {
+  t2iBase64 = null;
+  document.getElementById('t2iImg').src = '';
+  document.getElementById('t2iImgWrap').classList.remove('show');
+  document.getElementById('t2iProgressArea').style.display = 'none';
+  document.getElementById('t2i3dProgressArea').style.display = 'none';
+  document.getElementById('t2iResultViewer').style.display = 'none';
+  document.getElementById('t2iGenBtn').disabled = false;
+  document.getElementById('t2iTo3DBtn').disabled = false;
+  if (t2i3dPollTimer) clearInterval(t2i3dPollTimer);
+}
+
+async function generateImage() {
+  const prompt = document.getElementById('t2iPrompt').value.trim();
+  if (!prompt) return alert('请输入提示词');
+  const model = document.getElementById('t2iModel').value;
+  const resolution = document.getElementById('t2iResolution').value;
+  const neg = document.getElementById('t2iNeg').value.trim();
+
+  document.getElementById('t2iGenBtn').disabled = true;
+  document.getElementById('t2iImgWrap').classList.remove('show');
+  document.getElementById('t2i3dProgressArea').style.display = 'none';
+  document.getElementById('t2iResultViewer').style.display = 'none';
+
+  const progArea = document.getElementById('t2iProgressArea');
+  const progTitle = document.getElementById('t2iProgressTitle');
+  const progBar = document.getElementById('t2iProgressBar');
+  const progLog = document.getElementById('t2iProgressLog');
+  const spinner = document.getElementById('t2iSpinner');
+
+  progArea.style.display = 'block';
+  progLog.innerHTML = '';
+  progBar.style.width = '20%';
+  progTitle.textContent = '正在调用混元文生图 API…';
+  spinner.style.display = 'block';
+
+  try {
+    const r = await fetch('/api/t2i/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, negativePrompt: neg, model, resolution }),
+    });
+    const data = await r.json();
+    if (!data.success) throw new Error(data.error);
+    t2iBase64 = data.base64;
+    const dataUrl = 'data:image/jpeg;base64,' + t2iBase64;
+
+    progBar.style.width = '100%';
+    progTitle.textContent = '图片生成完成！';
+    spinner.style.display = 'none';
+
+    const img = document.getElementById('t2iImg');
+    img.src = dataUrl;
+    const dl = document.getElementById('t2iDownloadImg');
+    dl.href = dataUrl;
+    document.getElementById('t2iImgWrap').classList.add('show');
+    document.getElementById('t2iGenBtn').disabled = false;
+  } catch (e) {
+    progTitle.textContent = '生成失败';
+    progBar.style.width = '0%';
+    progLog.innerHTML = `❌ ${e.message}`;
+    spinner.style.display = 'none';
+    document.getElementById('t2iGenBtn').disabled = false;
+  }
+}
+
+async function submitT2ITo3D() {
+  if (!t2iBase64) return;
+  document.getElementById('t2iTo3DBtn').disabled = true;
+
+  const prog3dArea = document.getElementById('t2i3dProgressArea');
+  const prog3dTitle = document.getElementById('t2i3dProgressTitle');
+  const prog3dBar = document.getElementById('t2i3dProgressBar');
+  const prog3dLog = document.getElementById('t2i3dProgressLog');
+  const spinner3d = document.getElementById('t2i3dSpinner');
+
+  prog3dArea.style.display = 'block';
+  prog3dLog.innerHTML = '';
+  prog3dBar.style.width = '10%';
+  prog3dTitle.textContent = '正在上传图片并提交3D任务…';
+  spinner3d.style.display = 'block';
+  document.getElementById('t2iResultViewer').style.display = 'none';
+
+  // Convert base64 to Blob and submit as FormData
+  const blob = await (await fetch('data:image/jpeg;base64,' + t2iBase64)).blob();
+  const fd = new FormData();
+  fd.append('image', blob, 'generated.jpg');
+  const prompt = document.getElementById('t2iPrompt').value.trim();
+  if (prompt) fd.append('prompt', prompt);
+
+  let jobId;
+  try {
+    const r = await fetch('/api/img3d/submit', { method: 'POST', body: fd });
+    const data = await r.json();
+    if (!data.success) throw new Error(data.error);
+    jobId = data.jobId;
+    prog3dLog.innerHTML += `任务已提交，JobId: ${jobId}<br>`;
+    prog3dBar.style.width = '20%';
+    prog3dTitle.textContent = 'AI 正在生成 3D 模型（约 1~3 分钟）…';
+  } catch (e) {
+    prog3dTitle.textContent = '提交失败';
+    prog3dLog.innerHTML += `❌ ${e.message}<br>`;
+    spinner3d.style.display = 'none';
+    document.getElementById('t2iTo3DBtn').disabled = false;
+    return;
+  }
+
+  let attempts = 0;
+  t2i3dPollTimer = setInterval(async () => {
+    attempts++;
+    const pct = Math.min(20 + attempts * 3, 85);
+    try {
+      const r = await fetch(`/api/img3d/status/${jobId}`);
+      const data = await r.json();
+      const status = data.status || 'WAIT';
+      prog3dBar.style.width = pct + '%';
+      prog3dTitle.textContent = `AI 生成中… 状态: ${status}`;
+      prog3dLog.innerHTML += `[${new Date().toLocaleTimeString()}] ${status}<br>`;
+      prog3dLog.scrollTop = prog3dLog.scrollHeight;
+
+      if (status === 'DONE') {
+        clearInterval(t2i3dPollTimer);
+        prog3dBar.style.width = '90%';
+        prog3dTitle.textContent = '正在下载模型…';
+        prog3dLog.innerHTML += '✅ 生成完成，正在下载…<br>';
+        try {
+          const dlRes = await fetch(`/api/img3d/download/${jobId}`, { method: 'POST' });
+          const dlData = await dlRes.json();
+          if (!dlData.success) throw new Error(dlData.error);
+          const glb = dlData.results.find(r => r.type === 'GLB' || r.localUrl?.endsWith('.glb'));
+          if (glb) {
+            prog3dBar.style.width = '100%';
+            prog3dTitle.textContent = '3D 模型生成完成！';
+            spinner3d.style.display = 'none';
+            prog3dLog.innerHTML += `✅ 模型已保存: ${glb.localUrl}<br>`;
+            const mv = document.getElementById('t2iResultModelViewer');
+            mv.setAttribute('src', glb.localUrl);
+            document.getElementById('t2iDownloadBtn').href = glb.localUrl;
+            document.getElementById('t2iDownloadBtn').download = glb.localUrl.split('/').pop();
+            document.getElementById('t2iResultViewer').style.display = 'block';
+            loadHistory();
+          } else { throw new Error('未找到 GLB 文件'); }
+        } catch (e) {
+          prog3dLog.innerHTML += `❌ 下载失败: ${e.message}<br>`;
+          spinner3d.style.display = 'none';
+          document.getElementById('t2iTo3DBtn').disabled = false;
+        }
+      } else if (status === 'FAILED' || data.errorCode) {
+        clearInterval(t2i3dPollTimer);
+        prog3dLog.innerHTML += `❌ 生成失败: ${data.errorMessage || data.errorCode}<br>`;
+        spinner3d.style.display = 'none';
+        document.getElementById('t2iTo3DBtn').disabled = false;
+      } else if (attempts > 120) {
+        clearInterval(t2i3dPollTimer);
+        prog3dLog.innerHTML += '⏱️ 超时，请稍后重试<br>';
+        spinner3d.style.display = 'none';
+        document.getElementById('t2iTo3DBtn').disabled = false;
+      }
+    } catch (e) { prog3dLog.innerHTML += `轮询出错: ${e.message}<br>`; }
+  }, 5000);
+}
+
+// ── Image-to-3D Logic (Upload tab) ────────────────────────────
+const fileInput   = document.getElementById('fileInput');
+const dropZone    = document.getElementById('dropZone');
+const previewImg  = document.getElementById('previewImg');
+const submitBtn   = document.getElementById('submitBtn');
+const promptInput = document.getElementById('promptInput');
+const progressArea = document.getElementById('progressArea');
+const progressTitle = document.getElementById('progressTitle');
+const progressBar  = document.getElementById('progressBar');
+const progressLog  = document.getElementById('progressLog');
+const spinner     = document.getElementById('spinner');
+const resultViewer = document.getElementById('resultViewer');
+const resultMV    = document.getElementById('resultModelViewer');
+const downloadBtn = document.getElementById('downloadBtn');
+
+let selectedFile = null;
+let pollTimer = null;
+
+function setProgress(title, pct, log) {
+  progressTitle.textContent = title;
+  progressBar.style.width = pct + '%';
+  if (log) progressLog.innerHTML += log + '<br>';
+}
+
+function log(msg) {
+  progressLog.innerHTML += msg + '<br>';
+  progressLog.scrollTop = progressLog.scrollHeight;
+}
+
+function showProgress() {
+  progressArea.style.display = 'block';
+  resultViewer.style.display = 'none';
+  progressLog.innerHTML = '';
+  progressBar.style.width = '0%';
+  spinner.style.display = 'block';
+}
+
+function showResult(glbUrl) {
+  spinner.style.display = 'none';
+  progressBar.style.width = '100%';
+  progressTitle.textContent = '生成完成！';
+  resultMV.setAttribute('src', glbUrl);
+  resultViewer.style.display = 'block';
+  downloadBtn.href = glbUrl;
+  downloadBtn.download = glbUrl.split('/').pop();
+  loadHistory();
+}
+
+function resetForm() {
+  selectedFile = null;
+  fileInput.value = '';
+  previewImg.style.display = 'none';
+  previewImg.src = '';
+  submitBtn.disabled = true;
+  progressArea.style.display = 'none';
+  resultViewer.style.display = 'none';
+  document.getElementById('i2tRow').style.display = 'none';
+  document.getElementById('i2tStatus').textContent = '';
+  if (pollTimer) clearInterval(pollTimer);
+}
+
+// File selection
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return alert('请选择图片文件');
+  selectedFile = file;
+  const url = URL.createObjectURL(file);
+  previewImg.src = url;
+  previewImg.style.display = 'block';
+  // hide drop zone instructions
+  dropZone.querySelector('.drop-icon').style.display = 'none';
+  dropZone.querySelector('.drop-text').style.display = 'none';
+  dropZone.querySelector('div:last-of-type').style.display = 'none';
+  submitBtn.disabled = false;
+  // show AI describe button
+  document.getElementById('i2tRow').style.display = 'flex';
+  document.getElementById('i2tStatus').textContent = '';
+}
+
+// AI image-to-text: describe uploaded image and fill prompt
+async function describeImage() {
+  if (!selectedFile) return;
+  const btn = document.getElementById('i2tBtn');
+  const status = document.getElementById('i2tStatus');
+  btn.disabled = true;
+  status.textContent = '🤖 AI 正在识别图片内容…';
+  try {
+    const fd = new FormData();
+    fd.append('image', selectedFile);
+    const r = await fetch('/api/i2t', { method: 'POST', body: fd });
+    const data = await r.json();
+    if (!data.success) throw new Error(data.error);
+    promptInput.value = data.description;
+    status.textContent = '✅ 识别完成，已填入描述';
+    status.style.color = 'var(--green)';
+  } catch (e) {
+    status.textContent = `❌ 识别失败: ${e.message}`;
+    status.style.color = '#f87171';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  handleFile(e.dataTransfer.files[0]);
+});
+
+submitBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  submitBtn.disabled = true;
+  showProgress();
+  setProgress('正在上传图片并提交任务…', 10);
+
+  const formData = new FormData();
+  formData.append('image', selectedFile);
+  const prompt = promptInput.value.trim();
+  if (prompt) formData.append('prompt', prompt);
+
+  let jobId;
+  try {
+    const r = await fetch('/api/img3d/submit', { method: 'POST', body: formData });
+    const data = await r.json();
+    if (!data.success) throw new Error(data.error);
+    jobId = data.jobId;
+    log(`任务已提交，JobId: ${jobId}`);
+    setProgress('AI 正在生成 3D 模型（约 1~3 分钟）…', 20);
+  } catch (e) {
+    setProgress('提交失败', 0);
+    log(`❌ 错误: ${e.message}`);
+    spinner.style.display = 'none';
+    submitBtn.disabled = false;
+    return;
+  }
+
+  // Poll status
+  let attempts = 0;
+  pollTimer = setInterval(async () => {
+    attempts++;
+    const pct = Math.min(20 + attempts * 3, 85);
+    try {
+      const r = await fetch(`/api/img3d/status/${jobId}`);
+      const data = await r.json();
+      const status = data.status || 'WAIT';
+      setProgress(`AI 生成中… 状态: ${status}`, pct);
+      log(`[${new Date().toLocaleTimeString()}] 状态: ${status}`);
+
+      if (status === 'DONE') {
+        clearInterval(pollTimer);
+        setProgress('正在下载模型…', 90);
+        log('✅ 生成完成，正在下载…');
+        try {
+          const dlRes = await fetch(`/api/img3d/download/${jobId}`, { method: 'POST' });
+          const dlData = await dlRes.json();
+          if (!dlData.success) throw new Error(dlData.error);
+          const glb = dlData.results.find(r => r.type === 'GLB' || r.localUrl?.endsWith('.glb'));
+          if (glb) {
+            log(`✅ 模型已保存: ${glb.localUrl}`);
+            showResult(glb.localUrl);
+          } else {
+            throw new Error('未找到 GLB 文件');
+          }
+        } catch (e) {
+          log(`❌ 下载失败: ${e.message}`);
+          spinner.style.display = 'none';
+          submitBtn.disabled = false;
+        }
+      } else if (status === 'FAILED' || data.errorCode) {
+        clearInterval(pollTimer);
+        log(`❌ 生成失败: ${data.errorMessage || data.errorCode}`);
+        spinner.style.display = 'none';
+        submitBtn.disabled = false;
+      } else if (attempts > 120) { // 2min timeout
+        clearInterval(pollTimer);
+        log('⏱️ 超时，请稍后刷新页面');
+        spinner.style.display = 'none';
+        submitBtn.disabled = false;
+      }
+    } catch (e) {
+      log(`轮询出错: ${e.message}`);
+    }
+  }, 5000);
+});
+
+// Load history
+async function loadHistory() {
+  try {
+    const r = await fetch('/api/img3d/list');
+    const data = await r.json();
+    if (!data.success || !data.files.length) return;
+    const section = document.getElementById('genHistorySection');
+    const grid = document.getElementById('genGrid');
+    section.style.display = 'block';
+    grid.innerHTML = data.files.slice(0, 6).map(f => `
+      <div class="gen-card">
+        <model-viewer src="${f.localUrl}" auto-rotate camera-controls environment-image="neutral" exposure="1.2"></model-viewer>
+        <div class="gen-card-info">
+          <span>${(f.size/1024).toFixed(0)} KB</span>
+          <a href="${f.localUrl}" download class="btn btn-outline" style="padding:4px 10px;font-size:0.72rem;flex:0">⬇</a>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) { /* ignore */ }
+}
+loadHistory();
+</script>
+</body>
+</html>

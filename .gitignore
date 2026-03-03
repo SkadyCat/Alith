@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Excluded directories
+application/
+
+# Sensitive keys / credentials
+docs/key/
+
+# Application-specific docs (separate repo concern)
+docs/application_doc/
+
+# Runtime data
+data/
+
+# Docs history (session logs, auto-generated)
+docs/history/
+
+# Environment files
+.env
+*.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
