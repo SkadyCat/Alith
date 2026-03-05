@@ -168,10 +168,11 @@ function buildEnv() {
   for (const k of ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']) {
     if (process.env[k]) env[k] = process.env[k];
   }
-  // 兜底代理（国内 Clash 默认端口）
-  if (!env.HTTPS_PROXY && !env.HTTP_PROXY) {
-    env.HTTPS_PROXY = 'http://127.0.0.1:7890';
-    env.HTTP_PROXY  = 'http://127.0.0.1:7890';
+  // 兜底代理（可通过环境变量 CLASH_PROXY=http://127.0.0.1:7890 启用）
+  // 不强制硬编码，避免其他设备无 Clash 时 fetch failed
+  if (!env.HTTPS_PROXY && !env.HTTP_PROXY && process.env.CLASH_PROXY) {
+    env.HTTPS_PROXY = process.env.CLASH_PROXY;
+    env.HTTP_PROXY  = process.env.CLASH_PROXY;
   }
   // 本地地址绕过代理 —— 必须！否则 web_fetch 打 localhost 会走代理失败
   env.NO_PROXY = 'localhost,127.0.0.1,::1,0.0.0.0';
@@ -264,12 +265,16 @@ function filterCliTrace(text) {
 function filterForHistoryDoc(text) {
   const lines = text.split('\n');
   const kept = lines.filter(line => {
-    const nonSpace = line.replace(/\s/g, '');
-    if (!nonSpace) return true; // 空行保留（结构用）
-    const chinese = (nonSpace.match(/[\u4e00-\u9fff\u3400-\u4dbf\uff00-\uffef\u3000-\u303f\u2e80-\u2eff]/g) || []).length;
-    return chinese / nonSpace.length >= 0.5;
+    const trimmed = line.trim();
+    // Keep empty lines (structural)
+    if (!trimmed) return true;
+    // Keep lines starting with markdown heading markers
+    if (trimmed.startsWith('#') || trimmed.startsWith('>') || trimmed.startsWith('-') || trimmed.startsWith('*')) return true;
+    // Keep lines with Chinese characters (threshold: at least one Chinese char)
+    const chinese = (trimmed.match(/[\u4e00-\u9fff\u3400-\u4dbf\uff00-\uffef\u3000-\u303f\u2e80-\u2eff]/g) || []).length;
+    return chinese > 0;
   });
-  // 压缩连续 3 个以上空行为 2 个
+  // Compress 3+ consecutive empty lines to 2
   return kept.join('\n').replace(/\n{3,}/g, '\n\n');
 }
 

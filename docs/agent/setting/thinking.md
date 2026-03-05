@@ -1,4 +1,4 @@
-
+﻿
 # ═══════════════════════════════════════════
 # 【第一部分：会话执行控制流 — 最高优先级，不可违反】
 # ═══════════════════════════════════════════
@@ -11,6 +11,7 @@
 [START] → 执行当前任务 → [POLL]
                               │
                     读取 E:\docs-service\runtime\user_input 文件
+                    （注意：文件可能不存在，不存在等同于空文件）
                               │
               ┌───── 文件有内容 ──────────────────────────────────┐
               │                                                   │
@@ -20,13 +21,13 @@
               │  4. 回到 [执行当前任务]                           │
               └───────────────────────────────────────────────────┘
               │
-              └───── 文件为空 ──────────────────────────────────┐
+              └───── 文件为空或不存在 ──────────────────────────┐
                                                                 │
                   等待计数器 +1                                 │
                   等待 30 秒                                    │
                                                                 │
-                  计数器 < 20？ ──── 是 ──→ 回到 [POLL]        │
-                  计数器 ≥ 20？ ──── 是 ──→ [EXIT: 等待超时]   │
+                  计数器 < 100？ ──── 是 ──→ 回到 [POLL]       │
+                  计数器 ≥ 100？ ──── 是 ──→ [EXIT: 等待超时]  │
                                                                 │
                   留言中包含 "结束"/"exit"/"quit"？ → [EXIT: 用户终止]
                                                                 └──┘
@@ -41,23 +42,39 @@
 
 ## ✅ 合法的退出条件（满足其一才可退出）
 
-- **条件A**：[POLL] 累计等待超过 10 分钟（等待计数器 ≥ 20 次 × 30 秒）
+- **条件A**：[POLL] 累计等待超过 50 分钟（等待计数器 ≥ 100 次 × 30 秒）
 - **条件B**：读取到的留言内容明确包含 "结束" / "exit" / "quit"
 
 ## 进入 [POLL] 的操作模板
 
-每次任务执行完毕后，必须立即执行以下操作序列，不得省略：
+每次任务执行完毕后，必须立即执行以下 PowerShell 脚本，不得省略：
 
-```
-Step POLL-1: 读取文件 E:\docs-service\runtime\user_input
-Step POLL-2: 判断内容是否为空
-  → 有内容：清空文件 → 将内容设为新任务 → 重置计数器 → 跳回 [执行任务]
-  → 为空：等待 30 秒 → 计数器+1 → 若计数器<20 跳回 POLL-1 → 否则 EXIT
+```powershell
+$pollCount = 0
+$maxPoll = 100
+$statusFile = "E:\docs-service\runtime\poll_status.md"
+$inputFile  = "E:\docs-service\runtime\user_input"
+
+while ($pollCount -lt $maxPoll) {
+  $pollCount++
+  Set-Content $statusFile "Waiting for task... ($pollCount/$maxPoll) - $(Get-Date -Format 'HH:mm:ss')"
+  Start-Sleep -Seconds 30
+  $content = (Get-Content $inputFile -ErrorAction SilentlyContinue) -join "`n"
+  if ($content.Trim() -ne "") {
+    Set-Content $statusFile "New task received at $(Get-Date -Format 'HH:mm:ss')"
+    Set-Content $inputFile ""
+    Write-Host "NEW_TASK: $content"
+    break
+  }
+}
+if ($pollCount -ge $maxPoll) {
+  Set-Content $statusFile ""
+  Write-Host "POLL TIMEOUT"
+}
 ```
 
 ---
 
-# ═══════════════════════════════════════════
 # 【第二部分：输出格式规范】
 # ═══════════════════════════════════════════
 
