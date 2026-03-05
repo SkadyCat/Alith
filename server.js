@@ -345,6 +345,28 @@ app.delete('/api/folder', (req, res) => {
   }
 });
 
+// API: Rename file or folder
+app.post('/api/rename', (req, res) => {
+  const { oldPath, newPath } = req.body;
+  if (!oldPath || !newPath) return res.status(400).json({ success: false, error: 'oldPath and newPath required' });
+
+  const fullOld = path.join(DOCS_DIR, oldPath);
+  const fullNew = path.join(DOCS_DIR, newPath);
+
+  if (!fullOld.startsWith(DOCS_DIR) || !fullNew.startsWith(DOCS_DIR)) {
+    return res.status(403).json({ success: false, error: 'Access denied' });
+  }
+  if (fs.existsSync(fullNew)) {
+    return res.status(409).json({ success: false, error: '目标名称已存在' });
+  }
+  try {
+    fs.renameSync(fullOld, fullNew);
+    res.json({ success: true, newPath });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ─── Dialogue / Session API ──────────────────────────────────
 const DIALOGUE_DIR = path.join(DOCS_DIR, 'dialogue');
 

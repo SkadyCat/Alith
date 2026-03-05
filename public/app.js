@@ -982,6 +982,11 @@ function setupContextMenu() {
     hideContextMenu();
   });
 
+  document.getElementById('ctxRename').addEventListener('click', () => {
+    if (contextMenuTarget) renameItem(contextMenuTarget);
+    hideContextMenu();
+  });
+
   document.getElementById('ctxDelete').addEventListener('click', () => {
     if (contextMenuTarget && contextMenuTarget.type === 'file') deleteFile(contextMenuTarget.path);
     else if (contextMenuTarget && contextMenuTarget.type === 'folder') deleteFolder(contextMenuTarget.path);
@@ -1003,6 +1008,7 @@ function showContextMenu(e, target) {
   const isRoot = contextMenuTarget.type === 'root';
   const isFile = contextMenuTarget.type === 'file';
   document.getElementById('ctxCopyPath').style.display = isFile ? 'flex' : 'none';
+  document.getElementById('ctxRename').style.display = isRoot ? 'none' : 'flex';
   document.getElementById('ctxDelete').style.display = isRoot ? 'none' : 'flex';
   document.getElementById('ctxDivider').style.display = isRoot ? 'none' : 'block';
   const menu = document.getElementById('contextMenu');
@@ -1070,6 +1076,42 @@ async function deleteFolder(folderPath) {
       showToast('✓ 文件夹已删除', 'success');
     } else {
       showToast('删除失败', 'error');
+    }
+  } catch (e) {
+    showToast('网络错误', 'error');
+  }
+}
+
+async function renameItem(target) {
+  const oldPath = target.path;
+  const parts = oldPath.split('/');
+  const oldName = parts[parts.length - 1];
+  const newName = prompt('请输入新名称：', oldName);
+  if (!newName || newName === oldName) return;
+
+  parts[parts.length - 1] = newName;
+  const newPath = parts.join('/');
+
+  try {
+    const res = await fetch('/open/rename', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldPath, newPath })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      if (target.type === 'file' && state.currentFile === oldPath) {
+        state.currentFile = data.newPath;
+        document.getElementById('docTitle').textContent = newName.replace(/\.md$/, '');
+        document.title = `📄 ${newName.replace(/\.md$/, '')}`;
+      } else if (target.type === 'folder' && state.currentFile && state.currentFile.startsWith(oldPath + '/')) {
+        state.currentFile = state.currentFile.replace(oldPath, newPath);
+      }
+      await loadFileTree();
+      showToast('✓ 已重命名', 'success');
+    } else {
+      showToast(data.error || '重命名失败', 'error');
     }
   } catch (e) {
     showToast('网络错误', 'error');
