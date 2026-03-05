@@ -349,16 +349,22 @@ router.post('/magicworld/ensure', async (req, res) => {
   try {
     const running = await checkMagicWorldRunning();
     if (running) return res.json({ success: true, running: true, starting: false });
-    // 启动 MagicWorld
-    const batPath = path.join(MAGICWORLD_DIR, 'start.bat');
-    if (!fs.existsSync(batPath)) {
-      return res.status(404).json({ success: false, error: 'start.bat 不存在' });
+    // 读取 MagicWorld .env 并合并到子进程环境变量
+    const envVars = { ...process.env };
+    const mwEnvPath = path.join(MAGICWORLD_DIR, '.env');
+    if (fs.existsSync(mwEnvPath)) {
+      fs.readFileSync(mwEnvPath, 'utf8').split(/\r?\n/).forEach(line => {
+        const m = line.match(/^([^#\s][^=]*)=(.*)$/);
+        if (m) envVars[m[1].trim()] = m[2].trim();
+      });
     }
-    spawn('cmd.exe', ['/c', batPath], {
+    // 直接用 node.exe 启动，避免 cmd.exe 批处理在无控制台环境下的兼容问题
+    spawn(process.execPath, ['server.js'], {
       detached: true,
       stdio: 'ignore',
       cwd: MAGICWORLD_DIR,
       windowsHide: true,
+      env: envVars,
     }).unref();
     res.json({ success: true, running: false, starting: true });
   } catch (e) {

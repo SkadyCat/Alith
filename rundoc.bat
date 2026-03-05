@@ -57,6 +57,9 @@ echo   正在启动 SDXL Service...
 start "SDXL-Service" /min cmd /c "E:\AIGC\Flux\backend\venv\Scripts\python.exe E:\docs-service\application\sdxl-service\main.py"
 :skip_sdxl
 
+:: ── 本机 Clash 代理（其他设备无需此变量）────────────────────
+set CLASH_PROXY=http://127.0.0.1:7890
+
 echo 正在启动 DocSpace...
 echo 访问地址: http://localhost:7439
 echo 按 Ctrl+C 停止服务

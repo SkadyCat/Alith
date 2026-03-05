@@ -47,7 +47,9 @@ function collectAllFiles(dir, base = '') {
 
 // ── 会话状态 Map ─────────────────────────────────────────
 // 每个 sessionId 对应一个独立的 Agent 状态
-const sessions = new Map();
+// 使用 global 持久化，防止 hot-reload 时 sessions 被重置导致活跃会话丢失
+if (!global.__agentSessions) global.__agentSessions = new Map();
+const sessions = global.__agentSessions;
 
 function createSessionState() {
   return {
@@ -168,11 +170,11 @@ function buildEnv() {
   for (const k of ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']) {
     if (process.env[k]) env[k] = process.env[k];
   }
-  // 兜底代理（可通过环境变量 CLASH_PROXY=http://127.0.0.1:7890 启用）
-  // 不强制硬编码，避免其他设备无 Clash 时 fetch failed
-  if (!env.HTTPS_PROXY && !env.HTTP_PROXY && process.env.CLASH_PROXY) {
-    env.HTTPS_PROXY = process.env.CLASH_PROXY;
-    env.HTTP_PROXY  = process.env.CLASH_PROXY;
+  // 代理：优先使用已有环境变量，否则强制走 127.0.0.1:7890（Clash/ClashX 默认端口）
+  const defaultProxy = process.env.CLASH_PROXY || 'http://127.0.0.1:7890';
+  if (!env.HTTPS_PROXY && !env.HTTP_PROXY) {
+    env.HTTPS_PROXY = defaultProxy;
+    env.HTTP_PROXY  = defaultProxy;
   }
   // 本地地址绕过代理 —— 必须！否则 web_fetch 打 localhost 会走代理失败
   env.NO_PROXY = 'localhost,127.0.0.1,::1,0.0.0.0';

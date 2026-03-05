@@ -397,7 +397,9 @@ async function initMagicWorldBtn() {
   await refreshMagicWorldBtn(btn);
   btn.addEventListener('click', async (e) => {
     e.preventDefault();
+    // 先刷新 URL，再在用户手势上下文中立即打开窗口（避免弹窗拦截）
     await refreshMagicWorldBtn(btn);
+    const newWin = window.open('about:blank', '_blank');
     // 检查并确保 MagicWorld 服务运行
     try {
       const r = await fetch('/open/magicworld/ensure', { method: 'POST', signal: AbortSignal.timeout(5000) });
@@ -408,17 +410,22 @@ async function initMagicWorldBtn() {
         btn.title = '🚀 MagicWorld 正在启动，请稍候...';
         btn.style.opacity = '0.6';
         let ready = false;
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 30; i++) {
           await new Promise(res => setTimeout(res, 2000));
           const s = await fetch('/open/magicworld/status').then(r => r.json()).catch(() => ({}));
           if (s.running) { ready = true; break; }
         }
         btn.style.opacity = '';
         btn.title = originalTitle;
-        if (!ready) { alert('MagicWorld 启动超时，请手动启动后再试'); return; }
+        if (!ready) {
+          if (newWin) newWin.close();
+          alert('MagicWorld 启动超时，请手动启动后再试');
+          return;
+        }
       }
     } catch (_) { /* 检测失败时直接跳转 */ }
-    window.open(btn.href, '_blank');
+    if (newWin) newWin.location.href = btn.href;
+    else window.open(btn.href, '_blank');
   });
 }
 async function refreshMagicWorldBtn(btn) {
@@ -1513,13 +1520,13 @@ function connectAgentStream(sessionId, noReplay) {
   agentEventSource.addEventListener('waiting-confirm', (e) => {
     const { code, elapsed } = JSON.parse(e.data);
     const ok = code === 0;
-    setAgentStatus(ok ? 'done' : 'error', ok ? `完成 (${elapsed}s)，等待确认` : `错误 (code ${code})`);
+    setAgentStatus(ok ? 'done' : 'error', ok ? `完成 (${elapsed}s)` : `错误 (code ${code})`);
     updateAgentActionBar('idle', '');
     if (ok && _contextPressure && !_contextCompressing) {
       triggerContextCompression();
     } else if (!_contextCompressing) {
-      // 压缩任务进行中时不显示确认栏（done 事件会自动调用 finishContextCompression）
-      showAgentConfirmBar();
+      // 自动确认，不显示确认栏
+      confirmAgentDone();
     }
   });
 
@@ -2438,12 +2445,12 @@ async function loadSessionHistoryDoc(historyDoc, sessionId) {
         setAgentStatus('running', '运行中');
         startElapsedTimer();
       } else if (s === 'waiting') {
-        // 进程已结束，等待用户确认
+        // 进程已结束，自动确认
         agentRunning = false;
         document.getElementById('agentStartBtn').disabled = false;
         document.getElementById('agentStopBtn').disabled = true;
-        setAgentStatus('done', `等待确认`);
-        showAgentConfirmBar();
+        setAgentStatus('done', `已完成`);
+        confirmAgentDone();
       }
       // idle / done / error → 保持已重置的空闲状态
       if (s === 'idle' || s === 'done' || s === 'error') {
