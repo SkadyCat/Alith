@@ -14,6 +14,25 @@ const { marked } = require('marked');
 
 const router = express.Router();
 const DOCS_DIR = path.join(__dirname, '..', 'docs');
+const RUNTIME_DIR = path.join(__dirname, '..', 'runtime');
+
+/* ─────────────────────────────────────────────────────────────
+   GET /open/poll-status
+   Read Alice poll status from runtime/poll_status.md
+───────────────────────────────────────────────────────────── */
+router.get('/poll-status', (req, res) => {
+  try {
+    const statusFile = path.join(RUNTIME_DIR, 'poll_status.md');
+    if (!fs.existsSync(statusFile)) {
+      return res.json({ success: true, status: '', active: false });
+    }
+    const content = fs.readFileSync(statusFile, 'utf-8').trim();
+    const active = content.length > 0 && !content.startsWith('Poll timeout');
+    res.json({ success: true, status: content, active });
+  } catch (err) {
+    res.json({ success: false, status: '', active: false });
+  }
+});
 
 /* ─────────────────────────────────────────────────────────────
    POST /open/submit

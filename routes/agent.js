@@ -987,8 +987,9 @@ function spawnAuth() {
   }
 
   // 自动跳过「Press Enter to open browser」提示
+  authProcess.stdin.on('error', () => {}); // 忽略 EPIPE 等 stdin 写入错误
   setTimeout(() => {
-    try { if (authProcess) authProcess.stdin.write('\n'); } catch (_) {}
+    try { if (authProcess && !authProcess.stdin.destroyed) authProcess.stdin.write('\n'); } catch (_) {}
   }, 800);
 
   authProcess.stdout.on('data', (chunk) => {

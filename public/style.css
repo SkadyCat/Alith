@@ -2132,3 +2132,58 @@ textarea.doc-drag-over {
   outline: none; transition: border-color .15s;
 }
 .filetype-custom input:focus { border-color: var(--accent); }
+
+/* ── Alice Poll Status Bubble ──────────────────────────────── */
+.poll-bubble {
+  position: fixed;
+  bottom: 28px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid rgba(100,116,139,0.35);
+  border-radius: 24px;
+  padding: 8px 14px 8px 10px;
+  font-size: 12px;
+  color: #94a3b8;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  z-index: 1800;
+  opacity: 0;
+  transform: translateY(12px) scale(0.95);
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  pointer-events: none;
+  user-select: none;
+}
+.poll-bubble.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.poll-bubble-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #64748b;
+  flex-shrink: 0;
+  animation: poll-pulse 1.8s ease-in-out infinite;
+}
+.poll-bubble.active .poll-bubble-dot {
+  background: #4f8ef7;
+  animation: poll-pulse 1.2s ease-in-out infinite;
+}
+@keyframes poll-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
+.poll-bubble-text {
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.poll-bubble-count {
+  font-variant-numeric: tabular-nums;
+  color: #64748b;
+  margin-left: 2px;
+}
+.poll-bubble.active .poll-bubble-count {
+  color: #7eb8f7;
+}

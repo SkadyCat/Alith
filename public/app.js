@@ -124,9 +124,48 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     // We use server-side marked, but highlight on client after render
   }
+  // ── Alice poll status bubble ──────────────────────────────────
+  startPollBubble();
 });
 
-// ===== FILE TREE =====
+// ===== POLL STATUS BUBBLE =====
+let pollBubbleTimer = null;
+
+function startPollBubble() {
+  updatePollBubble();
+  pollBubbleTimer = setInterval(updatePollBubble, 4000);
+}
+
+async function updatePollBubble() {
+  try {
+    const res = await fetch('/open/poll-status');
+    const data = await res.json();
+    const bubble = document.getElementById('pollBubble');
+    const countEl = document.getElementById('pollBubbleCount');
+    if (!bubble) return;
+
+    if (data.status && data.status.trim()) {
+      // Parse counter from status like "Waiting for task... (3/20) - 10:30:00"
+      const match = data.status.match(/\((\d+)\/(\d+)\)/);
+      if (match) {
+        countEl.textContent = `${match[1]}/${match[2]}`;
+        bubble.title = data.status;
+      } else {
+        countEl.textContent = '';
+        bubble.title = data.status;
+      }
+      bubble.classList.add('visible');
+      bubble.classList.toggle('active', !!data.active);
+    } else {
+      bubble.classList.remove('visible', 'active');
+      countEl.textContent = '';
+    }
+  } catch {
+    // silently ignore network errors
+  }
+}
+
+
 async function loadFileTree() {
   try {
     const res = await fetch('/open/tree');
