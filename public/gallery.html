@@ -743,8 +743,17 @@
 
     <!-- Tab 1: 文生图→3D -->
     <div id="panelT2I" class="tab-content active">
-      <!-- Model + Resolution -->
-      <div class="t2i-row">
+      <!-- Engine selector -->
+      <div class="t2i-row" style="margin-bottom:4px">
+        <label style="font-size:0.82rem;color:var(--text2);white-space:nowrap">生成引擎：</label>
+        <select class="t2i-select" id="t2iEngine" onchange="onEngineChange()" style="flex:1">
+          <option value="hunyuan">混元 TextToImageLite（云端）</option>
+          <option value="flux">Flux Schnell（本地 GPU）</option>
+          <option value="sdxl">SDXL CivitAI 模型（本地 GPU）</option>
+        </select>
+      </div>
+      <!-- Model + Resolution (Hunyuan only) -->
+      <div class="t2i-row" id="hunyuanOptions">
         <select class="t2i-select" id="t2iModel">
           <option value="hunyuan-standard">混元标准版</option>
           <option value="hunyuan-standard-v2">混元标准 v2</option>
@@ -758,6 +767,35 @@
           <option value="16:9">16:9 宽屏</option>
           <option value="9:16">9:16 竖屏</option>
         </select>
+      </div>
+      <!-- Flux options (hidden by default) -->
+      <div class="t2i-row" id="fluxOptions" style="display:none">
+        <select class="t2i-select" id="fluxSize">
+          <option value="1024x1024">1024×1024 正方形</option>
+          <option value="1024x768">1024×768 横向</option>
+          <option value="768x1024">768×1024 竖向</option>
+        </select>
+        <select class="t2i-select" id="fluxSteps">
+          <option value="4">4步（极快）</option>
+          <option value="8">8步（较快）</option>
+          <option value="20">20步（高质量）</option>
+        </select>
+      </div>
+      <!-- SDXL CivitAI model options -->
+      <div class="t2i-row" id="sdxlOptions" style="display:none">
+        <select class="t2i-select" id="sdxlModel">
+          <option value="wai-sdxl">WAI-Illustrious SDXL v1.6（动漫/插画）</option>
+          <option value="gameicon">GameIcon Institute v3.0（游戏图标）</option>
+          <option value="gameicon-icons">GameIcon + sxz-icons LoRA</option>
+        </select>
+        <select class="t2i-select" id="sdxlSteps">
+          <option value="">默认步数</option>
+          <option value="20">20步</option>
+          <option value="28">28步（高质量）</option>
+        </select>
+      </div>
+      <div class="t2i-row" id="sdxlNegRow" style="display:none">
+        <input class="t2i-input" id="sdxlNeg" type="text" placeholder="反向提示词（可选）" style="flex:1;font-size:0.82rem">
       </div>
       <!-- Prompt -->
       <textarea class="t2i-textarea" id="t2iPrompt" placeholder="输入提示词（例：一只可爱的Q版卡通青蛙，绿色，大眼睛，正面视角，白色背景，高清）"></textarea>
@@ -941,6 +979,17 @@ function switchTab(tab) {
   document.getElementById('panelUpload').classList.toggle('active', tab === 'upload');
 }
 
+function onEngineChange() {
+  const engine = document.getElementById('t2iEngine').value;
+  const isFlux = engine === 'flux';
+  const isSdxl = engine === 'sdxl';
+  document.getElementById('hunyuanOptions').style.display = (isFlux || isSdxl) ? 'none' : '';
+  document.getElementById('fluxOptions').style.display = isFlux ? '' : 'none';
+  document.getElementById('sdxlOptions').style.display = isSdxl ? '' : 'none';
+  document.getElementById('sdxlNegRow').style.display = isSdxl ? '' : 'none';
+  document.getElementById('t2iNeg').style.display = (isFlux || isSdxl) ? 'none' : '';
+}
+
 // ── Text-to-Image Logic ────────────────────────────────────────
 let t2iBase64 = null;
 let t2i3dPollTimer = null;
@@ -960,9 +1009,7 @@ function resetT2I() {
 async function generateImage() {
   const prompt = document.getElementById('t2iPrompt').value.trim();
   if (!prompt) return alert('请输入提示词');
-  const model = document.getElementById('t2iModel').value;
-  const resolution = document.getElementById('t2iResolution').value;
-  const neg = document.getElementById('t2iNeg').value.trim();
+  const engine = document.getElementById('t2iEngine').value;
 
   document.getElementById('t2iGenBtn').disabled = true;
   document.getElementById('t2iImgWrap').classList.remove('show');
@@ -978,19 +1025,51 @@ async function generateImage() {
   progArea.style.display = 'block';
   progLog.innerHTML = '';
   progBar.style.width = '20%';
-  progTitle.textContent = '正在调用混元文生图 API…';
   spinner.style.display = 'block';
 
-  try {
-    const r = await fetch('/api/t2i/generate', {
+  let fetchPromise;
+  if (engine === 'flux') {
+    const sizeVal = document.getElementById('fluxSize').value;
+    const [w, h] = sizeVal.split('x').map(Number);
+    const steps = parseInt(document.getElementById('fluxSteps').value);
+    progTitle.textContent = '正在调用 Flux 本地生图（需启动 GPU 服务）…';
+    fetchPromise = fetch('/api/comfyui/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, width: w, height: h, steps }),
+    });
+  } else if (engine === 'sdxl') {
+    const model = document.getElementById('sdxlModel').value;
+    const stepsVal = document.getElementById('sdxlSteps').value;
+    const neg = document.getElementById('sdxlNeg').value.trim();
+    progTitle.textContent = `正在调用 SDXL 本地生图（模型: ${model}，首次加载较慢）…`;
+    const body = { prompt, model };
+    if (neg) body.negative_prompt = neg;
+    if (stepsVal) body.steps = parseInt(stepsVal);
+    fetchPromise = fetch('/api/sdxl/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } else {
+    const model = document.getElementById('t2iModel').value;
+    const resolution = document.getElementById('t2iResolution').value;
+    const neg = document.getElementById('t2iNeg').value.trim();
+    progTitle.textContent = '正在调用混元文生图 API…';
+    fetchPromise = fetch('/api/t2i/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, negativePrompt: neg, model, resolution }),
     });
+  }
+
+  try {
+    const r = await fetchPromise;
     const data = await r.json();
     if (!data.success) throw new Error(data.error);
     t2iBase64 = data.base64;
-    const dataUrl = 'data:image/jpeg;base64,' + t2iBase64;
+    const mime = (engine === 'flux' || engine === 'sdxl') ? 'image/png' : 'image/jpeg';
+    const dataUrl = `data:${mime};base64,` + t2iBase64;
 
     progBar.style.width = '100%';
     progTitle.textContent = '图片生成完成！';

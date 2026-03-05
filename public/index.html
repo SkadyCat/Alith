@@ -41,12 +41,25 @@
         </svg>
         重启
       </button>
+      <a href="http://localhost:8033" target="_blank" class="action-btn" id="magicWorldBtn" style="text-decoration:none;display:flex;align-items:center;gap:6px" title="MagicWorld 图像工作室">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        MagicWorld
+      </a>
       <a href="/gallery.html" class="action-btn" style="text-decoration:none;display:flex;align-items:center;gap:6px" title="3D 模型展示馆">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
         </svg>
         3D展示
       </a>
+      <button class="agent-toggle-btn" id="consoleToggleBtn" onclick="toggleApiConsole()" title="API 调试控制台">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+        </svg>
+        控制台
+      </button>
       <button class="agent-toggle-btn" id="agentToggleBtn" onclick="toggleAgentPanel()" title="CopilotCli Agent">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
@@ -86,6 +99,12 @@
               <polyline points="23 4 23 10 17 10"/>
               <polyline points="1 20 1 14 7 14"/>
               <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+          </button>
+          <button class="icon-btn" onclick="openFileTypeSettings()" title="文件类型设置">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
           </button>
         </div>
@@ -205,6 +224,28 @@
     </div>
   </div>
 
+  <!-- File Type Settings Modal -->
+  <div class="modal-overlay" id="fileTypeSettingsOverlay" onclick="closeFileTypeSettings()">
+    <div class="modal filetype-settings-modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>显示文件类型</h3>
+        <button class="modal-close" onclick="closeFileTypeSettings()">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="filetype-hint">勾选需要在文件树中显示的文件类型：</p>
+        <div class="filetype-list" id="fileTypeList"></div>
+        <div class="filetype-custom">
+          <input type="text" id="fileTypeCustomInput" placeholder="添加自定义类型，如 .yaml" />
+          <button class="btn-create" onclick="addCustomFileType()">添加</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeFileTypeSettings()">关闭</button>
+        <button class="btn-create" onclick="applyFileTypeSettings()">应用</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Session Panel -->
   <div class="session-panel" id="sessionPanel">
     <div class="session-panel-header">
@@ -291,6 +332,18 @@
         <button class="agent-btn" onclick="createHistoryDoc()" title="新建一个历史文档">新建</button>
         <button class="agent-btn" onclick="loadHistoryDocs()" title="刷新">↻</button>
       </div>
+      <div class="agent-setting-row">
+        <label class="agent-setting-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+          任务前缀
+        </label>
+        <select id="agentTaskPrefix" class="agent-doc-select">
+          <option value="">— 无前缀 —</option>
+        </select>
+        <button class="agent-btn" onclick="loadTaskPrefixDocs()" title="刷新文档列表">↻</button>
+      </div>
       <div class="agent-setting-row" style="align-items:flex-start">
         <label class="agent-setting-label" style="margin-top:5px">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -318,6 +371,9 @@
         <label class="agent-opt-label">
           <input type="checkbox" id="agentUseHistory" checked /> 历史上下文
         </label>
+        <label class="agent-opt-label" title="隐藏 ● ✗ └ 等 CLI 工具执行日志，只显示 AI 生成的文字">
+          <input type="checkbox" id="agentHideTrace" /> 隐藏操作日志
+        </label>
       </div>
       <div class="agent-btn-row">
         <button class="agent-btn primary" id="agentStartBtn" onclick="startAgent()">
@@ -330,6 +386,7 @@
         </button>
         <button class="agent-btn" onclick="clearAgentOutput()">清空</button>
         <button class="agent-btn" onclick="checkAgentEnv()" title="检测 Copilot CLI 是否可用">检测环境</button>
+        <button class="agent-btn" id="agentUserInputToggle" onclick="toggleUserInputBar()" title="向运行中的 Agent 发送多行输入">📥 注入输入</button>
       </div>
       <div class="agent-auth-row">
         <span class="agent-auth-label">GitHub 认证</span>
@@ -353,6 +410,16 @@
       <input type="text" id="agentConfirmInput" class="agent-confirm-input" placeholder="或者输入追加需求…" onkeydown="if(event.key==='Enter')continueAgentTask()" />
       <button class="agent-btn primary" onclick="continueAgentTask()">继续</button>
       <button class="agent-btn" onclick="triggerContextCompression()" title="精炼当前会话记忆并重置上下文" style="opacity:0.8">⚡ 压缩</button>
+    </div>
+
+    <div class="agent-userinput-bar" id="agentUserInputBar" style="display:none">
+      <div id="agentUserInputPrompt" class="agent-userinput-prompt" style="display:none"></div>
+      <textarea id="agentUserInputText" class="agent-userinput-textarea" placeholder="向 Agent 发送输入（多行，Ctrl+Enter 发送）…" rows="3" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){sendUserInput();event.preventDefault();}"></textarea>
+      <div class="agent-userinput-actions">
+        <span class="agent-userinput-hint">Ctrl+Enter 发送</span>
+        <button class="agent-btn" onclick="closeUserInputBar()">关闭</button>
+        <button class="agent-btn primary" onclick="sendUserInput()">发送</button>
+      </div>
     </div>
 
     <div class="agent-output-area" id="agentOutput"></div>
@@ -382,6 +449,13 @@
       </svg>
       新建文件夹
     </div>
+    <div class="context-item" id="ctxCopyPath" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+      </svg>
+      复制路径
+    </div>
     <div class="context-divider" id="ctxDivider"></div>
     <div class="context-item danger" id="ctxDelete">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -409,6 +483,79 @@
         <button class="agent-btn primary" onclick="confirmSystemDocSelection()">确认</button>
       </div>
     </div>
+  </div>
+
+  <!-- API Debug Console -->
+  <div class="api-console" id="apiConsole">
+    <div class="api-console-header" id="apiConsoleHeader">
+      <div class="api-console-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+        </svg>
+        API 控制台
+      </div>
+      <div class="api-console-header-actions">
+        <button class="api-console-tab-btn active" id="consoleTabReq" onclick="switchConsoleTab('req')">请求</button>
+        <button class="api-console-tab-btn" id="consoleTabHist" onclick="switchConsoleTab('hist')">历史</button>
+        <button class="api-console-minimize" onclick="toggleApiConsole()" title="收起控制台">✕</button>
+      </div>
+    </div>
+
+    <!-- Request Tab -->
+    <div class="api-console-body" id="consoleBodyReq">
+      <div class="api-console-url-row">
+        <select class="api-console-method" id="consoleMethod">
+          <option value="GET">GET</option>
+          <option value="POST" selected>POST</option>
+          <option value="PUT">PUT</option>
+          <option value="DELETE">DELETE</option>
+          <option value="PATCH">PATCH</option>
+        </select>
+        <input class="api-console-url" id="consoleUrl" type="text" placeholder="/api/file?path=README.md" autocomplete="off" spellcheck="false" onkeydown="if(event.key==='Enter') sendApiRequest()" />
+        <select class="api-console-preset" id="consolePreset" onchange="applyConsolePreset(this.value)" title="快速预设">
+          <option value="">快速预设…</option>
+          <optgroup label="文档">
+            <option value="GET|/api/tree">GET /api/tree</option>
+            <option value="GET|/api/file?path=README.md">GET /api/file</option>
+            <option value="POST|/api/file|{\n  &quot;path&quot;: &quot;README.md&quot;,\n  &quot;content&quot;: &quot;# Hello&quot;\n}">POST /api/file (保存)</option>
+            <option value="POST|/open/search|{\n  &quot;q&quot;: &quot;关键词&quot;,\n  &quot;mode&quot;: &quot;fuzzy&quot;\n}">POST /open/search</option>
+            <option value="POST|/open/submit|{\n  &quot;filename&quot;: &quot;test/demo&quot;,\n  &quot;content&quot;: &quot;# Demo\n\n内容&quot;\n}">POST /open/submit</option>
+          </optgroup>
+          <optgroup label="工具">
+            <option value="POST|/tools/shell|{\n  &quot;command&quot;: &quot;Get-Date&quot;\n}">POST /tools/shell</option>
+            <option value="POST|/tools/python|{\n  &quot;code&quot;: &quot;print('hello')&quot;\n}">POST /tools/python</option>
+          </optgroup>
+          <optgroup label="Agent">
+            <option value="GET|/agent/sessions">GET /agent/sessions</option>
+            <option value="GET|/agent/status?sessionId=">GET /agent/status</option>
+          </optgroup>
+        </select>
+        <button class="api-console-send" id="consoleSendBtn" onclick="sendApiRequest()">发送</button>
+      </div>
+
+      <div class="api-console-body-editor" id="consoleBodyEditorWrap">
+        <div class="api-console-section-label">请求体 (JSON)</div>
+        <textarea class="api-console-body-input" id="consoleBodyInput" placeholder='{\n  "key": "value"\n}' spellcheck="false"></textarea>
+      </div>
+
+      <div class="api-console-response" id="consoleResponse">
+        <div class="api-console-resp-empty">发送请求后，响应将在此显示</div>
+      </div>
+    </div>
+
+    <!-- History Tab -->
+    <div class="api-console-body" id="consoleBodyHist" style="display:none;">
+      <div class="api-console-hist-toolbar">
+        <span class="api-console-section-label">请求历史</span>
+        <button class="api-console-clear-hist" onclick="clearConsoleHistory()">清空</button>
+      </div>
+      <div class="api-console-hist-list" id="consoleHistList">
+        <div class="api-console-resp-empty">暂无历史记录</div>
+      </div>
+    </div>
+
+    <!-- Drag Handle -->
+    <div class="api-console-resize" id="apiConsoleResize"></div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>

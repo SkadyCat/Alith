@@ -16,9 +16,36 @@ const HY_BUCKET     = process.env.COS_BUCKET  || 'magicworld-1304036735';
 const HY_REGION     = process.env.COS_REGION  || 'ap-guangzhou';
 const MODELS3D_DIR  = path.join(__dirname, 'application', 'hunyuan', 'models');
 
-const externalRoutes = require('./routes/external');
-const agentRoutes = require('./routes/agent');
-const toolsRoutes = require('./routes/tools');
+const chokidar = require('chokidar');
+
+// ─── Hot-reload route registry ────────────────────────────────
+const routeModules = {
+  external: { file: './routes/external', router: null },
+  agent:    { file: './routes/agent',    router: null },
+  tools:    { file: './routes/tools',    router: null },
+};
+
+function loadRoute(key) {
+  const mod = routeModules[key];
+  const fullPath = require.resolve(mod.file);
+  delete require.cache[fullPath];
+  mod.router = require(mod.file);
+  console.log(`🔄 [hot-reload] reloaded: ${mod.file}`);
+}
+
+// Initial load
+Object.keys(routeModules).forEach(loadRoute);
+
+// Watch routes/ for changes
+chokidar.watch(path.join(__dirname, 'routes'), { ignoreInitial: true })
+  .on('change', (filePath) => {
+    const key = Object.keys(routeModules).find(k =>
+      filePath.replace(/\\/g, '/').endsWith(path.basename(routeModules[k].file) + '.js')
+    );
+    if (key) loadRoute(key);
+    else console.log(`🔄 [hot-reload] changed (no mapping): ${filePath}`);
+  })
+  .on('add', (filePath) => console.log(`➕ [hot-reload] new file: ${filePath}`));
 
 const app = express();
 const PORT = 7439;
@@ -146,13 +173,13 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── 对外开放接口 ───────────────────────────────────────────
-app.use('/open', externalRoutes);
+app.use('/open',  (req, res, next) => routeModules.external.router(req, res, next));
 
 // ─── CopilotCli Agent ────────────────────────────────────────
-app.use('/agent', agentRoutes);
+app.use('/agent', (req, res, next) => routeModules.agent.router(req, res, next));
 
 // ─── Python & Shell Tools ────────────────────────────────────
-app.use('/tools', toolsRoutes);
+app.use('/tools', (req, res, next) => routeModules.tools.router(req, res, next));
 
 // ─── Applications ────────────────────────────────────────────
 app.use('/jump_game', express.static(path.join(__dirname, 'application', 'jump_game')));
@@ -178,7 +205,7 @@ function getFileTree(dir, basePath = '') {
         path: relativePath,
         children: getFileTree(path.join(dir, entry.name), relativePath)
       });
-    } else if (entry.name.endsWith('.md')) {
+    } else if (/\.(md|json|txt|yaml|yml|toml|csv|xml|html|js|ts|py|sh)$/.test(entry.name)) {
       items.push({
         type: 'file',
         name: entry.name,
@@ -612,6 +639,93 @@ app.post('/api/t2i/generate', async (req, res) => {
   }
 });
 
+// POST /api/comfyui/generate — 文生图 via ComfyUI/Flux (port 8188)
+const COMFYUI_BASE = 'http://localhost:8188';
+app.post('/api/comfyui/generate', async (req, res) => {
+  const { prompt = 'a beautiful image', width = 1024, height = 1024, steps = 4, seed = -1 } = req.body;
+  // Build a minimal Flux workflow
+  const workflow = {
+    "1": { "class_type": "CLIPTextEncode", "inputs": { "text": prompt, "clip": ["2", 0] } },
+    "2": { "class_type": "DualCLIPLoader", "inputs": { "clip_name1": "t5xxl_fp8", "clip_name2": "clip_l", "type": "flux" } },
+    "3": { "class_type": "KSampler", "inputs": { "seed": seed, "steps": steps, "cfg": 0.0, "sampler_name": "euler", "scheduler": "simple", "denoise": 1.0, "model": ["4", 0], "positive": ["1", 0], "negative": ["5", 0], "latent_image": ["6", 0] } },
+    "4": { "class_type": "UNETLoader", "inputs": { "unet_name": "flux1-schnell-Q2_K.gguf", "weight_dtype": "fp8_e4m3fn" } },
+    "5": { "class_type": "CLIPTextEncode", "inputs": { "text": "", "clip": ["2", 0] } },
+    "6": { "class_type": "EmptyLatentImage", "inputs": { "width": width, "height": height, "batch_size": 1 } },
+  };
+  try {
+    // Submit job
+    const submitRes = await fetch(`${COMFYUI_BASE}/prompt`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: workflow }),
+    });
+    if (!submitRes.ok) return res.status(502).json({ success: false, error: `ComfyUI submit failed: ${submitRes.status}` });
+    const { prompt_id } = await submitRes.json();
+
+    // Poll history until done (max 3 min)
+    const deadline = Date.now() + 3 * 60 * 1000;
+    let filename = null;
+    while (Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 2000));
+      const histRes = await fetch(`${COMFYUI_BASE}/history/${prompt_id}`);
+      const hist = await histRes.json();
+      const job = hist[prompt_id];
+      if (!job) continue;
+      if (job.status === 'error') return res.status(500).json({ success: false, error: job.error || 'ComfyUI job failed' });
+      if (job.status === 'done') {
+        filename = job.outputs?.images?.[0]?.filename;
+        break;
+      }
+    }
+    if (!filename) return res.status(504).json({ success: false, error: '生成超时，请稍后重试' });
+
+    // Fetch image and return as base64
+    const imgRes = await fetch(`${COMFYUI_BASE}/view?filename=${encodeURIComponent(filename)}`);
+    if (!imgRes.ok) return res.status(502).json({ success: false, error: '获取图片失败' });
+    const buf = Buffer.from(await imgRes.arrayBuffer());
+    res.json({ success: true, base64: buf.toString('base64'), filename });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// POST /api/sdxl/generate — 文生图 via SDXL Service (port 8189, CivitAI models)
+const SDXL_BASE = 'http://localhost:8189';
+app.post('/api/sdxl/generate', async (req, res) => {
+  const {
+    prompt = 'a beautiful image',
+    negative_prompt,
+    model = 'wai-sdxl',
+    width,
+    height,
+    steps,
+    guidance_scale,
+    seed = -1,
+  } = req.body;
+  try {
+    const genRes = await fetch(`${SDXL_BASE}/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, negative_prompt, model, width, height, steps, guidance_scale, seed }),
+      signal: AbortSignal.timeout(5 * 60 * 1000),
+    });
+    if (!genRes.ok) {
+      const err = await genRes.text();
+      return res.status(502).json({ success: false, error: `SDXL service error: ${err}` });
+    }
+    const data = await genRes.json();
+    if (!data.success) return res.status(500).json({ success: false, error: data.detail || 'SDXL generation failed' });
+
+    // Fetch image and return as base64
+    const imgRes = await fetch(`${SDXL_BASE}/outputs/${data.filename}`);
+    if (!imgRes.ok) return res.status(502).json({ success: false, error: '获取图片失败' });
+    const buf = Buffer.from(await imgRes.arrayBuffer());
+    res.json({ success: true, base64: buf.toString('base64'), filename: data.filename, model: data.model, seed: data.seed, elapsed: data.elapsed_seconds });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // multer upload (images, max 10MB)
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -660,7 +774,7 @@ app.post('/api/img3d/submit', upload.single('image'), async (req, res) => {
   const base64Image = req.file.buffer.toString('base64');
   const prompt = req.body.prompt || '';
   try {
-    const payload = { Image: base64Image, Model: '3.0' };
+    const payload = { ImageBase64: base64Image, Model: '3.0' };
     if (prompt) payload.Prompt = prompt;
     const submitRes = await hyCallApi('SubmitHunyuanTo3DProJob', payload);
     if (!submitRes.Response || submitRes.Response.Error) {

@@ -249,4 +249,39 @@ router.get('/study', (req, res) => {
   }
 });
 
+/* ─────────────────────────────────────────────────────────────
+   GET /open/tree
+   返回 docs/ 文件树，文件节点含 size 字段（字节数）
+───────────────────────────────────────────────────────────── */
+function buildFileTree(dir, basePath = '') {
+  const items = [];
+  let entries;
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return items; }
+  entries.sort((a, b) => {
+    if (a.isDirectory() && !b.isDirectory()) return -1;
+    if (!a.isDirectory() && b.isDirectory()) return 1;
+    return a.name.localeCompare(b.name);
+  });
+  for (const entry of entries) {
+    const relativePath = basePath ? `${basePath}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      items.push({ type: 'folder', name: entry.name, path: relativePath, children: buildFileTree(path.join(dir, entry.name), relativePath) });
+    } else if (/\.(md|json|txt|yaml|yml|toml|csv|xml|html|js|ts|py|sh)$/.test(entry.name)) {
+      let size = 0;
+      try { size = fs.statSync(path.join(dir, entry.name)).size; } catch {}
+      items.push({ type: 'file', name: entry.name, path: relativePath, size });
+    }
+  }
+  return items;
+}
+
+router.get('/tree', (req, res) => {
+  try {
+    const tree = buildFileTree(DOCS_DIR);
+    res.json({ success: true, tree });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;

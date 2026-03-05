@@ -25,6 +25,7 @@ const DOCS_DIR = path.join(__dirname, '..', 'docs');
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const HIST_FILE = path.join(DATA_DIR, 'agent-history.md');
 const HISTORY_DIR = path.join(DOCS_DIR, 'history');  // 会话历史文档目录
+const RUNTIME_DIR = path.join(__dirname, '..', 'runtime'); // 运行时氚临文件目录
 
 // Windows 命令行长度上限约 32767 字节，留足够安全边距
 const MAX_CMD_CHARS = 20000;
@@ -60,6 +61,7 @@ function createSessionState() {
     startTime:      null,
     heartbeatTimer: null,
     outputAccum:    '',
+    hideTrace:      false,   // 是否过滤 CLI 工具日志行
   };
 }
 
@@ -74,29 +76,45 @@ let authProcess = null;      // GitHub 认证进程
 let installProcess = null;   // npm 安装进程
 
 // ── 检测 Copilot CLI 入口 ─────────────────────────────────
+let _copilotCmdCache = null;
 function detectCopilotCmd() {
+  if (_copilotCmdCache) return _copilotCmdCache;
   // 1. 用户自定义环境变量
   if (process.env.COPILOT_CMD) {
-    return { cmd: process.env.COPILOT_CMD, args: [], shell: false };
+    return (_copilotCmdCache = { cmd: process.env.COPILOT_CMD, args: [], shell: false });
   }
-  // 2. node-script 模式（最稳定）—— npm 全局安装路径
-  const candidates = [
-    path.join(os.homedir(), 'AppData', 'Roaming', 'npm', 'node_modules', '@github', 'copilot', 'npm-loader.js'),
-    path.join('/usr/local/lib/node_modules/@github/copilot/npm-loader.js'),
-    path.join('/usr/lib/node_modules/@github/copilot/npm-loader.js'),
+  // 2. node-script 模式（最稳定，无 cmd.exe 长度限制）—— 搜索多个可能路径
+  const npmRoots = [
+    path.join(os.homedir(), 'AppData', 'Roaming', 'npm', 'node_modules'),
+    path.join(os.homedir(), 'AppData', 'Local', 'npm', 'node_modules'),
+    path.join(os.homedir(), '.nvm', 'versions', 'node', process.version, 'lib', 'node_modules'),
+    '/usr/local/lib/node_modules',
+    '/usr/lib/node_modules',
   ];
-  for (const p of candidates) {
-    if (fs.existsSync(p)) {
-      return { cmd: process.execPath, args: [p], shell: false };
+  // 也尝试从环境变量 npm_config_prefix 推断
+  if (process.env.npm_config_prefix) {
+    npmRoots.unshift(path.join(process.env.npm_config_prefix, 'node_modules'));
+  }
+  // 尝试从 npm 全局前缀推断（同步 execFileSync 探测一次）
+  try {
+    const { execFileSync } = require('child_process');
+    const npmPrefix = execFileSync('npm', ['root', '-g'], { timeout: 3000, encoding: 'utf8', windowsHide: true, shell: process.platform === 'win32' }).trim();
+    if (npmPrefix) npmRoots.unshift(npmPrefix);
+  } catch (_) {}
+
+  for (const root of npmRoots) {
+    const candidate = path.join(root, '@github', 'copilot', 'npm-loader.js');
+    if (fs.existsSync(candidate)) {
+      return (_copilotCmdCache = { cmd: process.execPath, args: [candidate], shell: false });
     }
   }
   // 3. 直接调用 copilot / copilot.cmd —— Windows .cmd 需要 shell:true
   const isCmdFile = process.platform === 'win32';
-  return {
+  return (_copilotCmdCache = {
     cmd: isCmdFile ? 'copilot.cmd' : 'copilot',
     args: [],
     shell: isCmdFile,
-  };
+  });
 }
 
 // ── 快速检测 CLI 是否可用（Promise） ────────────────────────
@@ -118,7 +136,12 @@ function broadcast(sessionId, event, data) {
   sess.agentBuffer.push({ event, data });
   if (sess.agentBuffer.length > 500) sess.agentBuffer.shift();
   sess.agentClients.forEach(res => {
-    if (!res.writableEnded) res.write(payload);
+    if (res.writableEnded) { sess.agentClients.delete(res); return; }
+    try {
+      res.write(payload);
+    } catch (_) {
+      sess.agentClients.delete(res);
+    }
   });
 }
 
@@ -191,6 +214,61 @@ function cleanOutput(str) {
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
     .replace(/\uFFFD+/g, '');  // UTF-8 换行失败的垂测字符
+}
+
+/**
+ * 过滤 Copilot CLI 工具执行日志行（● ✗ └ $ 等），只保留 LLM 生成的自然语言文字。
+ * 使用行级匹配，适合对每个 stdout chunk 逐步调用。
+ */
+function filterCliTrace(text) {
+  const lines = text.split('\n');
+  const out = [];
+  let inToolBlock = false;  // 在 ● 工具块内，等待 └ 结束
+  let inCmdCont  = false;   // 在 $ shell 命令续行内
+
+  for (const line of lines) {
+    // 工具调用头行: ● / ✗
+    if (/^[●✗] /.test(line)) { inToolBlock = true; inCmdCont = false; continue; }
+    // 结果摘要行: └ → 结束工具块
+    if (/^\s+└ /.test(line)) { inToolBlock = false; inCmdCont = false; continue; }
+    // shell 命令行: 开始命令续行模式
+    if (/^  [$]/.test(line)) { inCmdCont = true; continue; }
+    // 错误详情行
+    if (/^  Error:/.test(line)) { continue; }
+    // 截断省略号
+    if (/^  \.\.\.$/.test(line)) { inToolBlock = false; continue; }
+
+    if (inToolBlock) {
+      // 工具块内的续行：括号包裹的路径参数 / 缩进行
+      if (/^\s*\(.*\)\s*$/.test(line)) continue;  // (filepath) 参数行
+      if (/^\s+/.test(line)) continue;             // 缩进续行
+      // 遇到非缩进非空行 → 工具块意外结束，输出该行
+      if (line.trim() !== '') inToolBlock = false;
+    }
+
+    if (inCmdCont) {
+      // 命令续行：-Flag 或缩进行属于命令的一部分
+      if (/^\s*-/.test(line)) continue;   // -AutoSize 等 flag 续行
+      if (/^\s+/.test(line)) continue;    // 缩进续行
+      inCmdCont = false;                  // 其他行 → 命令结束
+    }
+
+    out.push(line);
+  }
+  return out.join('\n');
+}
+
+// ── historyDoc 写入过滤：只保留中文含量 ≥ 50% 的行，并压缩多余空行 ──
+function filterForHistoryDoc(text) {
+  const lines = text.split('\n');
+  const kept = lines.filter(line => {
+    const nonSpace = line.replace(/\s/g, '');
+    if (!nonSpace) return true; // 空行保留（结构用）
+    const chinese = (nonSpace.match(/[\u4e00-\u9fff\u3400-\u4dbf\uff00-\uffef\u3000-\u303f\u2e80-\u2eff]/g) || []).length;
+    return chinese / nonSpace.length >= 0.5;
+  });
+  // 压缩连续 3 个以上空行为 2 个
+  return kept.join('\n').replace(/\n{3,}/g, '\n\n');
 }
 
 // ── 状态行解析 ───────────────────────────────────────────────
@@ -274,12 +352,18 @@ router.get('/stream', (req, res) => {
                                              如 ["roles/主角.md", "world/世界观.md"]
 ───────────────────────────────────────────────────────── */
 router.post('/start', async (req, res) => {
-  const { task, maxContinues = 10, saveAs, useHistory = true, systemDoc, systemDocs, model, historyDoc, sessionId: rawSessionId } = req.body;
+  const { task, maxContinues = 10, saveAs, useHistory = true, hideTrace = false, systemDoc, systemDocs, model, historyDoc, taskPrefixDoc, sessionId: rawSessionId } = req.body;
   const sessionId = String(rawSessionId || 'default');
   const sess = getSession(sessionId);
 
-  if (sess.agentStatus === 'running' || sess.agentStatus === 'waiting') {
+  if (sess.agentStatus === 'running') {
     return res.status(409).json({ success: false, error: 'Agent 正在运行中，请先停止' });
+  }
+  // 进程已结束但仍在等待用户确认 → 自动放弃上次结果，允许直接开始新任务
+  if (sess.agentStatus === 'waiting' && !sess.agentProcess) {
+    sess.pendingDone = null;
+    sess.agentStatus = 'idle';
+    broadcast(sessionId, 'done', { code: -1, elapsed: 0, task: sess.currentTask || '' });
   }
 
   if (!task || !task.trim()) {
@@ -313,9 +397,30 @@ router.post('/start', async (req, res) => {
   // ── 预算常量（字符数，非 Token）────────────────────────
   const HIST_BUDGET    = 8000;  // 历史上下文最大注入量
   const SYSDOC_BUDGET  = 5000;  // 系统设定文档最大注入量（每个）
+  const PREFIX_BUDGET  = 10000; // 任务前缀文档最大注入量
 
   // ── 注入会话历史文档（智能：优先压缩摘要，否则取末尾）──
-  let fullPrompt = task.trim();
+  // 先合并任务前缀 + 用户输入，得到"当前指令块"，再套历史/系统设定
+  let currentTask = task.trim();
+  if (taskPrefixDoc) {
+    const prefPath = path.join(DOCS_DIR, taskPrefixDoc);
+    if (prefPath.startsWith(DOCS_DIR) && fs.existsSync(prefPath)) {
+      let prefContent = fs.readFileSync(prefPath, 'utf-8');
+      if (prefContent.length > PREFIX_BUDGET) {
+        prefContent = prefContent.slice(0, PREFIX_BUDGET) + '\n[…已截断]';
+      }
+      // 若前缀以"现在执行任务："结尾（模板式前缀），直接拼接用户输入
+      // 否则用换行隔开
+      const trimmedPref = prefContent.trimEnd();
+      if (trimmedPref.endsWith('现在执行任务：') || trimmedPref.endsWith('现在执行任务:')) {
+        currentTask = trimmedPref + '\n' + currentTask;
+      } else {
+        currentTask = trimmedPref + '\n\n[用户任务]\n' + currentTask;
+      }
+    }
+  }
+
+  let fullPrompt = currentTask;
   let historyDocAbsPath = null;
   let historyDocRel = null;
   let histFileSize = 0;
@@ -386,11 +491,16 @@ router.post('/start', async (req, res) => {
     fullPrompt = `[历史任务上下文]\n${ctx}\n\n[当前任务]\n${fullPrompt}`;
   }
 
-  // ── 兜底：Prompt 仍超限则尾部保留（保护 task 完整）────
+  // ── 兜底：Prompt 仍超限则尾部保留（保护 currentTask 完整）────
   if (fullPrompt.length > MAX_CMD_CHARS) {
-    const taskSection = `[当前任务]\n${task.trim()}`;
-    const prefix = fullPrompt.slice(0, MAX_CMD_CHARS - taskSection.length - 60);
-    fullPrompt = prefix + '\n[…上下文已裁剪]\n\n' + taskSection;
+    const taskSection = `[当前任务]\n${currentTask}`;
+    const prefixLen = MAX_CMD_CHARS - taskSection.length - 60;
+    if (prefixLen > 0) {
+      fullPrompt = fullPrompt.slice(0, prefixLen) + '\n[…上下文已裁剪]\n\n' + taskSection;
+    } else {
+      // currentTask 本身就超限，只截 currentTask
+      fullPrompt = currentTask.slice(0, MAX_CMD_CHARS);
+    }
   }
   const { cmd, args: baseArgs, shell } = detectCopilotCmd();
   const agentArgs = [
@@ -414,6 +524,7 @@ router.post('/start', async (req, res) => {
   sess.currentTask  = task;
   sess.startTime    = Date.now();
   sess.outputAccum  = '';
+  sess.hideTrace    = !!hideTrace;
 
   broadcast(sessionId, 'start', { task, time: new Date().toISOString(), tokenEst: Math.round(promptChars / 4), maxTokens: modelInfo.maxTokens });
   // ── 实时写入历史文档：先写会话头部 ─────────────────────
@@ -437,11 +548,12 @@ router.post('/start', async (req, res) => {
       fs.appendFileSync(historyDocAbsPath, header, 'utf-8');
       broadcast(sessionId, 'history-writing', { path: `history/${historyDocRel}` });
 
-      // 每 3 秒将增量追加到文件
+      // 每 3 秒将增量追加到文件（过滤非中文行，压缩空行）
       liveWriteTimer = setInterval(() => {
         if (!liveWriteBuf) return;
         try {
-          fs.appendFileSync(historyDocAbsPath, liveWriteBuf, 'utf-8');
+          const toWrite = filterForHistoryDoc(liveWriteBuf);
+          if (toWrite.trim()) fs.appendFileSync(historyDocAbsPath, toWrite, 'utf-8');
         } catch (_) {}
         liveWriteBuf = '';
       }, 3000);
@@ -459,9 +571,13 @@ router.post('/start', async (req, res) => {
   } catch (err) {
     sess.agentStatus = 'error';
     clearInterval(liveWriteTimer);
-    const isTooLong = err.code === 'ENAMETOOLONG' || String(err.message).includes('ENAMETOOLONG');
+    // ENAMETOOLONG: 直接超出系统限制
+    // EPERM + shell:true: Windows cmd.exe 参数超过 8191 字符，系统拒绝创建进程
+    const isTooLong = err.code === 'ENAMETOOLONG'
+      || String(err.message).includes('ENAMETOOLONG')
+      || (err.code === 'EPERM' && shell === true);
     const msg = isTooLong
-      ? `启动失败: Prompt 超出系统命令行长度限制 (ENAMETOOLONG)。\n\n解决方法：点击「重置上下文」清除历史记录和系统设定文档后重试。`
+      ? `启动失败: Prompt 超出 Windows cmd.exe 命令行长度限制（约 8191 字符）。\n\n当前注入内容过多（系统设定 + 历史文档 + 任务前缀同时使用）。\n\n解决方法之一：点击「重置上下文」清除历史记录后重试。\n解决方法之二：减少同时使用的系统设定或任务前缀文档数量。`
       : `启动失败: ${err.message}`;
     broadcast(sessionId, 'error', { message: msg, resetHint: isTooLong });
     broadcast(sessionId, 'done', { code: 1, elapsed: 0, task });
@@ -478,8 +594,10 @@ router.post('/start', async (req, res) => {
     const tokenEst = Math.round((promptChars + sess.outputAccum.length) / 4);
     if (text) {
       sess.outputAccum += text;
-      liveWriteBuf  += text;
-      broadcast(sessionId, 'output', { text, stream: 'stdout', tokenEst, maxTokens: modelInfo.maxTokens });
+      // 若开启「隐藏操作日志」，过滤后再广播和写文件
+      const displayText = sess.hideTrace ? filterCliTrace(text) : text;
+      liveWriteBuf  += displayText;
+      broadcast(sessionId, 'output', { text: displayText, stream: 'stdout', tokenEst, maxTokens: modelInfo.maxTokens });
       for (const line of text.split('\n')) {
         const action = detectAction(line);
         if (action) broadcast(sessionId, 'agent-action', action);
@@ -494,9 +612,10 @@ router.post('/start', async (req, res) => {
     const tail = cleanOutput(stdoutDecoder.end());
     if (tail) {
       sess.outputAccum += tail;
-      liveWriteBuf += tail;
+      const displayTail = sess.hideTrace ? filterCliTrace(tail) : tail;
+      liveWriteBuf += displayTail;
       const tokenEst = Math.round((promptChars + sess.outputAccum.length) / 4);
-      broadcast(sessionId, 'output', { text: tail, stream: 'stdout', tokenEst, maxTokens: modelInfo.maxTokens });
+      broadcast(sessionId, 'output', { text: displayTail, stream: 'stdout', tokenEst, maxTokens: modelInfo.maxTokens });
     }
   });
 
@@ -527,14 +646,16 @@ router.post('/start', async (req, res) => {
     broadcast(sessionId, 'agent-action', { type: 'idle', label: '' }); // 清空状态栏
 
     // ── 记录历史 ────────────────────────────────────────
-    const entry = { task, output: sess.outputAccum, code, elapsed, time: new Date().toISOString() };
+    // outputAccum 保留原始全量文本（用于 token 计数），写文件时按需过滤
+    const outputForFile = sess.hideTrace ? filterCliTrace(sess.outputAccum) : sess.outputAccum;
+    const entry = { task, output: outputForFile, code, elapsed, time: new Date().toISOString() };
     sess.agentHistory.push(entry);
     if (sess.agentHistory.length > 30) sess.agentHistory.shift();
 
     // ── 持久化历史到文件 ────────────────────────────────
     try {
       fs.mkdirSync(DATA_DIR, { recursive: true });
-      const line = `## #${sess.agentHistory.length} ${entry.time}\n**任务**: ${task}\n**耗时**: ${elapsed}s  **退出码**: ${code}\n\n\`\`\`\n${sess.outputAccum.slice(0, 3000)}\n\`\`\`\n\n---\n\n`;
+      const line = `## #${sess.agentHistory.length} ${entry.time}\n**任务**: ${task}\n**耗时**: ${elapsed}s  **退出码**: ${code}\n\n\`\`\`\n${outputForFile.slice(0, 3000)}\n\`\`\`\n\n---\n\n`;
       fs.appendFileSync(HIST_FILE, line, 'utf-8');
     } catch (_) {}
 
@@ -544,7 +665,7 @@ router.post('/start', async (req, res) => {
         const rel = saveAs.endsWith('.md') ? saveAs : `${saveAs}.md`;
         const docPath = path.join(DOCS_DIR, rel);
         fs.mkdirSync(path.dirname(docPath), { recursive: true });
-        const docContent = `# Agent 输出\n\n> **任务**: ${task}  \n> **时间**: ${entry.time}  \n> **耗时**: ${elapsed}s\n\n\`\`\`\n${sess.outputAccum}\n\`\`\`\n`;
+        const docContent = `# Agent 输出\n\n> **任务**: ${task}  \n> **时间**: ${entry.time}  \n> **耗时**: ${elapsed}s\n\n\`\`\`\n${outputForFile}\n\`\`\`\n`;
         fs.writeFileSync(docPath, docContent, 'utf-8');
         broadcast(sessionId, 'saved', { path: rel });
       } catch (err) {
@@ -556,7 +677,8 @@ router.post('/start', async (req, res) => {
     if (historyDocAbsPath) {
       try {
         if (liveWriteBuf) {
-          fs.appendFileSync(historyDocAbsPath, liveWriteBuf, 'utf-8');
+          const toWrite = filterForHistoryDoc(liveWriteBuf);
+          if (toWrite.trim()) fs.appendFileSync(historyDocAbsPath, toWrite, 'utf-8');
           liveWriteBuf = '';
         }
         const footer = `\n\n**耗时**: ${elapsed}s  **退出码**: ${code}\n\n---\n\n`;
@@ -644,21 +766,66 @@ router.post('/confirm', (req, res) => {
 /* ─────────────────────────────────────────────────────────
    POST /agent/input  —— 向运行中的 Agent stdin 发送输入
    用于回应权限确认等交互提示（y/n 或自定义内容）
+   文本始终保存到 runtime/user_input 供 AI 读取
 ───────────────────────────────────────────────────────── */
 router.post('/input', (req, res) => {
   const sessionId = String(req.body.sessionId || 'default');
   const sess = getSession(sessionId);
-  if (!sess.agentProcess || sess.agentStatus !== 'running') {
-    return res.json({ success: false, error: 'Agent 未在运行' });
-  }
-  const { text = '' } = req.body;
+  const { text = '', saveTo } = req.body;
+
+  // 始终将输入内容保存到文件（默认 runtime/user_input）
+  const relPath = saveTo || 'user_input';
+  const savePath = path.join(RUNTIME_DIR, relPath);
   try {
-    sess.agentProcess.stdin.write(text + '\n', 'utf8');
-    broadcast(sessionId, 'output', { text: `> 已发送输入: ${text}`, stream: 'stdin' });
-    res.json({ success: true });
-  } catch (err) {
-    res.json({ success: false, error: err.message });
+    fs.mkdirSync(path.dirname(savePath), { recursive: true });
+    fs.writeFileSync(savePath, text, 'utf-8');
+  } catch (_) {}
+
+  // 若 agent 正在运行，同时写入 stdin
+  if (sess.agentProcess && sess.agentStatus === 'running') {
+    try { sess.agentProcess.stdin.write(text + '\n', 'utf8'); } catch (_) {}
   }
+
+  const preview = text.replace(/\n/g, '↵').slice(0, 80) + (text.length > 80 ? '…' : '');
+  broadcast(sessionId, 'output', { text: `> 已发送输入: ${preview}`, stream: 'stdin' });
+  res.json({ success: true, savedTo: path.relative(path.join(__dirname, '..'), savePath) });
+});
+
+/* ─────────────────────────────────────────────────────────
+   POST /agent/request-input  —— 主动要求用户在前端打开输入框
+   可由外部脚本、工具或 AI 调用，通过 SSE 广播触发前端弹出"注入输入"面板
+
+   Body (JSON):
+     sessionId   会话 ID（可选，默认 default）
+     prompt      显示在输入框顶部的提示文字（可选）
+     placeholder 输入框 placeholder（可选）
+──────────────────────────────────────────────────────── */
+router.post('/request-input', (req, res) => {
+  const rawId = req.body.sessionId || req.query.sessionId || '';
+  const { prompt = '', placeholder = '' } = req.body;
+  if (!rawId || rawId === '*') {
+    // 广播到所有已知 session
+    sessions.forEach((_, sid) => broadcast(sid, 'request-input', { prompt, placeholder }));
+  } else {
+    broadcast(String(rawId), 'request-input', { prompt, placeholder });
+  }
+  res.json({ success: true, message: '已发送打开输入框请求' });
+});
+
+/* ─────────────────────────────────────────────────────────
+   GET /agent/sessions  —— 列出所有已知 session
+──────────────────────────────────────────────────────── */
+router.get('/sessions', (req, res) => {
+  const list = [];
+  sessions.forEach((sess, id) => {
+    list.push({
+      id,
+      status: sess.agentStatus,
+      clients: sess.agentClients.size,
+      task: sess.currentTask ? sess.currentTask.slice(0, 60) : null,
+    });
+  });
+  res.json({ success: true, sessions: list });
 });
 
 /* ─────────────────────────────────────────────────────────

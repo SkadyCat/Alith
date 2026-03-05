@@ -10,6 +10,73 @@ const state = {
   allFiles: [],           // for search
 };
 
+// ===== FILE TYPE FILTER =====
+const FILE_TYPE_DEFAULTS = ['.md', '.json'];
+const FILE_TYPE_ALL = ['.md', '.json', '.txt', '.yaml', '.yml', '.toml', '.csv', '.xml', '.html', '.js', '.ts', '.py', '.sh'];
+let activeFileTypes = (() => {
+  try {
+    const saved = localStorage.getItem('docspace_file_types');
+    return saved ? JSON.parse(saved) : [...FILE_TYPE_DEFAULTS];
+  } catch { return [...FILE_TYPE_DEFAULTS]; }
+})();
+
+function saveFileTypeState() {
+  localStorage.setItem('docspace_file_types', JSON.stringify(activeFileTypes));
+}
+
+function openFileTypeSettings() {
+  const list = document.getElementById('fileTypeList');
+  list.innerHTML = '';
+  FILE_TYPE_ALL.forEach(ext => {
+    const checked = activeFileTypes.includes(ext);
+    const item = document.createElement('label');
+    item.className = 'filetype-item';
+    item.innerHTML = `<input type="checkbox" value="${ext}" ${checked ? 'checked' : ''}><span>${ext}</span>`;
+    list.appendChild(item);
+  });
+  // Show any custom types not in FILE_TYPE_ALL
+  activeFileTypes.forEach(ext => {
+    if (!FILE_TYPE_ALL.includes(ext)) {
+      const item = document.createElement('label');
+      item.className = 'filetype-item';
+      item.innerHTML = `<input type="checkbox" value="${ext}" checked><span>${ext} <em>(自定义)</em></span>`;
+      list.appendChild(item);
+    }
+  });
+  document.getElementById('fileTypeCustomInput').value = '';
+  document.getElementById('fileTypeSettingsOverlay').classList.add('show');
+}
+
+function closeFileTypeSettings() {
+  document.getElementById('fileTypeSettingsOverlay').classList.remove('show');
+}
+
+function addCustomFileType() {
+  const input = document.getElementById('fileTypeCustomInput');
+  let val = input.value.trim().toLowerCase();
+  if (!val) return;
+  if (!val.startsWith('.')) val = '.' + val;
+  const list = document.getElementById('fileTypeList');
+  if (list.querySelector(`input[value="${val}"]`)) {
+    input.value = '';
+    return;
+  }
+  const item = document.createElement('label');
+  item.className = 'filetype-item';
+  item.innerHTML = `<input type="checkbox" value="${val}" checked><span>${val} <em>(自定义)</em></span>`;
+  list.appendChild(item);
+  input.value = '';
+}
+
+function applyFileTypeSettings() {
+  const checkboxes = document.querySelectorAll('#fileTypeList input[type="checkbox"]');
+  activeFileTypes = Array.from(checkboxes).filter(c => c.checked).map(c => c.value);
+  if (activeFileTypes.length === 0) activeFileTypes = ['.md'];
+  saveFileTypeState();
+  closeFileTypeSettings();
+  refreshTree();
+}
+
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
   loadFileTree();
@@ -18,10 +85,14 @@ document.addEventListener('DOMContentLoaded', () => {
   setupKeyboardShortcuts();
   setupResizeHandle();
   setupContextMenu();
+  initMagicWorldBtn();
 
-  // Auto-save dialogue when historyDoc changes
-  document.getElementById('agentHistoryDoc').addEventListener('change', () => {
-    if (activeDialogueId) saveCurrentDialogue(activeDialogueId);
+  // Auto-save dialogue when any agent config changes
+  ['agentHistoryDoc', 'agentTaskPrefix', 'agentModel', 'agentSaveAs', 'agentMaxCont', 'agentUseHistory', 'agentHideTrace'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => {
+      if (activeDialogueId) saveCurrentDialogue(activeDialogueId);
+    });
   });
 
   // Real-time file change updates via SSE
@@ -58,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ===== FILE TREE =====
 async function loadFileTree() {
   try {
-    const res = await fetch('/api/tree');
+    const res = await fetch('/open/tree');
     const data = await res.json();
     state.allFiles = [];
     if (data.success) {
@@ -119,18 +190,25 @@ function appendTreeItems(items, container) {
       container.appendChild(el);
       container.appendChild(childContainer);
     } else {
+      // Filter by active file types
+      const ext = item.name.includes('.') ? '.' + item.name.split('.').pop().toLowerCase() : '';
+      if (!activeFileTypes.includes(ext)) return;
+
       el.className = 'tree-file';
       el.style.animationDelay = `${idx * 0.03}s`;
       el.dataset.path = item.path;
       el.draggable = true;
       
-      const nameWithoutExt = item.name.replace(/\.md$/, '');
+      const dotIdx = item.name.lastIndexOf('.');
+      const nameWithoutExt = dotIdx > 0 ? item.name.slice(0, dotIdx) : item.name;
+      const fileExt = dotIdx > 0 ? item.name.slice(dotIdx) : '';
       state.allFiles.push({ name: item.name, path: item.path, el });
       
+      const sizeLabel = item.size != null ? `<span class="tree-file-size">${formatBytes(item.size)}</span>` : '';
       el.innerHTML = `
         <span class="tree-file-icon">📄</span>
         <span class="tree-name">${nameWithoutExt}</span>
-        <span class="tree-file-ext">.md</span>`;
+        <span class="tree-file-ext">${fileExt}</span>${sizeLabel}`;
       
       el.addEventListener('dragstart', e => {
         e.dataTransfer.setData('text/doc-path', item.path);
@@ -272,6 +350,23 @@ function insertDocIntoTask(docPath) {
   showToast(`已插入任务: ${ref}`, 'success');
 }
 
+// ===== MAGICWORLD BUTTON =====
+// 启动时从 MagicWorld 服务读取公网 URL，若配置了则更新顶部菜单按钮链接
+async function initMagicWorldBtn() {
+  const btn = document.getElementById('magicWorldBtn');
+  if (!btn) return;
+  try {
+    const res = await fetch('http://localhost:8033/api/config', { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.publicUrl) {
+        btn.href = data.publicUrl;
+        btn.title = `MagicWorld 图像工作室（公网：${data.publicUrl}）`;
+      }
+    }
+  } catch (_) { /* MagicWorld 未启动或无公网配置，使用默认 localhost:8033 */ }
+}
+
 async function restartServer() {
   const btn = document.getElementById('restartBtn');
   if (!btn) return;
@@ -284,7 +379,7 @@ async function restartServer() {
   // Poll until server is back
   const poll = async () => {
     try {
-      const r = await fetch('/api/tree', { cache: 'no-store' });
+      const r = await fetch('/open/tree', { cache: 'no-store' });
       if (r.ok) { location.reload(); return; }
     } catch (_) {}
     setTimeout(poll, 800);
@@ -817,6 +912,17 @@ function setupContextMenu() {
     showNewFileDialog(prefix, 'folder');
   });
 
+  document.getElementById('ctxCopyPath').addEventListener('click', () => {
+    if (contextMenuTarget && contextMenuTarget.path) {
+      navigator.clipboard.writeText(contextMenuTarget.path).then(() => {
+        showToast('✓ 路径已复制', 'success');
+      }).catch(() => {
+        showToast('复制失败', 'error');
+      });
+    }
+    hideContextMenu();
+  });
+
   document.getElementById('ctxDelete').addEventListener('click', () => {
     if (contextMenuTarget && contextMenuTarget.type === 'file') deleteFile(contextMenuTarget.path);
     else if (contextMenuTarget && contextMenuTarget.type === 'folder') deleteFolder(contextMenuTarget.path);
@@ -836,6 +942,8 @@ function showContextMenu(e, target) {
   e.stopPropagation();
   contextMenuTarget = typeof target === 'string' ? { type: 'file', path: target } : target;
   const isRoot = contextMenuTarget.type === 'root';
+  const isFile = contextMenuTarget.type === 'file';
+  document.getElementById('ctxCopyPath').style.display = isFile ? 'flex' : 'none';
   document.getElementById('ctxDelete').style.display = isRoot ? 'none' : 'flex';
   document.getElementById('ctxDivider').style.display = isRoot ? 'none' : 'block';
   const menu = document.getElementById('contextMenu');
@@ -1137,6 +1245,7 @@ function toggleAgentPanel() {
     populateAgentDocSelector();
     loadAgentModels();
     loadHistoryDocs();
+    loadTaskPrefixDocs();
     // loadDialogues 完成后，若尚未连接则加载当前会话历史
     loadDialogues().then(() => {
       const sid = getActiveSessionId();
@@ -1152,10 +1261,12 @@ function toggleAgentPanel() {
 
 function connectAgentStream(sessionId, noReplay) {
   const sid = sessionId || getActiveSessionId();
-  // 关闭所有现有连接（切换会话时只保留当前会话的流）
+  // 关闭所有现有连接（切换会话时只保留当前会话的流）；同时重置压缩状态
   sessionSources.forEach(es => es.close());
   sessionSources.clear();
   agentEventSource = null;
+  _contextPressure = false;
+  _contextCompressing = false;
 
   const url = '/agent/stream?sessionId=' + encodeURIComponent(sid) + (noReplay ? '&noReplay=1' : '');
   const es = new EventSource(url);
@@ -1218,7 +1329,8 @@ function connectAgentStream(sessionId, noReplay) {
     updateAgentActionBar('idle', '');
     if (ok && _contextPressure && !_contextCompressing) {
       triggerContextCompression();
-    } else {
+    } else if (!_contextCompressing) {
+      // 压缩任务进行中时不显示确认栏（done 事件会自动调用 finishContextCompression）
       showAgentConfirmBar();
     }
   });
@@ -1227,6 +1339,11 @@ function connectAgentStream(sessionId, noReplay) {
     const { task } = JSON.parse(e.data);
     document.getElementById('agentTask').value = task;
     startAgent();
+  });
+
+  agentEventSource.addEventListener('request-input', (e) => {
+    const { prompt = '', placeholder = '' } = JSON.parse(e.data);
+    openUserInputBar(prompt, placeholder);
   });
 
   agentEventSource.addEventListener('done', (e) => {
@@ -1412,6 +1529,52 @@ async function sendAgentInput(text) {
     const data = await res.json();
     if (!data.success) showToast('发送失败: ' + data.error, 'error');
     updateAgentActionBar('idle', '');
+  } catch (e) {
+    showToast('发送失败: ' + e.message, 'error');
+  }
+}
+
+function toggleUserInputBar() {
+  openUserInputBar();
+}
+
+function openUserInputBar(prompt = '', placeholder = '') {
+  const bar = document.getElementById('agentUserInputBar');
+  const textarea = document.getElementById('agentUserInputText');
+  const hint = document.getElementById('agentUserInputPrompt');
+  if (!bar) return;
+  const alreadyOpen = bar.style.display !== 'none';
+  bar.style.display = 'flex';
+  if (hint) hint.textContent = prompt || '';
+  if (hint) hint.style.display = prompt ? '' : 'none';
+  if (placeholder) textarea.placeholder = placeholder;
+  else textarea.placeholder = '向 Agent 发送输入（多行，Ctrl+Enter 发送）…';
+  if (!alreadyOpen) textarea.focus();
+}
+
+function closeUserInputBar() {
+  const bar = document.getElementById('agentUserInputBar');
+  if (bar) bar.style.display = 'none';
+}
+
+async function sendUserInput() {
+  const textarea = document.getElementById('agentUserInputText');
+  const text = textarea.value;
+  if (!text.trim()) return;
+  try {
+    const res = await fetch('/agent/input', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, sessionId: getActiveSessionId() }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      textarea.value = '';
+      closeUserInputBar();
+      showToast('已发送', 'success');
+    } else {
+      showToast('发送失败: ' + data.error, 'error');
+    }
   } catch (e) {
     showToast('发送失败: ' + e.message, 'error');
   }
@@ -1668,6 +1831,23 @@ function confirmSystemDocSelection() {
   if (activeDialogueId) saveCurrentDialogue(activeDialogueId);
 }
 
+async function loadTaskPrefixDocs() {
+  try {
+    const res = await fetch('/agent/docs');
+    const data = await res.json();
+    const sel = document.getElementById('agentTaskPrefix');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— 无前缀 —</option>';
+    (data.docs || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p.replace(/\.md$/, '');
+      sel.appendChild(opt);
+    });
+    if (current) sel.value = current;
+  } catch (e) {}
+}
+
 async function populateAgentDocSelector() {
   // 预加载文档列表供弹窗使用（仅 agent/ 目录）
   try {
@@ -1701,9 +1881,11 @@ async function startAgent() {
   const saveAs = document.getElementById('agentSaveAs').value.trim();
   const maxContinues = parseInt(document.getElementById('agentMaxCont').value) || 10;
   const useHistory = document.getElementById('agentUseHistory').checked;
+  const hideTrace = document.getElementById('agentHideTrace').checked;
   const systemDocs = selectedSystemDocs.slice();
   const model = document.getElementById('agentModel').value || undefined;
   const historyDoc = document.getElementById('agentHistoryDoc').value || undefined;
+  const taskPrefixDoc = document.getElementById('agentTaskPrefix').value || undefined;
 
   document.getElementById('agentOutput').innerHTML = '';
   document.getElementById('agentElapsed').textContent = '';
@@ -1712,12 +1894,13 @@ async function startAgent() {
 
   if (systemDocs.length) appendAgentLine(`📄 系统设定: ${systemDocs.join(', ')}`, 'system');
   if (historyDoc) appendAgentLine(`📜 历史文档: history/${historyDoc}（读取上下文，会话结束后追加）`, 'system');
+  if (taskPrefixDoc) appendAgentLine(`📋 任务前缀: ${taskPrefixDoc}`, 'system');
 
   try {
     const res = await fetch('/agent/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task, maxContinues, saveAs: saveAs || undefined, useHistory, systemDocs: systemDocs.length ? systemDocs : undefined, model, historyDoc, sessionId: getActiveSessionId() }),
+      body: JSON.stringify({ task, maxContinues, saveAs: saveAs || undefined, useHistory, hideTrace, systemDocs: systemDocs.length ? systemDocs : undefined, model, historyDoc, taskPrefixDoc, sessionId: getActiveSessionId() }),
     });
     const data = await res.json();
     if (!data.success) {
@@ -1867,7 +2050,7 @@ async function loadDialogues() {
   } catch (e) {}
   // Fallback: use file tree API
   try {
-    const treeRes = await fetch('/api/tree');
+    const treeRes = await fetch('/open/tree');
     const treeData = await treeRes.json();
     const dialogueFolder = (treeData.tree || []).find(item => item.type === 'folder' && item.name === 'dialogue');
     const files = dialogueFolder ? (dialogueFolder.children || []).filter(f => f.type === 'file') : [];
@@ -1953,6 +2136,25 @@ function applyDialogue(cfg) {
   // 应用 systemDocs
   selectedSystemDocs = Array.isArray(cfg.systemDocs) ? cfg.systemDocs.slice() : [];
   renderSysdocTags();
+  // 应用任务前缀文档
+  const prefSel = document.getElementById('agentTaskPrefix');
+  const prefVal = cfg.taskPrefixDoc || '';
+  let prefFound = false;
+  for (const opt of prefSel.options) {
+    if (opt.value === prefVal) { opt.selected = true; prefFound = true; break; }
+  }
+  if (!prefFound && prefVal) {
+    const opt = document.createElement('option');
+    opt.value = prefVal;
+    opt.textContent = prefVal.replace(/\.md$/, '');
+    prefSel.appendChild(opt);
+    prefSel.value = prefVal;
+  }
+  // 应用其它配置选项
+  document.getElementById('agentSaveAs').value = cfg.saveAs || '';
+  document.getElementById('agentMaxCont').value = cfg.maxContinues != null ? cfg.maxContinues : 10;
+  document.getElementById('agentUseHistory').checked = cfg.useHistory !== false;
+  document.getElementById('agentHideTrace').checked = !!cfg.hideTrace;
 
   // 重置 UI
   agentMdBuffer = ''; agentMdBlock = null;
@@ -2008,18 +2210,47 @@ async function loadSessionHistoryDoc(historyDoc, sessionId) {
 
   // 连接该会话的 SSE 流（只监听实时新事件，不 replay）
   connectAgentStream(sessionId, /* noReplay= */ true);
+
+  // noReplay=true 时不会收到历史事件，需要主动查询后端状态来同步 UI
+  try {
+    const stRes = await fetch('/agent/status?sessionId=' + encodeURIComponent(sessionId));
+    const stData = await stRes.json();
+    if (stData.success) {
+      const s = stData.status;
+      if (s === 'running') {
+        agentRunning = true;
+        document.getElementById('agentStartBtn').disabled = true;
+        document.getElementById('agentStopBtn').disabled = false;
+        setAgentStatus('running', '运行中');
+        startElapsedTimer();
+      } else if (s === 'waiting') {
+        // 进程已结束，等待用户确认
+        agentRunning = false;
+        document.getElementById('agentStartBtn').disabled = false;
+        document.getElementById('agentStopBtn').disabled = true;
+        setAgentStatus('done', `等待确认`);
+        showAgentConfirmBar();
+      }
+      // idle / done / error → 保持已重置的空闲状态
+    }
+  } catch (_) {}
 }
 
 async function saveCurrentDialogue(id) {
   if (!id) return;
   const model = document.getElementById('agentModel').value || '';
   const historyDoc = document.getElementById('agentHistoryDoc').value || '';
+  const taskPrefixDoc = document.getElementById('agentTaskPrefix').value || '';
   const systemDocs = selectedSystemDocs.slice();
+  const saveAs = document.getElementById('agentSaveAs').value.trim() || '';
+  const maxContinues = parseInt(document.getElementById('agentMaxCont').value) || 10;
+  const useHistory = document.getElementById('agentUseHistory').checked;
+  const hideTrace = document.getElementById('agentHideTrace').checked;
   const existing = dialogueSessions.find(s => s.id === id) || {};
   await fetch(`/api/dialogue/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...existing, model, historyDoc, systemDocs }),
+    body: JSON.stringify({ ...existing, model, historyDoc, taskPrefixDoc, systemDocs, saveAs, maxContinues, useHistory, hideTrace }),
   });
   await loadDialogues();
 }
@@ -2029,11 +2260,16 @@ async function createDialogue() {
   if (!name || !name.trim()) return;
   const model = document.getElementById('agentModel').value || 'claude-sonnet-4.6';
   const historyDoc = document.getElementById('agentHistoryDoc').value || '';
+  const taskPrefixDoc = document.getElementById('agentTaskPrefix').value || '';
   const systemDocs = selectedSystemDocs.slice();
+  const saveAs = document.getElementById('agentSaveAs').value.trim() || '';
+  const maxContinues = parseInt(document.getElementById('agentMaxCont').value) || 10;
+  const useHistory = document.getElementById('agentUseHistory').checked;
+  const hideTrace = document.getElementById('agentHideTrace').checked;
   const res = await fetch('/api/dialogue', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: name.trim(), model, historyDoc, systemDocs }),
+    body: JSON.stringify({ name: name.trim(), model, historyDoc, taskPrefixDoc, systemDocs, saveAs, maxContinues, useHistory, hideTrace }),
   });
   const data = await res.json();
   if (data.success) {
@@ -2053,4 +2289,185 @@ async function deleteDialogue(id) {
   } catch (e) {
     showToast('删除失败', 'error');
   }
+}
+
+/* ===== API DEBUG CONSOLE ===== */
+let consoleHistory = JSON.parse(localStorage.getItem('apiConsoleHistory') || '[]');
+let consoleOpen = false;
+let consoleActiveTab = 'req';
+
+function toggleApiConsole() {
+  const panel = document.getElementById('apiConsole');
+  consoleOpen = !consoleOpen;
+  panel.classList.toggle('open', consoleOpen);
+  const btn = document.getElementById('consoleToggleBtn');
+  if (btn) btn.classList.toggle('active', consoleOpen);
+  if (consoleOpen) document.getElementById('consoleUrl').focus();
+}
+
+function switchConsoleTab(tab) {
+  consoleActiveTab = tab;
+  document.getElementById('consoleBodyReq').style.display = tab === 'req' ? 'flex' : 'none';
+  document.getElementById('consoleBodyHist').style.display = tab === 'hist' ? 'flex' : 'none';
+  document.getElementById('consoleTabReq').classList.toggle('active', tab === 'req');
+  document.getElementById('consoleTabHist').classList.toggle('active', tab === 'hist');
+  if (tab === 'hist') renderConsoleHistory();
+}
+
+function applyConsolePreset(val) {
+  if (!val) return;
+  const parts = val.split('|');
+  document.getElementById('consoleMethod').value = parts[0] || 'GET';
+  document.getElementById('consoleUrl').value = parts[1] || '';
+  if (parts[2]) {
+    document.getElementById('consoleBodyInput').value = parts[2].replace(/&quot;/g, '"');
+    document.getElementById('consoleBodyEditorWrap').style.display = '';
+  }
+  document.getElementById('consolePreset').value = '';
+  updateConsoleBodyVisibility();
+}
+
+function updateConsoleBodyVisibility() {
+  const method = document.getElementById('consoleMethod').value;
+  const wrap = document.getElementById('consoleBodyEditorWrap');
+  wrap.style.display = ['GET','DELETE'].includes(method) ? 'none' : '';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const methodSel = document.getElementById('consoleMethod');
+  if (methodSel) methodSel.addEventListener('change', updateConsoleBodyVisibility);
+  updateConsoleBodyVisibility();
+
+  // Resize handle
+  const resizeEl = document.getElementById('apiConsoleResize');
+  const consoleEl = document.getElementById('apiConsole');
+  if (resizeEl && consoleEl) {
+    let startY, startH;
+    resizeEl.addEventListener('mousedown', e => {
+      startY = e.clientY;
+      startH = consoleEl.offsetHeight;
+      document.addEventListener('mousemove', onConsoleResize);
+      document.addEventListener('mouseup', () => document.removeEventListener('mousemove', onConsoleResize), { once: true });
+    });
+    function onConsoleResize(e) {
+      const delta = startY - e.clientY;
+      const newH = Math.min(Math.max(startH + delta, 160), window.innerHeight * 0.8);
+      consoleEl.style.height = newH + 'px';
+    }
+  }
+});
+
+function formatJsonResponse(text) {
+  try {
+    const obj = JSON.parse(text);
+    return syntaxHighlightJson(JSON.stringify(obj, null, 2));
+  } catch {
+    return escapeHtml(text);
+  }
+}
+
+function syntaxHighlightJson(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
+      let cls = 'json-num';
+      if (/^"/.test(match)) cls = /:$/.test(match) ? 'json-key' : 'json-str';
+      else if (/true|false/.test(match)) cls = 'json-bool';
+      else if (/null/.test(match)) cls = 'json-null';
+      return '<span class="' + cls + '">' + match + '</span>';
+    });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function formatBytes(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n/1024).toFixed(1) + ' KB';
+  return (n/1048576).toFixed(1) + ' MB';
+}
+
+async function sendApiRequest() {
+  const method = document.getElementById('consoleMethod').value;
+  const url = document.getElementById('consoleUrl').value.trim();
+  const bodyText = document.getElementById('consoleBodyInput').value.trim();
+  const respEl = document.getElementById('consoleResponse');
+  const sendBtn = document.getElementById('consoleSendBtn');
+
+  if (!url) { document.getElementById('consoleUrl').focus(); return; }
+
+  respEl.innerHTML = '<div class="api-console-resp-empty" style="margin-top:8px">⏳ 请求中...</div>';
+  sendBtn.disabled = true;
+
+  const t0 = Date.now();
+  let status = 0, resText = '', ok = false;
+
+  try {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (!['GET','DELETE'].includes(method) && bodyText) {
+      opts.body = bodyText;
+    }
+    const res = await fetch(url, opts);
+    status = res.status;
+    ok = res.ok;
+    resText = await res.text();
+  } catch (err) {
+    resText = err.message;
+    status = 0;
+    ok = false;
+  }
+
+  const elapsed = Date.now() - t0;
+  const sizeStr = formatBytes(new TextEncoder().encode(resText).length);
+
+  const statusCls = ok ? 'ok' : 'err';
+  const statusLabel = status ? status + ' ' + (ok ? 'OK' : 'Error') : 'Network Error';
+
+  respEl.innerHTML =
+    '<div class="api-console-resp-meta">' +
+      '<span class="api-console-status ' + statusCls + '">' + escapeHtml(statusLabel) + '</span>' +
+      '<span class="api-console-resp-time">' + elapsed + ' ms</span>' +
+      '<span class="api-console-resp-size">' + sizeStr + '</span>' +
+    '</div>' +
+    '<div class="api-console-resp-body">' + formatJsonResponse(resText) + '</div>';
+
+  sendBtn.disabled = false;
+
+  // Save to history
+  consoleHistory.unshift({ method, url, body: bodyText, status, ok, elapsed, time: new Date().toLocaleTimeString() });
+  if (consoleHistory.length > 50) consoleHistory = consoleHistory.slice(0, 50);
+  localStorage.setItem('apiConsoleHistory', JSON.stringify(consoleHistory));
+}
+
+function renderConsoleHistory() {
+  const list = document.getElementById('consoleHistList');
+  if (!consoleHistory.length) {
+    list.innerHTML = '<div class="api-console-resp-empty">暂无历史记录</div>';
+    return;
+  }
+  list.innerHTML = consoleHistory.map((h, i) =>
+    '<div class="api-console-hist-item" onclick="loadConsoleHistItem(' + i + ')">' +
+      '<span class="api-console-hist-method">' + escapeHtml(h.method) + '</span>' +
+      '<span class="api-console-hist-url" title="' + escapeHtml(h.url) + '">' + escapeHtml(h.url) + '</span>' +
+      '<span class="api-console-hist-status ' + (h.ok ? 'ok' : 'err') + '">' + (h.status || '×') + '</span>' +
+      '<span class="api-console-hist-time">' + h.elapsed + 'ms</span>' +
+      '<span class="api-console-hist-time">' + escapeHtml(h.time) + '</span>' +
+    '</div>'
+  ).join('');
+}
+
+function loadConsoleHistItem(i) {
+  const h = consoleHistory[i];
+  if (!h) return;
+  document.getElementById('consoleMethod').value = h.method;
+  document.getElementById('consoleUrl').value = h.url;
+  document.getElementById('consoleBodyInput').value = h.body || '';
+  updateConsoleBodyVisibility();
+  switchConsoleTab('req');
+}
+
+function clearConsoleHistory() {
+  consoleHistory = [];
+  localStorage.removeItem('apiConsoleHistory');
+  renderConsoleHistory();
 }
