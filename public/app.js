@@ -1444,19 +1444,35 @@ function toggleAgentPanel() {
 
 function connectAgentStream(sessionId, noReplay) {
   const sid = sessionId || getActiveSessionId();
-  // 关闭所有现有连接（切换会话时只保留当前会话的流）；同时重置压缩状态
-  sessionSources.forEach(es => es.close());
-  sessionSources.clear();
-  agentEventSource = null;
-  _contextPressure = false;
-  _contextCompressing = false;
+  // 只关闭同一 sessionId 的旧连接（重连），保留其他会话的 SSE 连接
+  // 这样后台会话能持续接收事件（静默处理），不会因切换会话导致"同时结束"的假象
+  if (sessionSources.has(sid)) {
+    sessionSources.get(sid).close();
+    sessionSources.delete(sid);
+  }
+  if (sid === getActiveSessionId()) {
+    agentEventSource = null;
+    _contextPressure = false;
+    _contextCompressing = false;
+  }
 
   const url = '/agent/stream?sessionId=' + encodeURIComponent(sid) + (noReplay ? '&noReplay=1' : '');
   const es = new EventSource(url);
   sessionSources.set(sid, es);
-  agentEventSource = es; // 居用全局引用，供其它需要的地方
+  if (sid === getActiveSessionId()) agentEventSource = es;
 
-  agentEventSource.addEventListener('start', (e) => {
+  // 判断此 SSE 的事件是否对应当前活跃会话（事件触发时动态判断）
+  const isActive = () => sid === getActiveSessionId();
+
+  // 后台会话的 waiting-confirm：静默自动确认，不更新 UI
+  const bgConfirm = () => fetch('/agent/confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'done', sessionId: sid }),
+  }).catch(() => {});
+
+  es.addEventListener('start', (e) => {
+    if (!isActive()) return;
     const { task, tokenEst, maxTokens } = JSON.parse(e.data);
     agentRunning = true;
     agentStartTime = Date.now();
@@ -1474,7 +1490,8 @@ function connectAgentStream(sessionId, noReplay) {
     updateTokenCounter(tokenEst || 0);
   });
 
-  agentEventSource.addEventListener('output', (e) => {
+  es.addEventListener('output', (e) => {
+    if (!isActive()) return;
     const { text, stream, tokenEst, maxTokens } = JSON.parse(e.data);
     if (maxTokens) agentMaxTokens = maxTokens;
     if (tokenEst !== undefined) updateTokenCounter(tokenEst);
@@ -1504,22 +1521,29 @@ function connectAgentStream(sessionId, noReplay) {
     scheduleMdRender();
   });
 
-  agentEventSource.addEventListener('heartbeat', (e) => {
+  es.addEventListener('heartbeat', (e) => {
+    if (!isActive()) return;
     const { elapsedSec, tokenEst, maxTokens } = JSON.parse(e.data);
     document.getElementById('agentElapsed').textContent = `已运行 ${elapsedSec}s`;
     if (maxTokens) agentMaxTokens = maxTokens;
     if (tokenEst !== undefined) updateTokenCounter(tokenEst);
   });
 
-  agentEventSource.addEventListener('token-update', (e) => {
+  es.addEventListener('token-update', (e) => {
+    if (!isActive()) return;
     const { tokenEst, maxTokens } = JSON.parse(e.data);
     if (maxTokens) agentMaxTokens = maxTokens;
     if (tokenEst !== undefined) updateTokenCounter(tokenEst);
   });
 
-  agentEventSource.addEventListener('waiting-confirm', (e) => {
+  es.addEventListener('waiting-confirm', (e) => {
     const { code, elapsed } = JSON.parse(e.data);
     const ok = code === 0;
+    if (!isActive()) {
+      // 后台会话：静默自动确认，不影响当前 UI
+      bgConfirm();
+      return;
+    }
     setAgentStatus(ok ? 'done' : 'error', ok ? `完成 (${elapsed}s)` : `错误 (code ${code})`);
     updateAgentActionBar('idle', '');
     if (ok && _contextPressure && !_contextCompressing) {
@@ -1530,18 +1554,21 @@ function connectAgentStream(sessionId, noReplay) {
     }
   });
 
-  agentEventSource.addEventListener('continue-queued', (e) => {
+  es.addEventListener('continue-queued', (e) => {
+    if (!isActive()) return;
     const { task } = JSON.parse(e.data);
     document.getElementById('agentTask').value = task;
     startAgent();
   });
 
-  agentEventSource.addEventListener('request-input', (e) => {
+  es.addEventListener('request-input', (e) => {
+    if (!isActive()) return;
     const { prompt = '', placeholder = '' } = JSON.parse(e.data);
     openUserInputBar(prompt, placeholder);
   });
 
-  agentEventSource.addEventListener('done', (e) => {
+  es.addEventListener('done', (e) => {
+    if (!isActive()) return;
     const { code, elapsed, task } = JSON.parse(e.data);
     agentRunning = false;
     _permLocked = false;   // ensure perm bar is not stuck after task ends
@@ -1565,7 +1592,8 @@ function connectAgentStream(sessionId, noReplay) {
     }
   });
 
-  agentEventSource.addEventListener('stopped', () => {
+  es.addEventListener('stopped', () => {
+    if (!isActive()) return;
     agentRunning = false;
     _permLocked = false;   // ensure perm bar is not stuck
     _contextPressure = false;
@@ -1580,24 +1608,28 @@ function connectAgentStream(sessionId, noReplay) {
     startHistoryPolling();  // 停止后开始轮询历史文件
   });
 
-  agentEventSource.addEventListener('agent-action', (e) => {
+  es.addEventListener('agent-action', (e) => {
+    if (!isActive()) return;
     const { type, label } = JSON.parse(e.data);
     updateAgentActionBar(type, label);
   });
 
-  agentEventSource.addEventListener('history-saved', (e) => {
+  es.addEventListener('history-saved', (e) => {
+    if (!isActive()) return;
     const { path: p } = JSON.parse(e.data);
     appendAgentLine(`📜 已记录到历史文档: ${p}`, 'system');
     loadFileTree();
   });
 
-  agentEventSource.addEventListener('saved', (e) => {
+  es.addEventListener('saved', (e) => {
+    if (!isActive()) return;
     const { path } = JSON.parse(e.data);
     appendAgentLine(`💾 已保存为文档: ${path}`, 'system');
     loadFileTree(); // 刷新文件树
   });
 
-  agentEventSource.addEventListener('error', (e) => {
+  es.addEventListener('error', (e) => {
+    if (!isActive()) return;
     try {
       const d = JSON.parse(e.data);
       appendAgentLine(`[错误] ${d.message}`, 'error');
@@ -1611,8 +1643,9 @@ function connectAgentStream(sessionId, noReplay) {
     document.getElementById('agentStopBtn').disabled = true;
   });
 
-  // ── GitHub 认证事件 ────────────────────────────────────
-  agentEventSource.addEventListener('auth-start', () => {
+  // ── GitHub 认证事件（全局广播，只有活跃会话处理 UI）──────
+  es.addEventListener('auth-start', () => {
+    if (!isActive()) return;
     document.getElementById('agentOutput').innerHTML = '';
     agentMdBuffer = ''; agentMdBlock = null;
     appendAgentLine('🔐 GitHub 认证流程已启动...', 'system');
@@ -1621,12 +1654,14 @@ function connectAgentStream(sessionId, noReplay) {
     document.getElementById('agentAuthCancelBtn').disabled = false;
   });
 
-  agentEventSource.addEventListener('auth-output', (e) => {
+  es.addEventListener('auth-output', (e) => {
+    if (!isActive()) return;
     const { text, stream } = JSON.parse(e.data);
     appendAgentLineHTML(text, stream === 'stderr' ? 'stderr' : '');
   });
 
-  agentEventSource.addEventListener('auth-done', (e) => {
+  es.addEventListener('auth-done', (e) => {
+    if (!isActive()) return;
     const { code, cancelled } = JSON.parse(e.data);
     if (cancelled) {
       appendAgentLine('■ 认证已取消', 'system');
@@ -1638,7 +1673,8 @@ function connectAgentStream(sessionId, noReplay) {
     document.getElementById('agentAuthCancelBtn').disabled = true;
   });
 
-  agentEventSource.addEventListener('auth-error', (e) => {
+  es.addEventListener('auth-error', (e) => {
+    if (!isActive()) return;
     const { message, notInstalled } = JSON.parse(e.data);
     if (notInstalled) {
       // 多行清晰说明，直接逐行输出
