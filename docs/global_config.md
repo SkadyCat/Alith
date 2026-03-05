@@ -19,7 +19,7 @@
 
 | 字段 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `use_proxy` | boolean | `true` | 是否启用代理（Clash/ClashX）。其他设备无 Clash 时设为 `false` |
+| `use_proxy` | boolean | `true` | 是否启用代理（Clash/ClashX）。设为 `false` 时强制直连（会清除所有代理环境变量） |
 | `proxy_host` | string | `"127.0.0.1"` | 代理服务器地址 |
 | `proxy_port` | number | `7890` | 代理端口，Clash 默认 7890 |
 

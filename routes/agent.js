@@ -186,14 +186,16 @@ function buildEnv() {
   const useProxy    = cfg.use_proxy  !== false;  // 默认 true
   const proxyHost   = cfg.proxy_host || '127.0.0.1';
   const proxyPort   = cfg.proxy_port || 7890;
-  // 优先使用环境变量（CLASH_PROXY / HTTP_PROXY / HTTPS_PROXY）；其次用 global_config.md
-  if (!env.HTTPS_PROXY && !env.HTTP_PROXY) {
-    if (useProxy) {
-      const proxyUrl = process.env.CLASH_PROXY || `http://${proxyHost}:${proxyPort}`;
-      env.HTTPS_PROXY = proxyUrl;
-      env.HTTP_PROXY  = proxyUrl;
+  if (!useProxy) {
+    // 禁用代理：显式删除所有代理相关变量（含从父进程继承的）
+    for (const k of ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'CLASH_PROXY']) {
+      delete env[k];
     }
-    // useProxy=false 时不设置代理，直连
+  } else if (!env.HTTPS_PROXY && !env.HTTP_PROXY) {
+    // 启用代理：优先使用环境变量 CLASH_PROXY，其次用 global_config.md 中的设置
+    const proxyUrl = process.env.CLASH_PROXY || `http://${proxyHost}:${proxyPort}`;
+    env.HTTPS_PROXY = proxyUrl;
+    env.HTTP_PROXY  = proxyUrl;
   }
   // 本地地址绕过代理 —— 必须！否则 web_fetch 打 localhost 会走代理失败
   env.NO_PROXY = 'localhost,127.0.0.1,::1,0.0.0.0';
