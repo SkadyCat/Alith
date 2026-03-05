@@ -353,4 +353,28 @@ router.get('/magicworld/status', async (req, res) => {
   res.json({ success: true, running });
 });
 
+// ── 从 GitHub 拉取最新代码 ──────────────────────────────────────
+router.post('/update', (req, res) => {
+  const { exec } = require('child_process');
+  const cwd = path.join(__dirname, '..');
+  const env = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
+  // Step 1: git pull
+  exec('git pull origin master', { cwd, env, timeout: 60000 }, (err1, out1, err1s) => {
+    const gitOut = (out1 + '\n' + err1s).trim();
+    if (err1 && err1.code !== 0) {
+      return res.json({ success: false, stdout: gitOut, stderr: '', exitCode: err1.code });
+    }
+    // Step 2: npm install
+    exec('npm install --prefer-offline', { cwd, env, timeout: 60000 }, (err2, out2, err2s) => {
+      const npmOut = (out2 + '\n' + err2s).trim();
+      res.json({
+        success: true,
+        stdout: `[git pull]\n${gitOut}\n\n[npm install]\n${npmOut}`,
+        stderr: '',
+        exitCode: 0,
+      });
+    });
+  });
+});
+
 module.exports = router;

@@ -400,6 +400,32 @@ async function refreshMagicWorldBtn(btn) {
   btn.title = 'MagicWorld 图像工作室';
 }
 
+async function updateAlith() {
+  const btn = document.getElementById('updateBtn');
+  if (!btn) return;
+  if (!confirm('从 GitHub 拉取最新代码？\n（更新完成后建议重启服务）')) return;
+  btn.disabled = true;
+  btn.title = '更新中…';
+  const origText = btn.innerHTML;
+  btn.innerHTML = btn.innerHTML.replace('更新', '更新中…');
+  try {
+    const res = await fetch('/open/update', { method: 'POST', signal: AbortSignal.timeout(90000) });
+    const data = await res.json();
+    const output = [data.stdout, data.stderr].filter(Boolean).join('\n').trim();
+    if (data.success) {
+      alert('✅ 更新成功！\n\n' + (output || '代码已为最新') + '\n\n建议点击"重启"使新代码生效。');
+    } else {
+      alert('❌ 更新失败：\n' + output);
+    }
+  } catch (e) {
+    alert('❌ 更新请求失败：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.title = '从 GitHub 拉取最新代码';
+    btn.innerHTML = origText;
+  }
+}
+
 async function restartServer() {
   const btn = document.getElementById('restartBtn');
   if (!btn) return;
