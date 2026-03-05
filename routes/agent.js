@@ -51,17 +51,19 @@ const sessions = new Map();
 
 function createSessionState() {
   return {
-    agentProcess:   null,
-    agentStatus:    'idle',  // idle | running | waiting | done | error
-    pendingDone:    null,    // { code, elapsed, task }
-    agentClients:   new Set(),
-    agentBuffer:    [],      // SSE replay buffer
-    agentHistory:   [],      // 内存任务历史（最近 30 条）
-    currentTask:    null,
-    startTime:      null,
-    heartbeatTimer: null,
-    outputAccum:    '',
-    hideTrace:      false,   // 是否过滤 CLI 工具日志行
+    agentProcess:      null,
+    agentStatus:       'idle',  // idle | running | waiting | done | error
+    pendingDone:       null,    // { code, elapsed, task }
+    agentClients:      new Set(),
+    agentBuffer:       [],      // SSE replay buffer
+    agentHistory:      [],      // 内存任务历史（最近 30 条）
+    currentTask:       null,
+    startTime:         null,
+    heartbeatTimer:    null,
+    outputAccum:       '',
+    hideTrace:         false,   // 是否过滤 CLI 工具日志行
+    historyDocAbsPath: null,    // 当前运行任务的历史文档路径（用于写入用户留言）
+    historyDocRel:     null,
   };
 }
 
@@ -429,6 +431,8 @@ router.post('/start', async (req, res) => {
     if (absHist.startsWith(HISTORY_DIR) && fs.existsSync(absHist)) {
       historyDocAbsPath = absHist;
       historyDocRel = historyDoc;
+      sess.historyDocAbsPath = absHist;
+      sess.historyDocRel = historyDoc;
       const histContent = fs.readFileSync(absHist, 'utf-8');
       histFileSize = histContent.length;
 
@@ -502,6 +506,15 @@ router.post('/start', async (req, res) => {
       fullPrompt = currentTask.slice(0, MAX_CMD_CHARS);
     }
   }
+
+  // ── 会话隔离：非 default 会话使用独立的 user_input 文件 ─
+  if (sessionId !== 'default') {
+    const sessionInputFile = `user_input_${sessionId}`;
+    fullPrompt = fullPrompt
+      .replace(/runtime\\user_input\b/g, `runtime\\${sessionInputFile}`)
+      .replace(/runtime\/user_input\b/g,  `runtime/${sessionInputFile}`);
+  }
+
   const { cmd, args: baseArgs, shell } = detectCopilotCmd();
   const agentArgs = [
     ...baseArgs,
@@ -771,10 +784,10 @@ router.post('/confirm', (req, res) => {
 router.post('/input', (req, res) => {
   const sessionId = String(req.body.sessionId || 'default');
   const sess = getSession(sessionId);
-  const { text = '', saveTo } = req.body;
+  const { text = '', saveTo, historyDoc: reqHistoryDoc } = req.body;
 
-  // 始终将输入内容保存到文件（默认 runtime/user_input）
-  const relPath = saveTo || 'user_input';
+  // 始终将输入内容保存到会话专属文件（default 会话用 user_input，其他用 user_input_{sessionId}）
+  const relPath = saveTo || (sessionId === 'default' ? 'user_input' : `user_input_${sessionId}`);
   const savePath = path.join(RUNTIME_DIR, relPath);
   try {
     fs.mkdirSync(path.dirname(savePath), { recursive: true });
@@ -786,8 +799,26 @@ router.post('/input', (req, res) => {
     try { sess.agentProcess.stdin.write(text + '\n', 'utf8'); } catch (_) {}
   }
 
-  const preview = text.replace(/\n/g, '↵').slice(0, 80) + (text.length > 80 ? '…' : '');
-  broadcast(sessionId, 'output', { text: `> 已发送输入: ${preview}`, stream: 'stdin' });
+  // 将用户消息追加到历史文档（优先用 session 中已配置的路径，其次用请求中传来的 historyDoc 名）
+  let histAbsPath = sess.historyDocAbsPath;
+  let histRel = sess.historyDocRel;
+  if (!histAbsPath && reqHistoryDoc) {
+    const candidate = path.join(HISTORY_DIR, reqHistoryDoc);
+    if (candidate.startsWith(HISTORY_DIR) && fs.existsSync(candidate)) {
+      histAbsPath = candidate;
+      histRel = reqHistoryDoc;
+    }
+  }
+  if (histAbsPath) {
+    try {
+      const ts = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const userMsgMd = `\n> 💬 **[用户留言 ${ts}]**\n>\n> ${text.replace(/\n/g, '\n> ')}\n`;
+      fs.appendFileSync(histAbsPath, userMsgMd, 'utf-8');
+      broadcast(sessionId, 'history-saved', { path: `history/${histRel}` });
+    } catch (_) {}
+  }
+
+  broadcast(sessionId, 'output', { text: `💬 ${text}`, stream: 'user-msg' });
   res.json({ success: true, savedTo: path.relative(path.join(__dirname, '..'), savePath) });
 });
 
@@ -810,6 +841,18 @@ router.post('/request-input', (req, res) => {
     broadcast(String(rawId), 'request-input', { prompt, placeholder });
   }
   res.json({ success: true, message: '已发送打开输入框请求' });
+});
+
+/* ─────────────────────────────────────────────────────────
+   POST /agent/set-status  —— 外部设置 Agent 状态标签（供 POLL 期间调用）
+   Body: { sessionId, label, type }
+   type: 'poll' | 'running' | 'idle'
+──────────────────────────────────────────────────────── */
+router.post('/set-status', (req, res) => {
+  const sessionId = String(req.body.sessionId || 'default');
+  const { label = '', type = 'poll' } = req.body;
+  broadcast(sessionId, 'agent-action', { type, label });
+  res.json({ success: true });
 });
 
 /* ─────────────────────────────────────────────────────────

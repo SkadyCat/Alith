@@ -351,20 +351,53 @@ function insertDocIntoTask(docPath) {
 }
 
 // ===== MAGICWORLD BUTTON =====
-// 启动时从 MagicWorld 服务读取公网 URL，若配置了则更新顶部菜单按钮链接
+// 点击时动态从本地配置读取公网 URL，并确保 MagicWorld 服务正在运行
 async function initMagicWorldBtn() {
   const btn = document.getElementById('magicWorldBtn');
   if (!btn) return;
+  await refreshMagicWorldBtn(btn);
+  btn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    await refreshMagicWorldBtn(btn);
+    // 检查并确保 MagicWorld 服务运行
+    try {
+      const r = await fetch('/open/magicworld/ensure', { method: 'POST', signal: AbortSignal.timeout(5000) });
+      const data = await r.json();
+      if (data.starting) {
+        // 服务正在启动，轮询等待
+        const originalTitle = btn.title;
+        btn.title = '🚀 MagicWorld 正在启动，请稍候...';
+        btn.style.opacity = '0.6';
+        let ready = false;
+        for (let i = 0; i < 20; i++) {
+          await new Promise(res => setTimeout(res, 2000));
+          const s = await fetch('/open/magicworld/status').then(r => r.json()).catch(() => ({}));
+          if (s.running) { ready = true; break; }
+        }
+        btn.style.opacity = '';
+        btn.title = originalTitle;
+        if (!ready) { alert('MagicWorld 启动超时，请手动启动后再试'); return; }
+      }
+    } catch (_) { /* 检测失败时直接跳转 */ }
+    window.open(btn.href, '_blank');
+  });
+}
+async function refreshMagicWorldBtn(btn) {
   try {
-    const res = await fetch('http://localhost:8033/api/config', { signal: AbortSignal.timeout(3000) });
+    const res = await fetch('/open/app-config/magicworld', { signal: AbortSignal.timeout(3000) });
     if (res.ok) {
       const data = await res.json();
-      if (data.publicUrl) {
-        btn.href = data.publicUrl;
-        btn.title = `MagicWorld 图像工作室（公网：${data.publicUrl}）`;
+      const publicIp = data.publicIp || data.publicUrl;
+      if (publicIp) {
+        const url = publicIp.startsWith('http') ? publicIp : `http://${publicIp}`;
+        btn.href = url;
+        btn.title = `MagicWorld 图像工作室（公网：${publicIp}）`;
+        return;
       }
     }
-  } catch (_) { /* MagicWorld 未启动或无公网配置，使用默认 localhost:8033 */ }
+  } catch (_) { /* ignore */ }
+  btn.href = 'http://localhost:8033';
+  btn.title = 'MagicWorld 图像工作室';
 }
 
 async function restartServer() {
@@ -1201,6 +1234,42 @@ async function createHistoryDoc() {
   }
 }
 
+// ── 历史文件实时轮询（1秒）─────────────────────────────────────
+let _historyPoller = null;
+let _historyLastContent = '';
+
+function startHistoryPolling() {
+  if (_historyPoller) return;
+  _historyPoller = setInterval(async () => {
+    const docName = document.getElementById('agentHistoryDoc')?.value;
+    if (!docName) return;
+    try {
+      const res = await fetch('/api/file?path=' + encodeURIComponent('history/' + docName));
+      const data = await res.json();
+      if (!data.success) return;
+      if (data.content === _historyLastContent) return;
+      _historyLastContent = data.content;
+      // 渲染到会话区域
+      const output = document.getElementById('agentOutput');
+      const div = document.createElement('div');
+      div.className = 'agent-md-block agent-history-view';
+      div.innerHTML = data.html || marked.parse(data.content || '');
+      div.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+      output.innerHTML = '';
+      output.appendChild(div);
+      output.scrollTop = output.scrollHeight;
+      // 同步内部状态
+      agentMdBuffer = '';
+      agentMdBlock = null;
+    } catch (_) {}
+  }, 1000);
+}
+
+function stopHistoryPolling() {
+  if (_historyPoller) { clearInterval(_historyPoller); _historyPoller = null; }
+  _historyLastContent = '';
+}
+
 async function loadAgentModels() {
   try {
     const res = await fetch('/agent/models');
@@ -1280,6 +1349,7 @@ function connectAgentStream(sessionId, noReplay) {
     agentMdBuffer = '';
     agentMdBlock = null;
     _contextPressure = false;   // 每次任务重置压力标志（压缩任务期间保持 _contextCompressing）
+    stopHistoryPolling();       // 运行期间停止历史文件轮询，改用实时 SSE 输出
     setAgentStatus('running', `运行中`);
     updateAgentActionBar('idle', '');  // 清空上次状态
     appendAgentLine(`▶ 任务已启动: ${task}`, 'system');
@@ -1296,6 +1366,17 @@ function connectAgentStream(sessionId, noReplay) {
     if (tokenEst !== undefined) updateTokenCounter(tokenEst);
     if (stream === 'stderr') {
       if (text) appendAgentLine(text, 'stderr');
+      return;
+    }
+    if (stream === 'user-msg') {
+      // 用户留言：先强制渲染已积累的 markdown，避免重放时内容丢失
+      if (agentMdBuffer && agentMdBlock) {
+        agentMdBlock.innerHTML = marked.parse(agentMdBuffer);
+        agentMdBlock.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+      }
+      agentMdBuffer = '';
+      agentMdBlock = null;
+      if (text) appendAgentLine(text, 'user-msg');
       return;
     }
     // stdout — 累计 Markdown 内容，实时渲染
@@ -1358,6 +1439,7 @@ function connectAgentStream(sessionId, noReplay) {
     hideAgentConfirmBar();
     document.getElementById('agentStartBtn').disabled = false;
     document.getElementById('agentStopBtn').disabled = true;
+    startHistoryPolling();  // 任务结束后开始轮询历史文件
     if (pendingContinueTask) {
       const followUp = pendingContinueTask;
       pendingContinueTask = null;
@@ -1381,6 +1463,7 @@ function connectAgentStream(sessionId, noReplay) {
     appendAgentLine('■ Agent 已手动停止', 'system');
     document.getElementById('agentStartBtn').disabled = false;
     document.getElementById('agentStopBtn').disabled = true;
+    startHistoryPolling();  // 停止后开始轮询历史文件
   });
 
   agentEventSource.addEventListener('agent-action', (e) => {
@@ -1555,6 +1638,29 @@ function openUserInputBar(prompt = '', placeholder = '') {
 function closeUserInputBar() {
   const bar = document.getElementById('agentUserInputBar');
   if (bar) bar.style.display = 'none';
+}
+
+async function sendTaskInput() {
+  const textarea = document.getElementById('agentTask');
+  const text = textarea.value;
+  if (!text.trim()) return;
+  const historyDoc = document.getElementById('agentHistoryDoc')?.value || '';
+  try {
+    const res = await fetch('/agent/input', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, sessionId: getActiveSessionId(), historyDoc }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      textarea.value = '';
+      showToast('已发送给 Agent', 'success');
+    } else {
+      showToast('发送失败: ' + data.error, 'error');
+    }
+  } catch (e) {
+    showToast('发送失败: ' + e.message, 'error');
+  }
 }
 
 async function sendUserInput() {
@@ -2157,6 +2263,7 @@ function applyDialogue(cfg) {
   document.getElementById('agentHideTrace').checked = !!cfg.hideTrace;
 
   // 重置 UI
+  stopHistoryPolling();  // 切换会话时停止旧会话的轮询
   agentMdBuffer = ''; agentMdBlock = null;
   agentRunning = false; _permLocked = false;
   pendingContinueTask = null;
@@ -2232,6 +2339,9 @@ async function loadSessionHistoryDoc(historyDoc, sessionId) {
         showAgentConfirmBar();
       }
       // idle / done / error → 保持已重置的空闲状态
+      if (s === 'idle' || s === 'done' || s === 'error') {
+        startHistoryPolling();  // 空闲时启动历史文件轮询
+      }
     }
   } catch (_) {}
 }

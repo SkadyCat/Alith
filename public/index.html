@@ -306,8 +306,20 @@
 
     <div class="agent-input-section">
       <textarea class="agent-task-input" id="agentTask"
-        placeholder="输入任务描述...&#10;例如：分析 docs 目录结构，生成一份摘要报告"
-        rows="3"></textarea>
+        placeholder="输入任务描述...&#10;例如：分析 docs 目录结构，生成一份摘要报告&#10;（运行中时，Ctrl+Enter 发送留言给 Agent）"
+        rows="3"
+        onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){sendTaskInput();event.preventDefault();}"></textarea>
+
+      <div class="agent-userinput-bar" id="agentUserInputBar" style="display:none">
+        <div id="agentUserInputPrompt" class="agent-userinput-prompt" style="display:none"></div>
+        <textarea id="agentUserInputText" class="agent-userinput-textarea" placeholder="向 Agent 发送输入（多行，Ctrl+Enter 发送）…" rows="3" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){sendUserInput();event.preventDefault();}"></textarea>
+        <div class="agent-userinput-actions">
+          <span class="agent-userinput-hint">Ctrl+Enter 发送</span>
+          <button class="agent-btn" onclick="closeUserInputBar()">关闭</button>
+          <button class="agent-btn primary" onclick="sendUserInput()">发送</button>
+        </div>
+      </div>
+
       <div class="agent-setting-row">
         <label class="agent-setting-label">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -386,7 +398,6 @@
         </button>
         <button class="agent-btn" onclick="clearAgentOutput()">清空</button>
         <button class="agent-btn" onclick="checkAgentEnv()" title="检测 Copilot CLI 是否可用">检测环境</button>
-        <button class="agent-btn" id="agentUserInputToggle" onclick="toggleUserInputBar()" title="向运行中的 Agent 发送多行输入">📥 注入输入</button>
       </div>
       <div class="agent-auth-row">
         <span class="agent-auth-label">GitHub 认证</span>
@@ -410,16 +421,6 @@
       <input type="text" id="agentConfirmInput" class="agent-confirm-input" placeholder="或者输入追加需求…" onkeydown="if(event.key==='Enter')continueAgentTask()" />
       <button class="agent-btn primary" onclick="continueAgentTask()">继续</button>
       <button class="agent-btn" onclick="triggerContextCompression()" title="精炼当前会话记忆并重置上下文" style="opacity:0.8">⚡ 压缩</button>
-    </div>
-
-    <div class="agent-userinput-bar" id="agentUserInputBar" style="display:none">
-      <div id="agentUserInputPrompt" class="agent-userinput-prompt" style="display:none"></div>
-      <textarea id="agentUserInputText" class="agent-userinput-textarea" placeholder="向 Agent 发送输入（多行，Ctrl+Enter 发送）…" rows="3" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){sendUserInput();event.preventDefault();}"></textarea>
-      <div class="agent-userinput-actions">
-        <span class="agent-userinput-hint">Ctrl+Enter 发送</span>
-        <button class="agent-btn" onclick="closeUserInputBar()">关闭</button>
-        <button class="agent-btn primary" onclick="sendUserInput()">发送</button>
-      </div>
     </div>
 
     <div class="agent-output-area" id="agentOutput"></div>

@@ -284,4 +284,73 @@ router.get('/tree', (req, res) => {
   }
 });
 
+// ── MagicWorld 应用配置 (application_doc/magicworld/config.json) ──────────────
+const MAGICWORLD_CONFIG_PATH = path.join(DOCS_DIR, 'application_doc', 'magicworld', 'config.json');
+const MAGICWORLD_DIR = path.join(__dirname, '..', 'application', 'MagicWorld');
+const http = require('http');
+const { spawn } = require('child_process');
+
+function checkMagicWorldRunning() {
+  return new Promise((resolve) => {
+    const req = http.get('http://localhost:8033/api/config', { timeout: 2000 }, (res) => {
+      res.resume();
+      resolve(res.statusCode < 500);
+    });
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+  });
+}
+
+router.get('/app-config/magicworld', (req, res) => {
+  try {
+    const cfg = fs.existsSync(MAGICWORLD_CONFIG_PATH)
+      ? JSON.parse(fs.readFileSync(MAGICWORLD_CONFIG_PATH, 'utf8'))
+      : {};
+    res.json({ success: true, ...cfg });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+router.post('/app-config/magicworld', (req, res) => {
+  try {
+    const current = fs.existsSync(MAGICWORLD_CONFIG_PATH)
+      ? JSON.parse(fs.readFileSync(MAGICWORLD_CONFIG_PATH, 'utf8'))
+      : {};
+    const updated = { ...current, ...req.body };
+    fs.writeFileSync(MAGICWORLD_CONFIG_PATH, JSON.stringify(updated, null, 2), 'utf8');
+    res.json({ success: true, config: updated });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 检查 MagicWorld 是否运行，未运行则自动启动
+router.post('/magicworld/ensure', async (req, res) => {
+  try {
+    const running = await checkMagicWorldRunning();
+    if (running) return res.json({ success: true, running: true, starting: false });
+    // 启动 MagicWorld
+    const batPath = path.join(MAGICWORLD_DIR, 'start.bat');
+    if (!fs.existsSync(batPath)) {
+      return res.status(404).json({ success: false, error: 'start.bat 不存在' });
+    }
+    spawn('cmd.exe', ['/c', batPath], {
+      detached: true,
+      stdio: 'ignore',
+      cwd: MAGICWORLD_DIR,
+      windowsHide: true,
+    }).unref();
+    res.json({ success: true, running: false, starting: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 轮询 MagicWorld 是否已就绪
+router.get('/magicworld/status', async (req, res) => {
+  const running = await checkMagicWorldRunning();
+  res.json({ success: true, running });
+});
+
 module.exports = router;
