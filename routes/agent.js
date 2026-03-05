@@ -164,17 +164,36 @@ function broadcastGlobal(event, data) {
   }
 }
 
+// ── 读取全局配置（docs/global_config.md 中的 JSON 代码块）──
+function readGlobalConfig() {
+  try {
+    const cfgPath = path.join(DOCS_DIR, 'global_config.md');
+    const content = fs.readFileSync(cfgPath, 'utf-8');
+    const m = content.match(/```json\s*([\s\S]*?)```/);
+    if (m) return JSON.parse(m[1]);
+  } catch (_) {}
+  return {};
+}
+
 // ── 构建代理环境变量 ──────────────────────────────────────
 function buildEnv() {
   const env = { ...process.env };
   for (const k of ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']) {
     if (process.env[k]) env[k] = process.env[k];
   }
-  // 代理：优先使用已有环境变量，否则强制走 127.0.0.1:7890（Clash/ClashX 默认端口）
-  const defaultProxy = process.env.CLASH_PROXY || 'http://127.0.0.1:7890';
+  // 读取全局配置中的代理设置（每次动态读取，修改 global_config.md 立即生效）
+  const cfg = readGlobalConfig();
+  const useProxy    = cfg.use_proxy  !== false;  // 默认 true
+  const proxyHost   = cfg.proxy_host || '127.0.0.1';
+  const proxyPort   = cfg.proxy_port || 7890;
+  // 优先使用环境变量（CLASH_PROXY / HTTP_PROXY / HTTPS_PROXY）；其次用 global_config.md
   if (!env.HTTPS_PROXY && !env.HTTP_PROXY) {
-    env.HTTPS_PROXY = defaultProxy;
-    env.HTTP_PROXY  = defaultProxy;
+    if (useProxy) {
+      const proxyUrl = process.env.CLASH_PROXY || `http://${proxyHost}:${proxyPort}`;
+      env.HTTPS_PROXY = proxyUrl;
+      env.HTTP_PROXY  = proxyUrl;
+    }
+    // useProxy=false 时不设置代理，直连
   }
   // 本地地址绕过代理 —— 必须！否则 web_fetch 打 localhost 会走代理失败
   env.NO_PROXY = 'localhost,127.0.0.1,::1,0.0.0.0';
