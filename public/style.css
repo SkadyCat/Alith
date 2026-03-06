@@ -2439,14 +2439,40 @@ body.zone-highlight-mode #zoneOverlay {
 #sessionBubbles::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
 
 /* Session bubble extends alith-bubble */
+/* Context progress ring around session bubbles */
 .sess-bubble {
+  position: relative;
+  isolation: isolate;
   align-items: flex-start;
   width: 100%;
   box-sizing: border-box;
   pointer-events: all;
 }
 
-/* ===== AUDIO PLAYER ===== */
+/* Track ring (always present) */
+.sess-bubble::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: calc(var(--radius-lg) + 3px);
+  background: conic-gradient(
+    var(--ctx-ring-color, var(--success)) calc(var(--ctx-pct, 0) * 1%),
+    rgba(255,255,255,0.06) calc(var(--ctx-pct, 0) * 1%)
+  );
+  z-index: -1;
+  opacity: var(--ctx-ring-opacity, 0);
+  transition: opacity 0.4s ease, background 0.6s ease;
+}
+
+/* Fill behind bubble to prevent bleed-through */
+.sess-bubble::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: calc(var(--radius-lg) - 1px);
+  background: var(--bg-elevated);
+  z-index: -1;
+}
 .audio-player-wrap {
   display: flex;
   flex-direction: column;

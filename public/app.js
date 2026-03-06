@@ -2988,10 +2988,14 @@ function clearConsoleHistory() {
       const cachedAction = _actionCache[s.id] || s.currentAction;
       const actionLabel = cachedAction && cachedAction.type !== 'idle' ? cachedAction.label : '';
       const sidEsc = escapeHtml(s.id).replace(/'/g, "\\'");
-      return `<div class="alith-bubble sess-bubble ${colorClass}" data-sid="${escapeHtml(s.id)}" onclick="window.switchToSession('${sidEsc}')" style="cursor:pointer" title="点击切换到此会话">
+      // Context progress ring
+      const ctxPct = s.contextProgress || 0;
+      const ctxColor = ctxPct >= 80 ? 'var(--danger)' : ctxPct >= 60 ? 'var(--warning)' : 'var(--success)';
+      const ctxStyle = ctxPct > 0 ? `--ctx-pct:${ctxPct};--ctx-ring-color:${ctxColor};--ctx-ring-opacity:1;` : '';
+      return `<div class="alith-bubble sess-bubble ${colorClass}" data-sid="${escapeHtml(s.id)}" onclick="window.switchToSession('${sidEsc}')" style="cursor:pointer;${ctxStyle}" title="点击切换到此会话">
         ${iconHtml}
         <div class="alith-bubble-body">
-          <div class="alith-bubble-label">${escapeHtml(name)} · ${label}</div>
+          <div class="alith-bubble-label">${escapeHtml(name)} · ${label}${ctxPct > 0 ? ` · 📊${ctxPct}%` : ''}</div>
           <div class="alith-bubble-main">${escapeHtml(task)}</div>
           ${actionLabel ? `<div class="alith-bubble-sub bubble-action-sub">⚙️ ${escapeHtml(actionLabel)}</div>` : '<div class="alith-bubble-sub bubble-action-sub" style="display:none"></div>'}
           ${elapsed ? `<div class="alith-bubble-sub bubble-elapsed-sub">⏱ ${elapsed}</div>` : ''}
@@ -3039,7 +3043,7 @@ function clearConsoleHistory() {
               signal: AbortSignal.timeout(3000),
             });
             const d = await r.json();
-            return { ...s, name: nameMap[s.id] || s.id, elapsedSec: d.elapsedSec, currentAction: d.currentAction };
+            return { ...s, name: nameMap[s.id] || s.id, elapsedSec: d.elapsedSec, currentAction: d.currentAction, contextProgress: d.contextProgress || 0 };
           } catch (_) {
             return { ...s, name: nameMap[s.id] || s.id };
           }

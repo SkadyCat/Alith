@@ -55,6 +55,7 @@
 ```powershell
 $pollCount = 0
 $maxPoll = 100
+$ctxProgress = 0       # 在进入POLL前，将此变量设为上下文进度百分比（0-100整数）
 $statusFile = "{{RUNTIME_DIR}}\poll_status.md"
 $sessionId  = "{{SESSION_ID}}"
 $baseUrl    = "{{BASE_URL}}"
@@ -81,7 +82,7 @@ function Check-Input {
 while ($pollCount -lt $maxPoll) {
   $pollCount++
   Set-Content $statusFile "Waiting for task... ($pollCount/$maxPoll) - $(Get-Date -Format 'HH:mm:ss')"
-  $body = "{`"sessionId`":`"$sessionId`",`"status`":`"waiting`",`"task`":`"POLL 等待中 ($pollCount/$maxPoll)`"}"
+  $body = "{`"sessionId`":`"$sessionId`",`"status`":`"waiting`",`"task`":`"POLL 等待中 ($pollCount/$maxPoll)`",`"contextProgress`":$ctxProgress}"
   Invoke-RestMethod -Uri "$baseUrl/agent/set-status" -Method POST -ContentType "application/json" -Body $body -ErrorAction SilentlyContinue | Out-Null
 
   # 先立即检查一次（防止在进入等待前消息已到达）
@@ -124,6 +125,7 @@ if ($pollCount -ge $maxPoll) {
 4. **热重载**：代码修改后无需重启服务，保存即生效
 5. **【必须遵守】上下文进度报告**：每次任务执行完毕后（进入 [POLL] 前），必须输出当前上下文使用量估算，格式如下：
    > 📊 上下文进度：约 XX%（历史记录条数 / 系统设定 / 本轮对话）
+   **同时**，在开始执行 POLL 脚本之前，设置变量 `$ctxProgress = XX`（整数），POLL 脚本将自动将该值上报给服务器，显示为气泡进度环。
    不得省略此步骤。
 
 6. **【必须遵守】上下文超限自动重置规则**：当上下文进度估算达到或超过 **80%** 时，必须立即执行以下重置链路，不得跳过：

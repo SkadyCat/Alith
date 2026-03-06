@@ -1062,6 +1062,10 @@ router.post('/set-status', (req, res) => {
     }
   }
   if (body.task !== undefined) sess.currentTask = body.task;
+  if (body.contextProgress !== undefined) {
+    const p = Number(body.contextProgress);
+    if (!isNaN(p)) sess.contextProgress = Math.max(0, Math.min(100, p));
+  }
   // 同时广播标签事件（向前兼容旧用法）
   if (body.label !== undefined || body.type !== undefined) {
     broadcast(sid, 'agent-action', { type: body.type || 'poll', label: body.label || '' });
@@ -1088,6 +1092,7 @@ router.get('/sessions', (req, res) => {
       status: sess.agentStatus,
       clients: sess.agentClients.size,
       task: sess.currentTask ? sess.currentTask.slice(0, 60) : null,
+      contextProgress: sess.contextProgress || 0,
     });
   });
   toDelete.forEach(id => sessions.delete(id));
@@ -1108,6 +1113,7 @@ router.get('/status', (req, res) => {
     elapsedSec: sess.startTime ? Math.floor((Date.now() - sess.startTime) / 1000) : null,
     pid: sess.agentProcess ? sess.agentProcess.pid : null,
     historyCount: sess.agentHistory.length,
+    contextProgress: sess.contextProgress || 0,
   });
 });
 
