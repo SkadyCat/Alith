@@ -2373,16 +2373,17 @@ body.zone-highlight-mode #zoneOverlay {
   left: 24px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 10px;
-  max-width: 420px;
+  width: 420px;
+  max-width: calc(100vw - 48px);
   z-index: 10001;
   pointer-events: none;
 }
 
 #zonePickResult {
-  min-width: 320px;
-  max-width: 420px;
+  width: 100%;
+  box-sizing: border-box;
   pointer-events: all;
 }
 
@@ -2390,16 +2391,26 @@ body.zone-highlight-mode #zoneOverlay {
 #sessionBubbles {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 10px;
   width: 100%;
   pointer-events: none;
+  /* max-height & overflow-y are applied dynamically from ALITH_CONFIG.bubbleMaxHeight */
+  overflow-y: auto;
+  padding-right: 4px;
+  box-sizing: border-box;
+  scroll-behavior: smooth;
 }
+
+/* Thin scrollbar for bubble container */
+#sessionBubbles::-webkit-scrollbar { width: 4px; }
+#sessionBubbles::-webkit-scrollbar-track { background: transparent; }
+#sessionBubbles::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
 
 /* Session bubble extends alith-bubble */
 .sess-bubble {
   align-items: flex-start;
-  min-width: 260px;
-  max-width: 500px;
+  width: 100%;
+  box-sizing: border-box;
   pointer-events: all;
 }

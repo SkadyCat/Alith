@@ -2,6 +2,12 @@
    DocSpace - Application Logic
    ============================================ */
 
+// ===== GLOBAL CONFIG =====
+window.ALITH_CONFIG = {
+  // Session bubble container: max height in px before scrolling kicks in
+  bubbleMaxHeight: 420,
+};
+
 // ===== STATE =====
 const state = {
   currentFile: null,
@@ -2766,15 +2772,15 @@ function clearConsoleHistory() {
 // ===== SESSION STATUS BUBBLES =====
 (function () {
   const STATUS_LABELS = {
-    running: '运行中',
-    waiting: '等待输入',
+    running: '思考中...',
+    waiting: '等待中...',
     done:    '已完成',
     error:   '出错',
     idle:    '空闲',
   };
   const STATUS_ICONS = {
     running: null,       // spinner div
-    waiting: '⏳',
+    waiting: '💤',
     done:    '✅',
     error:   '❌',
     idle:    '💤',
@@ -2811,6 +2817,11 @@ function clearConsoleHistory() {
     const key = JSON.stringify(active);
     if (key === lastBubbleData) return;
     lastBubbleData = key;
+
+    // Apply max-height from global config
+    const maxH = (window.ALITH_CONFIG && window.ALITH_CONFIG.bubbleMaxHeight) || 420;
+    container.style.maxHeight = maxH + 'px';
+    container.style.overflowY = 'auto';
 
     if (!active.length) { container.innerHTML = ''; return; }
 
