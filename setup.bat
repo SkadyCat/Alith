@@ -8,10 +8,10 @@ echo   github.com/SkadyCat/Alith
 echo ============================================
 echo.
 
-:: --- Check Node.js ---
+:: --- Check Node.js (required) ---
 where node >nul 2>&1
 if errorlevel 1 (
-  echo [ERROR] Node.js not found. Please install from: https://nodejs.org
+  echo [ERROR] Node.js is required. Install from: https://nodejs.org
   pause & exit /b 1
 )
 for /f "tokens=*" %%v in ('node -v') do set NODE_VER=%%v
@@ -20,29 +20,33 @@ echo [OK] Node.js !NODE_VER!
 :: --- Check Git ---
 where git >nul 2>&1
 if errorlevel 1 (
-  echo [ERROR] Git not found. Please install from: https://git-scm.com
-  pause & exit /b 1
+  echo [WARN] Git not found. Install from: https://git-scm.com
+) else (
+  for /f "tokens=*" %%v in ('git --version') do echo [OK] %%v
 )
-for /f "tokens=*" %%v in ('git --version') do set GIT_VER=%%v
-echo [OK] !GIT_VER!
 echo.
 
 :: --- Deploy directory ---
 set DEPLOY_DIR=%~dp0
 if exist "%DEPLOY_DIR%server.js" (
-  echo [INFO] Already in Alice directory, skipping clone.
+  echo [INFO] Already in Alice directory.
   cd /d "%DEPLOY_DIR%"
   goto :deps
 )
 
 set TARGET_DIR=%~dp0Alith
 echo [INFO] Target directory: !TARGET_DIR!
+where git >nul 2>&1
+if errorlevel 1 (
+  echo [ERROR] Git is required to clone. Please install Git.
+  pause & exit /b 1
+)
 if exist "!TARGET_DIR!\.git" (
   echo [INFO] Repository exists, running git pull...
   cd /d "!TARGET_DIR!"
   git pull origin master
 ) else (
-  echo [INFO] Cloning repository from GitHub...
+  echo [INFO] Cloning from GitHub...
   git clone https://github.com/SkadyCat/Alith.git "!TARGET_DIR!"
   if errorlevel 1 (
     echo [ERROR] Clone failed. Check network or GitHub access.
@@ -54,152 +58,135 @@ if exist "!TARGET_DIR!\.git" (
 :deps
 echo.
 echo [INFO] Installing npm dependencies...
-npm install --no-audit
+npm install --no-audit --no-fund
 if errorlevel 1 (
-  echo [ERROR] npm install failed.
-  pause & exit /b 1
+  echo [WARN] npm install had errors, continuing anyway...
 )
-echo [OK] npm dependencies installed.
-:: --- Setup Python virtual environment in tools/venv ---
+echo [OK] npm step done.
+
+:: --- Create required directories ---
+echo.
+echo [INFO] Initializing directories...
+for %%d in (docs docs\history docs\agent data logs outputs runtime) do (
+  if not exist "%%d" mkdir "%%d"
+)
+if not exist "docs\application_doc\magicworld" mkdir "docs\application_doc\magicworld"
+if not exist "docs\application_doc\magicworld\config.json" (
+  echo {"publicIp":""} > "docs\application_doc\magicworld\config.json"
+)
+echo [OK] Directories ready.
+
+:: --- PowerShell Core 7 (required by Copilot CLI) ---
+echo.
+echo [INFO] Checking PowerShell Core 7...
+if exist "tools\pwsh7\pwsh.exe" (
+  echo [OK] PowerShell Core 7 found.
+  goto :pwsh_done
+)
+if not exist "tools" mkdir tools
+if not exist "tools\pwsh7" mkdir tools\pwsh7
+echo [INFO] Downloading PowerShell 7.5.0 portable (~100MB)...
+set PWSH_ZIP=!TEMP!\pwsh7_setup.zip
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/PowerShell/PowerShell/releases/download/v7.5.0/PowerShell-7.5.0-win-x64.zip' -OutFile '!PWSH_ZIP!' -UseBasicParsing; exit 0 } catch { Write-Host $_.Exception.Message; exit 1 }"
+if errorlevel 1 (
+  echo [WARN] Download failed. Install PowerShell Core 7 manually: https://aka.ms/powershell
+  echo        Or extract zip to tools\pwsh7\
+  goto :pwsh_done
+)
+powershell -NoProfile -Command "Expand-Archive -Path '!PWSH_ZIP!' -DestinationPath 'tools\pwsh7' -Force"
+if errorlevel 1 (
+  echo [WARN] Extraction failed. Please extract PowerShell 7 to tools\pwsh7\ manually.
+) else (
+  del /q "!PWSH_ZIP!" 2>nul
+  echo [OK] PowerShell Core 7 installed.
+)
+:pwsh_done
+
+:: --- Python virtual environment ---
 echo.
 echo [INFO] Checking Python...
 where python >nul 2>&1
 if errorlevel 1 (
-  echo [WARN] Python not found. Skipping Python venv setup.
-  echo        Install Python from https://www.python.org then run setup.bat again.
-  goto :skip_python
+  echo [WARN] Python not found. Skipping venv setup.
+  echo        Install Python from https://www.python.org and re-run setup.
+  goto :python_done
 )
-for /f "tokens=*" %%v in ('python --version 2^>^&1') do set PY_VER=%%v
-echo [OK] !PY_VER!
-
+for /f "tokens=*" %%v in ('python --version 2^>^&1') do echo [OK] %%v
 if exist "tools\venv\Scripts\python.exe" (
-  echo [OK] Python venv already exists at tools\venv\
-  goto :skip_python
+  echo [OK] Python venv already exists.
+  goto :python_done
 )
-
-echo [INFO] Creating Python virtual environment at tools\venv\...
+echo [INFO] Creating Python venv at tools\venv\...
 python -m venv tools\venv
 if errorlevel 1 (
-  echo [WARN] Failed to create venv. Skipping Python setup.
-  goto :skip_python
+  echo [WARN] venv creation failed. Skipping.
+  goto :python_done
 )
-
-echo [INFO] Installing Python dependencies from tools\requirements.txt...
+echo [INFO] Installing Python dependencies...
 tools\venv\Scripts\pip.exe install -r tools\requirements.txt -q
 if errorlevel 1 (
-  echo [WARN] pip install failed. Python tools may not work correctly.
+  echo [WARN] pip install had issues, some Python tools may not work.
 ) else (
-  echo [OK] Python dependencies installed to tools\venv\
+  echo [OK] Python venv ready at tools\venv\
 )
+:python_done
 
-:skip_python
-
-:: --- Create required directories ---
-echo.
-echo [INFO] Initializing directory structure...
-if not exist "docs"                            mkdir docs
-if not exist "docs\history"                    mkdir docs\history
-if not exist "docs\agent"                      mkdir docs\agent
-if not exist "docs\application_doc\magicworld" mkdir docs\application_doc\magicworld
-if not exist "data"    mkdir data
-if not exist "logs"    mkdir logs
-if not exist "outputs" mkdir outputs
-if not exist "runtime" mkdir runtime
-echo [OK] Directories initialized.
-
-:: --- Create MagicWorld config if not exists ---
-if not exist "docs\application_doc\magicworld\config.json" (
-  echo {"publicIp":""} > docs\application_doc\magicworld\config.json
-  echo [OK] MagicWorld config created.
-)
-
-:: --- Install PowerShell Core 7 (required by Copilot CLI) ---
-echo.
-echo [INFO] Checking PowerShell Core 7 (tools\pwsh7\pwsh.exe)...
-if exist "tools\pwsh7\pwsh.exe" (
-  echo [OK] PowerShell Core 7 already present.
-) else (
-  echo [INFO] Not found. Downloading PowerShell 7.5.0 portable (~100MB)...
-  if not exist "tools"       mkdir tools
-  if not exist "tools\pwsh7" mkdir tools\pwsh7
-  set PWSH_ZIP=!TEMP!\pwsh7_setup.zip
-  set PWSH_URL=https://github.com/PowerShell/PowerShell/releases/download/v7.5.0/PowerShell-7.5.0-win-x64.zip
-  powershell -NoProfile -Command "try { Invoke-WebRequest -Uri '!PWSH_URL!' -OutFile '!PWSH_ZIP!' -UseBasicParsing; exit 0 } catch { Write-Host $_.Exception.Message; exit 1 }"
-  if errorlevel 1 (
-    echo [WARN] Download failed. Please install PowerShell Core 7 manually:
-    echo        https://aka.ms/powershell
-    echo        Then extract the zip to: tools\pwsh7\
-  ) else (
-    powershell -NoProfile -Command "Expand-Archive -Path '!PWSH_ZIP!' -DestinationPath 'tools\pwsh7' -Force"
-    if errorlevel 1 (
-      echo [WARN] Extraction failed. Please extract manually to tools\pwsh7\
-    ) else (
-      del /q "!PWSH_ZIP!" 2>nul
-      echo [OK] PowerShell Core 7 installed to tools\pwsh7\
-    )
-  )
-)
-
-:: --- Install GitHub CLI (gh) ---
+:: --- GitHub CLI ---
 echo.
 echo [INFO] Checking GitHub CLI (gh)...
 where gh >nul 2>&1
 if errorlevel 1 (
-  echo [INFO] GitHub CLI not found. Attempting install via winget...
-  winget install --id GitHub.cli -e --silent
+  echo [INFO] GitHub CLI not found. Trying winget...
+  winget install --id GitHub.cli -e --silent >nul 2>&1
   if errorlevel 1 (
-    echo [WARN] winget install failed. Install manually: https://cli.github.com/
-  ) else (
-    echo [OK] GitHub CLI installed.
-    set "PATH=!PATH!;!LOCALAPPDATA!\Microsoft\WinGet\Packages\GitHub.cli_Microsoft.Winget.Source_8wekyb3d8bbwe\tools"
+    echo [WARN] Could not install gh. Install manually: https://cli.github.com/
+    goto :gh_done
   )
+  echo [OK] GitHub CLI installed.
+  set "PATH=!PATH!;!LOCALAPPDATA!\Microsoft\WinGet\Packages\GitHub.cli_Microsoft.Winget.Source_8wekyb3d8bbwe\tools"
 ) else (
   for /f "tokens=*" %%v in ('gh --version 2^>nul') do (
     echo [OK] %%v
-    goto :gh_ok
+    goto :gh_check_ext
   )
 )
 
-:gh_ok
-:: --- Install GitHub Copilot extension ---
-echo.
-echo [INFO] Checking GitHub Copilot extension...
+:gh_check_ext
 where gh >nul 2>&1
-if not errorlevel 1 (
-  gh extension list 2>nul | findstr /i "copilot" >nul 2>&1
+if errorlevel 1 goto :gh_done
+
+:: --- Copilot extension ---
+echo [INFO] Checking Copilot extension...
+gh extension list 2>nul | findstr /i "copilot" >nul 2>&1
+if errorlevel 1 (
+  gh extension install github/gh-copilot 2>nul
   if errorlevel 1 (
-    echo [INFO] Installing GitHub Copilot extension...
-    gh extension install github/gh-copilot 2>nul
-    if errorlevel 1 (
-      echo [WARN] Install failed. Run: gh auth login then gh extension install github/gh-copilot
-    ) else (
-      echo [OK] GitHub Copilot extension installed.
-    )
+    echo [WARN] Copilot install failed. Run: gh auth login then gh extension install github/gh-copilot
   ) else (
-    echo [OK] GitHub Copilot extension already installed.
-  )
-  gh auth status >nul 2>&1
-  if errorlevel 1 (
-    echo.
-    echo [INFO] GitHub auth required. Running: gh auth login
-    gh auth login
-  ) else (
-    echo [OK] GitHub authentication: already logged in.
+    echo [OK] Copilot extension installed.
   )
 ) else (
-  echo [WARN] gh CLI not available. Skipping Copilot extension setup.
+  echo [OK] Copilot extension present.
 )
 
-:: --- .env hint ---
+:: --- GitHub auth ---
+gh auth status >nul 2>&1
+if errorlevel 1 (
+  echo [INFO] GitHub auth needed. Running: gh auth login
+  gh auth login
+) else (
+  echo [OK] GitHub authenticated.
+)
+:gh_done
+
 echo.
 if not exist ".env" (
-  echo [INFO] To enable COS upload or API keys, create .env at: !CD!\.env
-  echo        Example: SECRET_ID=xxx  SECRET_KEY=yyy  PUBLIC_URL=http://YOUR_IP:7439
+  echo [INFO] Optional: create .env for COS/API keys at !CD!\.env
 )
 
 echo.
 echo ============================================
-echo   Setup complete! Starting Alice...
+echo   Setup complete!  Starting Alice...
 echo   URL: http://localhost:7439
 echo ============================================
 echo.
