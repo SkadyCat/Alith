@@ -7,6 +7,9 @@ application/
 # Sensitive keys / credentials
 docs/key/
 
+# Local config (use global_config_temp.json as template)
+docs/global_config.json
+
 # Application-specific docs (separate repo concern)
 docs/application_doc/
 
