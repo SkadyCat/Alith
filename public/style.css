@@ -2366,29 +2366,33 @@ body.zone-highlight-mode #zoneOverlay {
 .alith-bubble-close:hover { color: var(--danger); }
 
 /* ── Zone Picker specific ── */
-#zonePickResult {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
+/* ── Unified bubble stack (zone picker + session bubbles) ── */
+#bubbleStack {
+  position: absolute;
+  bottom: 32px;
+  left: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 420px;
   z-index: 10001;
+  pointer-events: none;
+}
+
+#zonePickResult {
   min-width: 320px;
-  max-width: 700px;
+  max-width: 420px;
+  pointer-events: all;
 }
 
 /* ── Session Bubbles container ── */
 #sessionBubbles {
-  position: absolute;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
-  width: max-content;
-  max-width: 500px;
-  z-index: 10;
+  width: 100%;
   pointer-events: none;
 }
 

@@ -53,11 +53,15 @@
 $pollCount = 0
 $maxPoll = 100
 $statusFile = "E:\docs-service\runtime\poll_status.md"
-$inputFile  = "E:\docs-service\runtime\user_input"
+$inputFile  = "E:\docs-service\runtime\user_input_<SESSION_ID>"
+$sessionId  = "<SESSION_ID>"
 
 while ($pollCount -lt $maxPoll) {
   $pollCount++
   Set-Content $statusFile "Waiting for task... ($pollCount/$maxPoll) - $(Get-Date -Format 'HH:mm:ss')"
+  # 同步更新 session 状态，让气泡显示 POLL 状态
+  $body = "{`"sessionId`":`"$sessionId`",`"status`":`"waiting`",`"task`":`"POLL 等待中 ($pollCount/$maxPoll)`"}"
+  Invoke-RestMethod -Uri "http://localhost:7439/agent/set-status" -Method POST -ContentType "application/json" -Body $body -ErrorAction SilentlyContinue | Out-Null
   Start-Sleep -Seconds 30
   $content = (Get-Content $inputFile -ErrorAction SilentlyContinue) -join "`n"
   if ($content.Trim() -ne "") {

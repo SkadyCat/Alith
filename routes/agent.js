@@ -60,6 +60,7 @@ function createSessionState() {
     agentBuffer:       [],      // SSE replay buffer
     agentHistory:      [],      // 内存任务历史（最近 30 条）
     currentTask:       null,
+    currentAction:     null,    // 当前正在执行的动作标签（来自 agent-action 事件）
     startTime:         null,
     heartbeatTimer:    null,
     outputAccum:       '',
@@ -138,6 +139,10 @@ function checkCliAvailable() {
 // ── SSE 广播 ──────────────────────────────────────────────
 function broadcast(sessionId, event, data) {
   const sess = getSession(sessionId);
+  // Persist current action so /agent/status can return it
+  if (event === 'agent-action') {
+    sess.currentAction = (data && data.type && data.type !== 'idle') ? data : null;
+  }
   const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   sess.agentBuffer.push({ event, data });
   if (sess.agentBuffer.length > 500) sess.agentBuffer.shift();
@@ -166,13 +171,21 @@ function broadcastGlobal(event, data) {
   }
 }
 
-// ── 读取全局配置（docs/global_config.md 中的 JSON 代码块）──
+// ── 读取全局配置（docs/global_config.json，向下兼容旧的 global_config.md）──
 function readGlobalConfig() {
   try {
-    const cfgPath = path.join(DOCS_DIR, 'global_config.md');
-    const content = fs.readFileSync(cfgPath, 'utf-8');
-    const m = content.match(/```json\s*([\s\S]*?)```/);
-    if (m) return JSON.parse(m[1]);
+    // 优先读取 JSON 文件
+    const jsonPath = path.join(DOCS_DIR, 'global_config.json');
+    if (fs.existsSync(jsonPath)) {
+      return JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+    }
+    // 向下兼容：从 Markdown 文件中提取 JSON 代码块
+    const mdPath = path.join(DOCS_DIR, 'global_config.md');
+    if (fs.existsSync(mdPath)) {
+      const content = fs.readFileSync(mdPath, 'utf-8');
+      const m = content.match(/```json\s*([\s\S]*?)```/);
+      if (m) return JSON.parse(m[1]);
+    }
   } catch (_) {}
   return {};
 }
@@ -183,7 +196,7 @@ function buildEnv() {
   for (const k of ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']) {
     if (process.env[k]) env[k] = process.env[k];
   }
-  // 读取全局配置中的代理设置（每次动态读取，修改 global_config.md 立即生效）
+  // 读取全局配置中的代理设置（每次动态读取，修改 global_config.json 立即生效）
   const cfg = readGlobalConfig();
   const useProxy    = cfg.use_proxy  !== false;  // 默认 true
   const proxyHost   = cfg.proxy_host || '127.0.0.1';
@@ -194,7 +207,7 @@ function buildEnv() {
       delete env[k];
     }
   } else if (!env.HTTPS_PROXY && !env.HTTP_PROXY) {
-    // 启用代理：优先使用环境变量 CLASH_PROXY，其次用 global_config.md 中的设置
+    // 启用代理：优先使用环境变量 CLASH_PROXY，其次用 global_config.json 中的设置
     const proxyUrl = process.env.CLASH_PROXY || `http://${proxyHost}:${proxyPort}`;
     env.HTTPS_PROXY = proxyUrl;
     env.HTTP_PROXY  = proxyUrl;
@@ -1014,6 +1027,7 @@ router.get('/status', (req, res) => {
     success: true,
     status: sess.agentStatus,
     task: sess.currentTask,
+    currentAction: sess.currentAction || null,
     elapsedSec: sess.startTime ? Math.floor((Date.now() - sess.startTime) / 1000) : null,
     pid: sess.agentProcess ? sess.agentProcess.pid : null,
     historyCount: sess.agentHistory.length,
@@ -1259,6 +1273,26 @@ router.get('/detect', (req, res) => {
   probe.on('error', (err) => {
     res.json({ success: false, cmd, args, available: false, error: err.message });
   });
+});
+
+/* ─────────────────────────────────────────────────────────
+   GET  /agent/global-config  —— 读取全局配置 JSON
+   POST /agent/global-config  —— 写入全局配置 JSON（合并更新）
+───────────────────────────────────────────────────────── */
+router.get('/global-config', (_req, res) => {
+  res.json({ success: true, config: readGlobalConfig() });
+});
+
+router.post('/global-config', (req, res) => {
+  try {
+    const jsonPath = path.join(DOCS_DIR, 'global_config.json');
+    const current = readGlobalConfig();
+    const updated = Object.assign({}, current, req.body || {});
+    fs.writeFileSync(jsonPath, JSON.stringify(updated, null, 2), 'utf-8');
+    res.json({ success: true, config: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 module.exports = router;

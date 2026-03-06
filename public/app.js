@@ -1616,8 +1616,10 @@ function connectAgentStream(sessionId, noReplay) {
   });
 
   es.addEventListener('agent-action', (e) => {
-    if (!isActive()) return;
     const { type, label } = JSON.parse(e.data);
+    // Always update the session bubble regardless of which session is active
+    if (window.updateBubbleAction) window.updateBubbleAction(sid, { type, label });
+    if (!isActive()) return;
     updateAgentActionBar(type, label);
   });
 
@@ -2758,6 +2760,26 @@ function clearConsoleHistory() {
   };
 
   let lastBubbleData = '';
+  const _actionCache = {}; // sessionId → { type, label }
+
+  // Called from SSE handler to instantly update action sub-line in bubble
+  window.updateBubbleAction = function(sid, action) {
+    _actionCache[sid] = action;
+    const bubble = document.querySelector(`#sessionBubbles .sess-bubble[data-sid="${CSS.escape(sid)}"]`);
+    if (!bubble) return;
+    let sub = bubble.querySelector('.bubble-action-sub');
+    if (action && action.label && action.type !== 'idle') {
+      if (!sub) {
+        sub = document.createElement('div');
+        sub.className = 'alith-bubble-sub bubble-action-sub';
+        const body = bubble.querySelector('.alith-bubble-body');
+        if (body) body.insertBefore(sub, body.querySelector('.bubble-elapsed-sub'));
+      }
+      sub.textContent = '⚙️ ' + action.label;
+    } else {
+      if (sub) sub.remove();
+    }
+  };
 
   function renderBubbles(sessions) {
     const container = document.getElementById('sessionBubbles');
@@ -2781,12 +2803,16 @@ function clearConsoleHistory() {
       const name   = (s.name || s.id || '会话').slice(0, 30);
       const task   = (s.task || '准备中…').slice(0, 80);
       const elapsed = s.elapsedSec != null ? `${s.elapsedSec}s` : '';
-      return `<div class="alith-bubble sess-bubble ${colorClass}">
+      // Use cached action (updated via SSE) over API-polled value
+      const cachedAction = _actionCache[s.id] || s.currentAction;
+      const actionLabel = cachedAction && cachedAction.type !== 'idle' ? cachedAction.label : '';
+      return `<div class="alith-bubble sess-bubble ${colorClass}" data-sid="${escapeHtml(s.id)}">
         ${iconHtml}
         <div class="alith-bubble-body">
           <div class="alith-bubble-label">${escapeHtml(name)} · ${label}</div>
           <div class="alith-bubble-main">${escapeHtml(task)}</div>
-          ${elapsed ? `<div class="alith-bubble-sub">⏱ ${elapsed}</div>` : ''}
+          ${actionLabel ? `<div class="alith-bubble-sub bubble-action-sub">⚙️ ${escapeHtml(actionLabel)}</div>` : '<div class="alith-bubble-sub bubble-action-sub" style="display:none"></div>'}
+          ${elapsed ? `<div class="alith-bubble-sub bubble-elapsed-sub">⏱ ${elapsed}</div>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -2814,7 +2840,7 @@ function clearConsoleHistory() {
           try {
             const r = await fetch(`/agent/status?sessionId=${encodeURIComponent(s.id)}`);
             const d = await r.json();
-            return { ...s, name: nameMap[s.id] || s.id, elapsedSec: d.elapsedSec };
+            return { ...s, name: nameMap[s.id] || s.id, elapsedSec: d.elapsedSec, currentAction: d.currentAction };
           } catch (_) {
             return { ...s, name: nameMap[s.id] || s.id };
           }

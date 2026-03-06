@@ -179,8 +179,21 @@
           </div>
         </div>
       </div>
-      <!-- Session status bubbles (outside welcomeScreen so they show when doc is open too) -->
-      <div id="sessionBubbles"></div>
+      <!-- Unified bubble stack: zone picker + session bubbles, left-aligned -->
+      <div id="bubbleStack">
+        <div id="zonePickResult" class="alith-bubble accent" style="display:none">
+          <div id="zonePickTitle" class="alith-bubble-label">🔍 元素拾取器</div>
+          <div id="zonePickInfo" class="alith-bubble-main"></div>
+          <button id="zonePickCopyBtn" class="alith-bubble-btn" title="复制到剪贴板">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            复制
+          </button>
+          <button id="zonePickClose" class="alith-bubble-close" title="关闭 (ESC)">✕</button>
+        </div>
+        <div id="sessionBubbles"></div>
+      </div>
       <div class="doc-area" id="docArea" style="display:none;">
         
         <!-- Editor Pane -->
@@ -594,17 +607,5 @@
   <div id="zoneLabel"></div>
   <!-- Zone highlight overlay -->
   <div id="zoneOverlay"></div>
-  <!-- Zone pick result bubble (live update) -->
-  <div id="zonePickResult" class="alith-bubble accent" style="display:none">
-    <div id="zonePickTitle" class="alith-bubble-label">🔍 元素拾取器</div>
-    <div id="zonePickInfo" class="alith-bubble-main"></div>
-    <button id="zonePickCopyBtn" class="alith-bubble-btn" title="复制到剪贴板">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-      </svg>
-      复制
-    </button>
-    <button id="zonePickClose" class="alith-bubble-close" title="关闭 (ESC)">✕</button>
-  </div>
 </body>
 </html>
