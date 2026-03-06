@@ -170,7 +170,8 @@ console.log('Hello, World!');
 `);
 }
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── 对外开放接口 ───────────────────────────────────────────
