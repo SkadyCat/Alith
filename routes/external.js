@@ -440,4 +440,145 @@ router.post('/rename', (req, res) => {
   }
 });
 
+/* ─────────────────────────────────────────────────────────────
+   GET /open/global-config
+   读取 docs/global_config.json（供前端获取主爱丽丝地址等）
+───────────────────────────────────────────────────────────── */
+router.get('/global-config', (req, res) => {
+  try {
+    const cfgPath = path.join(DOCS_DIR, 'global_config.json');
+    if (!fs.existsSync(cfgPath)) return res.json({ success: true, config: {} });
+    const config = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
+    res.json({ success: true, config });
+  } catch (err) {
+    res.json({ success: false, error: err.message, config: {} });
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────
+   POST /open/report-error
+   子爱丽丝提交错误报告 → 写入本地 error_report/待处理/ + 转发主爱丽丝
+
+   Body (JSON):
+     title       {string}  可选 — 错误标题，默认 "未命名错误"
+     description {string}  必填 — 错误描述（Markdown 支持）
+     device      {string}  可选 — 上报设备名，默认 "未知设备"
+───────────────────────────────────────────────────────────── */
+router.post('/report-error', async (req, res) => {
+  const { title, description, device = '未知设备' } = req.body || {};
+  if (!description || !description.trim()) {
+    return res.status(400).json({ success: false, error: '错误描述不能为空' });
+  }
+
+  const now = new Date();
+  const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const safeTitle = (title || '未命名错误').replace(/[/\\:*?"<>|]/g, '_').slice(0, 40);
+  const filename = `${timestamp}_${safeTitle}`;
+
+  const content = `# 错误报告 — ${safeTitle}
+
+**上报设备**: ${device}
+**上报时间**: ${now.toLocaleString('zh-CN')}
+**状态**: 待处理
+
+## 错误描述
+
+${description.trim()}
+
+## 解决步骤
+
+> 待主爱丽丝处理
+`;
+
+  // ── 本地写入 docs/error_report/待处理/ ─────────────────────
+  const pendingDir = path.join(DOCS_DIR, 'error_report', '待处理');
+  if (!fs.existsSync(pendingDir)) fs.mkdirSync(pendingDir, { recursive: true });
+  fs.writeFileSync(path.join(pendingDir, `${filename}.md`), content, 'utf-8');
+
+  // ── 尝试转发到主爱丽丝（仅当 main_alith_host 为非本机时）─────
+  let forwarded = false;
+  let forwardError = null;
+  try {
+    const cfgPath = path.join(DOCS_DIR, 'global_config.json');
+    if (fs.existsSync(cfgPath)) {
+      const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
+      const host = cfg.main_alith_host;
+      const port = cfg.main_alith_port || 7439;
+      const isLocal = !host || host === '127.0.0.1' || host === 'localhost';
+      if (!isLocal) {
+        const http = require('http');
+        const bodyStr = JSON.stringify({
+          filename: `error_report/待处理/${filename}`,
+          content,
+          overwrite: false,
+        });
+        await new Promise((resolve) => {
+          const r = http.request({
+            hostname: host, port, path: '/open/submit', method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(bodyStr) },
+            timeout: 5000,
+          }, (resp) => { resp.resume(); forwarded = true; resolve(); });
+          r.on('error', (e) => { forwardError = e.message; resolve(); });
+          r.on('timeout', () => { forwardError = '转发超时'; r.destroy(); resolve(); });
+          r.write(bodyStr);
+          r.end();
+        });
+      }
+    }
+  } catch (e) {
+    forwardError = e.message;
+  }
+
+  res.json({
+    success: true,
+    path: `error_report/待处理/${filename}.md`,
+    forwarded,
+    forwardError,
+    message: forwarded
+      ? '已写入本地并转发到主爱丽丝'
+      : '已写入本地（主爱丽丝为本机或未配置远程地址）',
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────
+   POST /open/resolve-error
+   将错误报告从 待处理/ 移动到 已处理/（供主爱丽丝处理完后调用）
+
+   Body (JSON):
+     filename  {string}  必填 — 文件名（不含路径），如 "2026-03-06T07-35-02_测试报告.md"
+     solution  {string}  可选 — 追加的解决步骤说明
+───────────────────────────────────────────────────────────── */
+router.post('/resolve-error', (req, res) => {
+  const { filename, solution } = req.body || {};
+  if (!filename || typeof filename !== 'string') {
+    return res.status(400).json({ success: false, error: 'filename 为必填项' });
+  }
+  // 安全校验：不允许路径穿越
+  const safeName = path.basename(filename);
+  const pendingDir = path.join(DOCS_DIR, 'error_report', '待处理');
+  const resolvedDir = path.join(DOCS_DIR, 'error_report', '已处理');
+  const srcPath = path.join(pendingDir, safeName);
+  const dstPath = path.join(resolvedDir, safeName);
+
+  if (!fs.existsSync(srcPath)) {
+    return res.status(404).json({ success: false, error: '待处理文件不存在: ' + safeName });
+  }
+  if (!fs.existsSync(resolvedDir)) fs.mkdirSync(resolvedDir, { recursive: true });
+
+  // 追加解决步骤（若提供）
+  if (solution && solution.trim()) {
+    let content = fs.readFileSync(srcPath, 'utf-8');
+    content = content.replace(
+      '## 解决步骤\n\n> 待主爱丽丝处理',
+      `## 解决步骤\n\n${solution.trim()}`
+    );
+    // 更新状态行
+    content = content.replace('**状态**: 待处理', `**状态**: 已处理 (${new Date().toLocaleString('zh-CN')})`);
+    fs.writeFileSync(srcPath, content, 'utf-8');
+  }
+
+  fs.renameSync(srcPath, dstPath);
+  res.json({ success: true, from: `error_report/待处理/${safeName}`, to: `error_report/已处理/${safeName}` });
+});
+
 module.exports = router;

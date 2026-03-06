@@ -1,5 +1,7 @@
 {
   "proxy_host": "127.0.0.1",
   "proxy_port": 7890,
-  "use_proxy": true
+  "use_proxy": true,
+  "main_alith_host": "127.0.0.1",
+  "main_alith_port": 7439
 }

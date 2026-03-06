@@ -85,6 +85,13 @@
         </svg>
         修复
       </button>
+      <button class="agent-toggle-btn error-report-btn" id="errorReportBtn" onclick="openErrorReportDialog()" title="报告错误 — 提交错误信息给主爱丽丝处理">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        报告错误
+      </button>
       <button class="action-btn save-btn" id="saveBtn" onclick="saveFile()" style="display:none;" title="保存 (Ctrl+S)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
@@ -613,5 +620,40 @@
   <div id="zoneLabel"></div>
   <!-- Zone highlight overlay -->
   <div id="zoneOverlay"></div>
+
+  <!-- Error Report Dialog -->
+  <div class="modal-overlay" id="errorReportOverlay" onclick="closeErrorReportDialog()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:500px;width:90%">
+      <div class="modal-header">
+        <h3>🚨 报告错误</h3>
+        <button class="modal-close" onclick="closeErrorReportDialog()">×</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:13px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:4px">错误标题 <span style="opacity:.5">(可选)</span></label>
+          <input type="text" id="errorReportTitle" placeholder="简短描述错误（如: 图片上传失败）" style="width:100%;box-sizing:border-box" />
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:4px">错误描述 <span style="color:#f87171">*</span></label>
+          <textarea id="errorReportDesc" placeholder="请详细描述错误现象、复现步骤、报错信息等（支持 Markdown）" rows="6" style="width:100%;box-sizing:border-box;resize:vertical;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);color:var(--text-primary);outline:none"></textarea>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:4px">设备名称 <span style="opacity:.5">(可选)</span></label>
+          <input type="text" id="errorReportDevice" placeholder="例如: 办公室电脑 / MacBook-Pro" style="width:100%;box-sizing:border-box" />
+        </div>
+        <div id="errorReportStatus" style="display:none;font-size:12px;padding:8px;border-radius:6px"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeErrorReportDialog()">取消</button>
+        <button class="btn-create" id="errorReportSubmitBtn" onclick="submitErrorReport()" style="background:#ef4444">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          提交报告
+        </button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

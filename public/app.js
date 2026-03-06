@@ -2907,7 +2907,40 @@ function clearConsoleHistory() {
       );
 
       renderBubbles(enriched);
+      syncStartBtnWithSessionStatus(enriched);
     } catch (_) {}
+  }
+
+  // Disable "启动 Agent" button while active session is in POLL waiting state
+  function syncStartBtnWithSessionStatus(sessions) {
+    const btn = document.getElementById('agentStartBtn');
+    if (!btn) return;
+    // If agent is actively running via SSE, don't interfere
+    if (agentRunning) return;
+
+    const activeSid = typeof getActiveSessionId === 'function' ? getActiveSessionId() : null;
+    const activeSess = activeSid
+      ? sessions.find(s => s.id === activeSid)
+      : sessions.find(s => s.status === 'waiting' || s.status === 'running');
+
+    if (activeSess && activeSess.status === 'waiting') {
+      btn.disabled = true;
+      btn.title = 'Agent 正在 POLL 等待中，请通过输入栏发送新任务';
+      if (!btn.dataset.pollLabel) {
+        btn.dataset.pollLabel = '1';
+        btn.dataset.origText = btn.innerHTML;
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:restart-spin 1.2s linear infinite"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> POLL 等待中`;
+      }
+    } else {
+      // Restore button if it was put into poll-label mode
+      if (btn.dataset.pollLabel) {
+        btn.disabled = false;
+        btn.title = '启动 Agent';
+        btn.innerHTML = btn.dataset.origText || '启动 Agent';
+        delete btn.dataset.pollLabel;
+        delete btn.dataset.origText;
+      }
+    }
   }
 
   // Start polling every 3 seconds
@@ -3134,8 +3167,8 @@ function powerRepair() {
   }
 
   // 6. 关闭可能残留的 modal / overlay
-  document.querySelectorAll('.modal-overlay, .modal-backdrop').forEach(el => {
-    el.style.display = 'none';
+  document.querySelectorAll('.modal-overlay.show').forEach(el => {
+    el.classList.remove('show');
     fixes.push('关闭残留 modal');
   });
 
@@ -3167,4 +3200,70 @@ function powerRepair() {
 
   const summary = fixes.length ? fixes.join(' · ') : '界面状态正常，无需修复';
   showToast(`🔧 修复完成：${summary}`, 'success');
+}
+
+// ===== ERROR REPORT =====
+function openErrorReportDialog() {
+  const overlay = document.getElementById('errorReportOverlay');
+  if (!overlay) return;
+  // Reset fields
+  document.getElementById('errorReportTitle').value = '';
+  document.getElementById('errorReportDesc').value = '';
+  document.getElementById('errorReportDevice').value = '';
+  const status = document.getElementById('errorReportStatus');
+  status.style.display = 'none';
+  status.textContent = '';
+  document.getElementById('errorReportSubmitBtn').disabled = false;
+  overlay.classList.add('show');
+  setTimeout(() => document.getElementById('errorReportDesc').focus(), 100);
+}
+
+function closeErrorReportDialog() {
+  const overlay = document.getElementById('errorReportOverlay');
+  if (overlay) overlay.classList.remove('show');
+}
+
+async function submitErrorReport() {
+  const title = document.getElementById('errorReportTitle').value.trim();
+  const description = document.getElementById('errorReportDesc').value.trim();
+  const device = document.getElementById('errorReportDevice').value.trim();
+  const statusEl = document.getElementById('errorReportStatus');
+  const submitBtn = document.getElementById('errorReportSubmitBtn');
+
+  if (!description) {
+    statusEl.style.display = 'block';
+    statusEl.style.background = 'rgba(239,68,68,0.12)';
+    statusEl.style.color = '#f87171';
+    statusEl.textContent = '❌ 错误描述不能为空，请填写后再提交';
+    return;
+  }
+
+  submitBtn.disabled = true;
+  statusEl.style.display = 'block';
+  statusEl.style.background = 'rgba(99,102,241,0.1)';
+  statusEl.style.color = 'var(--text-secondary)';
+  statusEl.textContent = '⏳ 提交中…';
+
+  try {
+    const res = await fetch('/open/report-error', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, description, device: device || undefined }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      statusEl.style.background = 'rgba(34,197,94,0.12)';
+      statusEl.style.color = '#4ade80';
+      statusEl.textContent = `✅ ${data.message} → ${data.path}`;
+      showToast('🚨 错误报告已提交', 'success');
+      setTimeout(closeErrorReportDialog, 1800);
+    } else {
+      throw new Error(data.error || '提交失败');
+    }
+  } catch (e) {
+    statusEl.style.background = 'rgba(239,68,68,0.12)';
+    statusEl.style.color = '#f87171';
+    statusEl.textContent = `❌ 提交失败: ${e.message}`;
+    submitBtn.disabled = false;
+  }
 }
