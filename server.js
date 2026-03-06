@@ -20,9 +20,10 @@ const chokidar = require('chokidar');
 
 // ─── Hot-reload route registry ────────────────────────────────
 const routeModules = {
-  external: { file: './routes/external', router: null },
-  agent:    { file: './routes/agent',    router: null },
-  tools:    { file: './routes/tools',    router: null },
+  external:  { file: './routes/external',  router: null },
+  agent:     { file: './routes/agent',     router: null },
+  tools:     { file: './routes/tools',     router: null },
+  nodeflow:  { file: './routes/nodeflow',  router: null },
 };
 
 function loadRoute(key) {
@@ -181,6 +182,9 @@ app.use('/agent', (req, res, next) => routeModules.agent.router(req, res, next))
 // ─── Python & Shell Tools ────────────────────────────────────
 app.use('/tools', (req, res, next) => routeModules.tools.router(req, res, next));
 
+// ─── NodeFlow 可视化流水线 ────────────────────────────────────
+app.use('/nodeflow', (req, res, next) => routeModules.nodeflow.router(req, res, next));
+
 // ─── Applications ────────────────────────────────────────────
 app.use('/jump_game', express.static(path.join(__dirname, 'application', 'jump_game')));
 app.use('/models3d', express.static(path.join(__dirname, 'application', 'hunyuan', 'models')));
@@ -205,7 +209,7 @@ function getFileTree(dir, basePath = '') {
         path: relativePath,
         children: getFileTree(path.join(dir, entry.name), relativePath)
       });
-    } else if (/\.(md|json|txt|yaml|yml|toml|csv|xml|html|js|ts|py|sh)$/.test(entry.name)) {
+    } else if (/\.(md|json|txt|yaml|yml|toml|csv|xml|html|js|ts|py|sh|wav|mp3|ogg|m4a)$/.test(entry.name)) {
       items.push({
         type: 'file',
         name: entry.name,
@@ -242,6 +246,39 @@ app.get('/api/file', (req, res) => {
     res.json({ success: true, content, html });
   } catch (err) {
     res.status(404).json({ success: false, error: 'File not found' });
+  }
+});
+
+// API: Serve audio file (wav, mp3, ogg, m4a)
+const AUDIO_MIME = { wav: 'audio/wav', mp3: 'audio/mpeg', ogg: 'audio/ogg', m4a: 'audio/mp4' };
+app.get('/api/audio', (req, res) => {
+  const filePath = req.query.path;
+  if (!filePath) return res.status(400).json({ success: false, error: 'Path required' });
+  const fullPath = path.join(DOCS_DIR, filePath);
+  if (!fullPath.startsWith(DOCS_DIR)) {
+    return res.status(403).json({ success: false, error: 'Access denied' });
+  }
+  if (!fs.existsSync(fullPath)) {
+    return res.status(404).json({ success: false, error: 'File not found' });
+  }
+  const ext = path.extname(fullPath).slice(1).toLowerCase();
+  const mime = AUDIO_MIME[ext] || 'application/octet-stream';
+  const stat = fs.statSync(fullPath);
+  const range = req.headers.range;
+  if (range) {
+    const [startStr, endStr] = range.replace(/bytes=/, '').split('-');
+    const start = parseInt(startStr, 10);
+    const end = endStr ? parseInt(endStr, 10) : stat.size - 1;
+    res.writeHead(206, {
+      'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': end - start + 1,
+      'Content-Type': mime,
+    });
+    fs.createReadStream(fullPath, { start, end }).pipe(res);
+  } else {
+    res.writeHead(200, { 'Content-Type': mime, 'Content-Length': stat.size, 'Accept-Ranges': 'bytes' });
+    fs.createReadStream(fullPath).pipe(res);
   }
 });
 

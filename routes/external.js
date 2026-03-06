@@ -441,6 +441,80 @@ router.post('/rename', (req, res) => {
 });
 
 /* ─────────────────────────────────────────────────────────────
+   POST /open/open-folder
+   在 Windows 资源管理器中打开文件所在目录（或选中文件）
+   Body (JSON):
+     path   {string}  必填 — 相对于 docs/ 的路径
+     select {boolean} 可选 — true 表示选中文件，false 只打开目录，默认 true
+───────────────────────────────────────────────────────────── */
+router.post('/open-folder', (req, res) => {
+  const { path: filePath, select = true } = req.body || {};
+  if (!filePath) return res.status(400).json({ success: false, error: 'path 为必填项' });
+
+  const fullPath = path.join(DOCS_DIR, filePath);
+  if (!fullPath.startsWith(DOCS_DIR)) {
+    return res.status(403).json({ success: false, error: 'Access denied' });
+  }
+  if (!fs.existsSync(fullPath)) {
+    return res.status(404).json({ success: false, error: '路径不存在: ' + filePath });
+  }
+
+  const { exec } = require('child_process');
+  const stat = fs.statSync(fullPath);
+  const isDir = stat.isDirectory();
+
+  // 文件：/select 选中；目录：直接打开
+  const explorerArg = (!isDir && select)
+    ? `/select,"${fullPath}"`
+    : `"${fullPath}"`;
+
+  exec(`explorer.exe ${explorerArg}`, (err) => {
+    // explorer.exe 通常返回非零退出码，不视为错误
+    if (err && err.code && err.code > 1) {
+      return res.json({ success: false, error: err.message });
+    }
+    res.json({ success: true, opened: fullPath });
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────
+   GET /open/audio
+   流式返回音频文件（支持 Range 请求，供浏览器 <audio> 标签使用）
+   Query: ?path=relative/path/to/file.wav
+───────────────────────────────────────────────────────────── */
+const AUDIO_MIME = { wav: 'audio/wav', mp3: 'audio/mpeg', ogg: 'audio/ogg', m4a: 'audio/mp4' };
+router.get('/audio', (req, res) => {
+  const filePath = req.query.path;
+  if (!filePath) return res.status(400).json({ success: false, error: 'Path required' });
+  const fullPath = path.join(DOCS_DIR, filePath);
+  if (!fullPath.startsWith(DOCS_DIR)) {
+    return res.status(403).json({ success: false, error: 'Access denied' });
+  }
+  if (!fs.existsSync(fullPath)) {
+    return res.status(404).json({ success: false, error: 'File not found' });
+  }
+  const ext = path.extname(fullPath).slice(1).toLowerCase();
+  const mime = AUDIO_MIME[ext] || 'application/octet-stream';
+  const stat = fs.statSync(fullPath);
+  const range = req.headers.range;
+  if (range) {
+    const [startStr, endStr] = range.replace(/bytes=/, '').split('-');
+    const start = parseInt(startStr, 10);
+    const end = endStr ? parseInt(endStr, 10) : stat.size - 1;
+    res.writeHead(206, {
+      'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': end - start + 1,
+      'Content-Type': mime,
+    });
+    fs.createReadStream(fullPath, { start, end }).pipe(res);
+  } else {
+    res.writeHead(200, { 'Content-Type': mime, 'Content-Length': stat.size, 'Accept-Ranges': 'bytes' });
+    fs.createReadStream(fullPath).pipe(res);
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────
    GET /open/global-config
    读取 docs/global_config.json（供前端获取主爱丽丝地址等）
 ───────────────────────────────────────────────────────────── */

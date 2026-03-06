@@ -18,7 +18,8 @@ const state = {
 
 // ===== FILE TYPE FILTER =====
 const FILE_TYPE_DEFAULTS = ['.md', '.json'];
-const FILE_TYPE_ALL = ['.md', '.json', '.txt', '.yaml', '.yml', '.toml', '.csv', '.xml', '.html', '.js', '.ts', '.py', '.sh'];
+const FILE_TYPE_ALL = ['.md', '.json', '.txt', '.yaml', '.yml', '.toml', '.csv', '.xml', '.html', '.js', '.ts', '.py', '.sh', '.wav', '.mp3', '.ogg', '.m4a'];
+const AUDIO_EXTS = new Set(['.wav', '.mp3', '.ogg', '.m4a']);
 let activeFileTypes = (() => {
   try {
     const saved = localStorage.getItem('docspace_file_types');
@@ -724,6 +725,13 @@ function filterTree(query) {
 // ===== OPEN FILE =====
 async function openFile(filePath) {
   try {
+    // ── 音频文件：显示播放器 ─────────────────────────────────
+    const ext = filePath.includes('.') ? '.' + filePath.split('.').pop().toLowerCase() : '';
+    if (AUDIO_EXTS.has(ext)) {
+      openAudioFile(filePath);
+      return;
+    }
+
     const res = await fetch(`/api/file?path=${encodeURIComponent(filePath)}`);
     const data = await res.json();
     if (!data.success) {
@@ -771,6 +779,48 @@ async function openFile(filePath) {
   } catch (e) {
     showToast('网络错误', 'error');
   }
+}
+
+function openAudioFile(filePath) {
+  state.currentFile = filePath;
+  state.isDirty = false;
+
+  // Hide normal doc UI, show welcome area (reused as audio player container)
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('saveBtn').style.display = 'none';
+  document.getElementById('docArea').style.display = 'flex';
+
+  // Hide editor + divider, use full preview pane for audio player
+  const editorPane = document.getElementById('editorPane');
+  const splitDivider = document.getElementById('splitDivider');
+  const previewPane = document.getElementById('previewPane');
+  const previewHeader = document.getElementById('previewHeader');
+  editorPane.style.display = 'none';
+  splitDivider.style.display = 'none';
+  previewPane.style.display = 'flex';
+  previewPane.style.flex = '1';
+  previewHeader.style.display = 'none';
+
+  const name = filePath.split('/').pop();
+  const audioUrl = `/open/audio?path=${encodeURIComponent(filePath)}`;
+
+  document.getElementById('markdownBody').innerHTML = `
+    <div class="audio-player-wrap">
+      <div class="audio-player-icon">🎵</div>
+      <div class="audio-player-name">${escapeHtml(name)}</div>
+      <audio class="audio-player-el" controls preload="metadata" src="${audioUrl}">
+        您的浏览器不支持 audio 标签
+      </audio>
+      <div class="audio-player-path">${escapeHtml(filePath)}</div>
+    </div>`;
+
+  updateBreadcrumb(filePath);
+  document.getElementById('docTitle').textContent = name;
+  document.title = `${name} — DocSpace`;
+
+  document.querySelectorAll('.tree-file').forEach(el => {
+    el.classList.toggle('active', el.dataset.path === filePath);
+  });
 }
 
 function renderMarkdown(html) {
@@ -1000,6 +1050,11 @@ function setupKeyboardShortcuts() {
     if (e.key === 'Escape') {
       closeModal();
       hideContextMenu();
+      // 关闭 Agent 面板（如果已打开）
+      const agentPanel = document.getElementById('agentPanel');
+      if (agentPanel && agentPanel.classList.contains('open')) {
+        toggleAgentPanel();
+      }
     }
   });
 }
@@ -1039,6 +1094,23 @@ function setupContextMenu() {
     hideContextMenu();
   });
 
+  document.getElementById('ctxOpenFolder').addEventListener('click', async () => {
+    if (contextMenuTarget && contextMenuTarget.path) {
+      try {
+        const r = await fetch('/open/open-folder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: contextMenuTarget.path, select: contextMenuTarget.type === 'file' }),
+        });
+        const d = await r.json();
+        if (!d.success) showToast('打开失败: ' + d.error, 'error');
+      } catch (e) {
+        showToast('打开失败: ' + e.message, 'error');
+      }
+    }
+    hideContextMenu();
+  });
+
   document.getElementById('ctxDelete').addEventListener('click', () => {
     if (contextMenuTarget && contextMenuTarget.type === 'file') deleteFile(contextMenuTarget.path);
     else if (contextMenuTarget && contextMenuTarget.type === 'folder') deleteFolder(contextMenuTarget.path);
@@ -1061,6 +1133,7 @@ function showContextMenu(e, target) {
   const isFile = contextMenuTarget.type === 'file';
   document.getElementById('ctxCopyPath').style.display = isFile ? 'flex' : 'none';
   document.getElementById('ctxRename').style.display = isRoot ? 'none' : 'flex';
+  document.getElementById('ctxOpenFolder').style.display = isRoot ? 'none' : 'flex';
   document.getElementById('ctxDelete').style.display = isRoot ? 'none' : 'flex';
   document.getElementById('ctxDivider').style.display = isRoot ? 'none' : 'block';
   const menu = document.getElementById('contextMenu');
@@ -2517,12 +2590,21 @@ async function loadSessionHistoryDoc(historyDoc, sessionId) {
         setAgentStatus('running', '运行中');
         startElapsedTimer();
       } else if (s === 'waiting') {
-        // 进程已结束，自动确认
-        agentRunning = false;
-        document.getElementById('agentStartBtn').disabled = false;
-        document.getElementById('agentStopBtn').disabled = true;
-        setAgentStatus('done', `已完成`);
-        confirmAgentDone();
+        if (stData.pid) {
+          // 进程仍活跃（POLL 等待中）→ 保持 Start 禁用，显示 POLL 状态
+          agentRunning = true;
+          document.getElementById('agentStartBtn').disabled = true;
+          document.getElementById('agentStopBtn').disabled = false;
+          setAgentStatus('running', 'POLL 等待中');
+          startElapsedTimer();
+        } else {
+          // 进程已结束，自动确认
+          agentRunning = false;
+          document.getElementById('agentStartBtn').disabled = false;
+          document.getElementById('agentStopBtn').disabled = true;
+          setAgentStatus('done', `已完成`);
+          confirmAgentDone();
+        }
       }
       // idle / done / error → 保持已重置的空闲状态
       if (s === 'idle' || s === 'done' || s === 'error') {
