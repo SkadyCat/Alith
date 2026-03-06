@@ -9,6 +9,9 @@
   "author": "",
   "license": "ISC",
   "description": "",
+  "overrides": {
+    "fast-xml-parser": ">=4.4.1"
+  },
   "dependencies": {
     "chokidar": "^5.0.0",
     "cos-nodejs-sdk-v5": "^2.15.4",
