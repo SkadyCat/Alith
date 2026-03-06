@@ -2380,11 +2380,12 @@ async function checkAgentEnv() {
 // ===== DIALOGUE / SESSION PANEL =====
 let dialogueSessions = [];       // loaded sessions
 let activeDialogueId = null;     // currently active session id
+let _loadSessionAC   = null;     // AbortController for in-flight loadSessionHistoryDoc
 
 async function loadDialogues() {
   try {
     // Try dedicated API first (available after server restart)
-    const res = await fetch('/api/dialogue');
+    const res = await fetch('/api/dialogue', { signal: AbortSignal.timeout(5000) });
     if (res.ok) {
       const data = await res.json();
       dialogueSessions = data.sessions || [];
@@ -2394,13 +2395,13 @@ async function loadDialogues() {
   } catch (e) {}
   // Fallback: use file tree API
   try {
-    const treeRes = await fetch('/open/tree');
+    const treeRes = await fetch('/open/tree', { signal: AbortSignal.timeout(5000) });
     const treeData = await treeRes.json();
     const dialogueFolder = (treeData.tree || []).find(item => item.type === 'folder' && item.name === 'dialogue');
     const files = dialogueFolder ? (dialogueFolder.children || []).filter(f => f.type === 'file') : [];
     dialogueSessions = await Promise.all(files.map(async f => {
       try {
-        const fr = await fetch(`/api/file?path=${encodeURIComponent(f.path)}`);
+        const fr = await fetch(`/api/file?path=${encodeURIComponent(f.path)}`, { signal: AbortSignal.timeout(4000) });
         const fd = await fr.json();
         const cfg = JSON.parse(fd.content || '{}');
         return { id: f.path, name: cfg.name || f.name.replace('.md',''), model: cfg.model||'', historyDoc: cfg.historyDoc||'', systemDocs: cfg.systemDocs||[] };
@@ -2514,7 +2515,9 @@ function applyDialogue(cfg) {
   document.getElementById('agentStopBtn').disabled = true;
 
   // 从 historyDoc 文件载入历史，然后接上 SSE 实时流
-  loadSessionHistoryDoc(cfg.historyDoc, cfg.id);
+  if (_loadSessionAC) _loadSessionAC.abort();
+  _loadSessionAC = new AbortController();
+  loadSessionHistoryDoc(cfg.historyDoc, cfg.id, _loadSessionAC.signal);
 
   showToast(`已切换: ${cfg.name}`, 'success');
 }
@@ -2541,15 +2544,20 @@ window.switchToSession = function(sid) {
 };
 
 
-async function loadSessionHistoryDoc(historyDoc, sessionId) {
+async function loadSessionHistoryDoc(historyDoc, sessionId, signal) {
   const output = document.getElementById('agentOutput');
   output.innerHTML = '';
 
   if (historyDoc) {
     try {
       const filePath = 'history/' + historyDoc;
-      const res = await fetch(`/api/file?path=${encodeURIComponent(filePath)}`);
+      const res = await fetch(`/api/file?path=${encodeURIComponent(filePath)}`, {
+        signal: signal || AbortSignal.timeout(10000),
+      });
+      // 被 abort 时直接退出，不更新 UI（用户已切换到其他会话）
+      if (signal && signal.aborted) return;
       const data = await res.json();
+      if (signal && signal.aborted) return;
       if (data.success && data.content) {
         // 渲染 markdown 历史内容
         const block = document.createElement('div');
@@ -2568,19 +2576,26 @@ async function loadSessionHistoryDoc(historyDoc, sessionId) {
         appendAgentLine('（暂无历史记录）', 'system');
       }
     } catch (e) {
+      if (e.name === 'AbortError') return; // 正常中断，不报错
       appendAgentLine('（历史记录加载失败）', 'system');
     }
   } else {
     appendAgentLine('（此会话未配置历史文档）', 'system');
   }
 
+  if (signal && signal.aborted) return;
+
   // 连接该会话的 SSE 流（只监听实时新事件，不 replay）
   connectAgentStream(sessionId, /* noReplay= */ true);
 
   // noReplay=true 时不会收到历史事件，需要主动查询后端状态来同步 UI
   try {
-    const stRes = await fetch('/agent/status?sessionId=' + encodeURIComponent(sessionId));
+    const stRes = await fetch('/agent/status?sessionId=' + encodeURIComponent(sessionId), {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (signal && signal.aborted) return;
     const stData = await stRes.json();
+    if (signal && signal.aborted) return;
     if (stData.success) {
       const s = stData.status;
       if (s === 'running') {
@@ -2961,10 +2976,10 @@ function clearConsoleHistory() {
 
   async function pollSessionBubbles() {
     try {
-      // Get agent session statuses
+      // Get agent session statuses (with timeout to prevent hanging)
       const [sessRes, dialRes] = await Promise.all([
-        fetch('/agent/sessions'),
-        fetch('/api/dialogue'),
+        fetch('/agent/sessions', { signal: AbortSignal.timeout(4000) }),
+        fetch('/api/dialogue',   { signal: AbortSignal.timeout(4000) }),
       ]);
       const sessData = await sessRes.json();
       const dialData = await dialRes.json();
@@ -2979,7 +2994,9 @@ function clearConsoleHistory() {
         .filter(s => s.status !== 'idle')
         .map(async s => {
           try {
-            const r = await fetch(`/agent/status?sessionId=${encodeURIComponent(s.id)}`);
+            const r = await fetch(`/agent/status?sessionId=${encodeURIComponent(s.id)}`, {
+              signal: AbortSignal.timeout(3000),
+            });
             const d = await r.json();
             return { ...s, name: nameMap[s.id] || s.id, elapsedSec: d.elapsedSec, currentAction: d.currentAction };
           } catch (_) {
