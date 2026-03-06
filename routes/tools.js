@@ -12,10 +12,19 @@
 const express = require('express');
 const { spawn } = require('child_process');
 const path = require('path');
+const fs   = require('fs');
 
 const router = express.Router();
 const TOOLS_DIR = path.join(__dirname, '..', 'tools');
 const PWSH_EXE  = path.join(TOOLS_DIR, 'pwsh7', 'pwsh.exe');  // PowerShell 7 本地可移植版
+
+// 优先使用 tools/venv 中的 Python（setup.bat 自动创建）
+const VENV_PY_WIN  = path.join(TOOLS_DIR, 'venv', 'Scripts', 'python.exe');
+const VENV_PY_UNIX = path.join(TOOLS_DIR, 'venv', 'bin', 'python');
+const PYTHON_CMD = fs.existsSync(VENV_PY_WIN)  ? VENV_PY_WIN
+                 : fs.existsSync(VENV_PY_UNIX) ? VENV_PY_UNIX
+                 : 'python';
+
 const DEFAULT_TIMEOUT = 30_000; // 30 秒
 const MAX_TIMEOUT = 120_000;    // 最多 2 分钟
 
@@ -86,7 +95,7 @@ router.post('/python', async (req, res) => {
 
   try {
     const result = await runProcess(
-      'python',
+      PYTHON_CMD,
       [runnerScript],
       { cwd: TOOLS_DIR },
       code,

@@ -60,6 +60,39 @@ if errorlevel 1 (
   pause & exit /b 1
 )
 echo [OK] npm dependencies installed.
+:: --- Setup Python virtual environment in tools/venv ---
+echo.
+echo [INFO] Checking Python...
+where python >nul 2>&1
+if errorlevel 1 (
+  echo [WARN] Python not found. Skipping Python venv setup.
+  echo        Install Python from https://www.python.org then run setup.bat again.
+  goto :skip_python
+)
+for /f "tokens=*" %%v in ('python --version 2^>^&1') do set PY_VER=%%v
+echo [OK] !PY_VER!
+
+if exist "tools\venv\Scripts\python.exe" (
+  echo [OK] Python venv already exists at tools\venv\
+  goto :skip_python
+)
+
+echo [INFO] Creating Python virtual environment at tools\venv\...
+python -m venv tools\venv
+if errorlevel 1 (
+  echo [WARN] Failed to create venv. Skipping Python setup.
+  goto :skip_python
+)
+
+echo [INFO] Installing Python dependencies from tools\requirements.txt...
+tools\venv\Scripts\pip.exe install -r tools\requirements.txt -q
+if errorlevel 1 (
+  echo [WARN] pip install failed. Python tools may not work correctly.
+) else (
+  echo [OK] Python dependencies installed to tools\venv\
+)
+
+:skip_python
 
 :: --- Create required directories ---
 echo.
