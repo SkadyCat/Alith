@@ -66,6 +66,8 @@ function createSessionState() {
     hideTrace:         false,   // 是否过滤 CLI 工具日志行
     historyDocAbsPath: null,    // 当前运行任务的历史文档路径（用于写入用户留言）
     historyDocRel:     null,
+    lastLaunchParams:  null,    // 上次启动时的完整参数（供 /relaunch 使用）
+    pendingRelaunch:   null,    // 当前进程结束后自动重新启动的参数（由 /relaunch 设置）
   };
 }
 
@@ -396,6 +398,9 @@ router.post('/start', async (req, res) => {
   if (!task || !task.trim()) {
     return res.status(400).json({ success: false, error: 'task 为必填项' });
   }
+
+  // ── 保存启动参数（供 /relaunch 端点复用）──────────────
+  sess.lastLaunchParams = { task, maxContinues, saveAs, useHistory, hideTrace, systemDoc, systemDocs, model, historyDoc, taskPrefixDoc };
 
   // ── 预检：CLI 是否可用 ─────────────────────────────────
   const cli = await checkCliAvailable();
@@ -728,6 +733,36 @@ router.post('/start', async (req, res) => {
       }
     }
 
+    // ── 检查是否有待执行的 relaunch 请求 ──────────────────
+    if (sess.pendingRelaunch) {
+      const relaunchParams = sess.pendingRelaunch;
+      sess.pendingRelaunch = null;
+      sess.agentStatus = 'idle';
+      sess.agentProcess = null;
+      broadcast(sessionId, 'output', { text: '\n🔄 上下文已重置，正在重新启动 Agent…\n', stream: 'stdout' });
+      broadcast(sessionId, 'done', { code, elapsed, task, relaunch: true });
+      // 短暂延迟后通过内部 HTTP 请求重新调用 /agent/start
+      setTimeout(() => {
+        const http = require('http');
+        const body = JSON.stringify({ ...relaunchParams, sessionId });
+        const internalReq = http.request({
+          hostname: 'localhost',
+          port: 7439,
+          path: '/agent/start',
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+        }, (r) => {
+          r.resume(); // 消费响应流，避免内存泄漏
+        });
+        internalReq.on('error', (err) => {
+          broadcast(sessionId, 'output', { text: `[relaunch 失败] ${err.message}\n`, stream: 'stderr' });
+        });
+        internalReq.write(body);
+        internalReq.end();
+      }, 800);
+      return;
+    }
+
     // 等待用户确认结束或追加任务，而不是立即广播 done
     sess.pendingDone = { code, elapsed, task };
     sess.agentStatus = 'waiting';
@@ -748,6 +783,73 @@ router.post('/start', async (req, res) => {
   }, 3000);
 
   res.json({ success: true, message: 'Agent 已启动', task, pid: sess.agentProcess.pid });
+});
+
+/* ─────────────────────────────────────────────────────────
+   POST /agent/relaunch  —— 重新启动 Agent（上下文重置后自动调用）
+
+   使用上次 /agent/start 保存的参数重新启动 Agent，常用于：
+     1. 上下文达到 80% 后执行压缩重置，再调用此接口恢复运行
+     2. 无需前端干预，Agent 在任务内自动调用即可完成重启 + POLL 循环
+
+   Body (JSON, 均可选):
+     sessionId    {string}  会话 ID，默认 "default"
+     overrideTask {string}  覆盖上次的 task（如注入新的 POLL 指令），不传则沿用原 task
+──────────────────────────────────────────────────────── */
+router.post('/relaunch', (req, res) => {
+  const body = req.body || {};
+  const sessionId = String(body.sessionId || req.query.sessionId || 'default');
+  const sess = getSession(sessionId);
+
+  if (!sess.lastLaunchParams) {
+    return res.status(400).json({
+      success: false,
+      error: '没有可用的启动参数，请先通过 /agent/start 启动一次 Agent',
+    });
+  }
+
+  // 允许调用方用 overrideTask 替换任务描述（例如注入新的 POLL 指令文本）
+  const launchParams = { ...sess.lastLaunchParams };
+  if (body.overrideTask) launchParams.task = body.overrideTask;
+
+  if (sess.agentStatus === 'running' && sess.agentProcess) {
+    // Agent 正在运行（最常见：Agent 自身调用 relaunch）：
+    // 挂起 relaunch 参数 → 进程结束后 close handler 自动重启
+    sess.pendingRelaunch = launchParams;
+    try { sess.agentProcess.kill('SIGTERM'); } catch (_) {}
+    setTimeout(() => {
+      if (sess.agentProcess) {
+        try { sess.agentProcess.kill('SIGKILL'); } catch (_) {}
+      }
+    }, 3000);
+    return res.json({ success: true, scheduled: true, message: '当前 Agent 进程将被终止，随后自动重新启动' });
+  }
+
+  // Agent 未在运行（等待中/空闲/错误）：立即通过内部 HTTP 请求启动
+  if (sess.agentStatus === 'waiting') {
+    sess.pendingDone = null;
+    sess.agentStatus = 'idle';
+    broadcast(sessionId, 'done', { code: -1, elapsed: 0, task: sess.currentTask || '' });
+  }
+
+  const http = require('http');
+  const payload = JSON.stringify({ ...launchParams, sessionId });
+  const internalReq = http.request({
+    hostname: 'localhost',
+    port: 7439,
+    path: '/agent/start',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+  }, (r) => {
+    r.resume();
+  });
+  internalReq.on('error', (err) => {
+    broadcast(sessionId, 'output', { text: `[relaunch 内部请求失败] ${err.message}\n`, stream: 'stderr' });
+  });
+  internalReq.write(payload);
+  internalReq.end();
+
+  return res.json({ success: true, scheduled: false, message: 'Agent 已立即重新启动' });
 });
 
 /* ─────────────────────────────────────────────────────────
@@ -870,15 +972,20 @@ router.post('/request-input', (req, res) => {
 });
 
 /* ─────────────────────────────────────────────────────────
-   POST /agent/set-status  —— 外部设置 Agent 状态标签（供 POLL 期间调用）
-   Body: { sessionId, label, type }
-   type: 'poll' | 'running' | 'idle'
+   POST /agent/set-status  —— 外部（POLL 脚本）更新 session 状态 + 广播标签
+   Body: { sessionId, status, task, label, type }
 ──────────────────────────────────────────────────────── */
 router.post('/set-status', (req, res) => {
-  const sessionId = String(req.body.sessionId || 'default');
-  const { label = '', type = 'poll' } = req.body;
-  broadcast(sessionId, 'agent-action', { type, label });
-  res.json({ success: true });
+  const body = req.body || {};
+  const sid  = String(body.sessionId || 'default');
+  const sess = getSession(sid);
+  if (body.status)          sess.agentStatus  = body.status;
+  if (body.task !== undefined) sess.currentTask = body.task;
+  // 同时广播标签事件（向前兼容旧用法）
+  if (body.label !== undefined || body.type !== undefined) {
+    broadcast(sid, 'agent-action', { type: body.type || 'poll', label: body.label || '' });
+  }
+  res.json({ success: true, sessionId: sid, status: sess.agentStatus });
 });
 
 /* ─────────────────────────────────────────────────────────

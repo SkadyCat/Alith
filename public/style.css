@@ -1,4 +1,4 @@
-/* ============================================
+﻿/* ============================================
    DocSpace - CSS Design System
    Aesthetic: Editorial Dark — ink on night paper
    ============================================ */
@@ -97,9 +97,11 @@ body {
 .top-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
   justify-content: flex-end;
+  overflow: visible;
+  flex-wrap: nowrap;
 }
 
 .sidebar-toggle {
@@ -175,6 +177,8 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .save-btn {
@@ -224,6 +228,12 @@ body {
   height: calc(100vh - var(--top-h));
   margin-top: var(--top-h);
   overflow: hidden;
+  transition: padding-right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* When agent panel is open, push center area left to avoid overlap */
+body.agent-panel-open .main-layout {
+  padding-right: calc(min(520px, 45vw) + 156px);
 }
 
 /* ===== LEFT MENU / SIDEBAR ===== */
@@ -473,6 +483,7 @@ textarea.doc-drag-over {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 /* Welcome Screen */
@@ -482,6 +493,7 @@ textarea.doc-drag-over {
   align-items: center;
   justify-content: center;
   padding: 40px;
+  position: relative;
 }
 .welcome-content {
   text-align: center;
@@ -1050,6 +1062,8 @@ textarea.doc-drag-over {
   font-size: 13px;
   cursor: pointer;
   transition: all var(--transition);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .agent-toggle-btn:hover,
 .agent-toggle-btn.active {
@@ -2186,4 +2200,202 @@ textarea.doc-drag-over {
 }
 .poll-bubble.active .poll-bubble-count {
   color: #7eb8f7;
+}
+
+/* ===== ZONE HIGHLIGHT MODE ===== */
+#zoneHighlightBtn.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent-glow);
+}
+
+body.zone-highlight-mode * {
+  cursor: crosshair !important;
+}
+
+/* Overlay box that tracks hovered element */
+#zoneOverlay {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9998;
+  display: none;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-glow), inset 0 0 20px rgba(79,142,247,0.08), 0 0 20px var(--accent-glow);
+  border-radius: 3px;
+  transition: top 0.05s, left 0.05s, width 0.05s, height 0.05s;
+  background: rgba(79,142,247,0.05);
+}
+
+body.zone-highlight-mode #zoneOverlay {
+  display: block;
+}
+
+/* Floating cursor tooltip */
+#zoneLabel {
+  position: fixed;
+  background: rgba(20,25,35,0.92);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 3px 8px;
+  border-radius: 5px;
+  pointer-events: none;
+  z-index: 10000;
+  display: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.icon-only-btn {
+  padding: 6px !important;
+  min-width: unset !important;
+  width: 32px;
+  justify-content: center;
+}
+
+
+/* ═══════════════════════════════════════════════
+   ALITH BUBBLE — unified floating info component
+   Used by: zone picker + session status bubbles
+   ═══════════════════════════════════════════════ */
+
+@keyframes bubbleIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+@keyframes alith-spin { to { transform: rotate(360deg); } }
+
+/* ── Base ── */
+.alith-bubble {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 10px 14px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.38);
+  user-select: none;
+  animation: bubbleIn 0.22s cubic-bezier(0.34, 1.5, 0.64, 1);
+}
+
+/* ── Status color variants ── */
+.alith-bubble.accent  { border-color: var(--accent);  box-shadow: 0 4px 24px rgba(79,142,247,0.28); }
+.alith-bubble.warning { border-color: var(--warning); box-shadow: 0 4px 24px rgba(245,166,35,0.2); }
+.alith-bubble.success { border-color: var(--success); box-shadow: 0 4px 24px rgba(62,207,142,0.15); }
+.alith-bubble.danger  { border-color: var(--danger);  box-shadow: 0 4px 24px rgba(240,107,107,0.18); }
+
+/* ── Shared subcomponents ── */
+.alith-bubble-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.alith-bubble.accent  .alith-bubble-label { color: var(--accent); }
+.alith-bubble.warning .alith-bubble-label { color: var(--warning); }
+.alith-bubble.success .alith-bubble-label { color: var(--success); }
+.alith-bubble.danger  .alith-bubble-label { color: var(--danger); }
+
+.alith-bubble-body { flex: 1; min-width: 0; }
+
+.alith-bubble-main {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.alith-bubble.accent .alith-bubble-main { color: var(--accent); }
+
+.alith-bubble-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Spinner for running state */
+.alith-spinner {
+  width: 14px; height: 14px;
+  border: 2px solid var(--accent-dim);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: alith-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Action button */
+.alith-bubble-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  padding: 5px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+.alith-bubble-btn:hover { opacity: 0.85; }
+.alith-bubble-btn.copied { background: var(--success); }
+.alith-bubble-btn.warning-btn { background: var(--warning); }
+
+/* Close button */
+.alith-bubble-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.alith-bubble-close:hover { color: var(--danger); }
+
+/* ── Zone Picker specific ── */
+#zonePickResult {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10001;
+  min-width: 320px;
+  max-width: 700px;
+}
+
+/* ── Session Bubbles container ── */
+#sessionBubbles {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  max-width: 500px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Session bubble extends alith-bubble */
+.sess-bubble {
+  align-items: flex-start;
+  min-width: 260px;
+  max-width: 500px;
+  pointer-events: all;
 }

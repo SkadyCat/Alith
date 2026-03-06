@@ -98,10 +98,18 @@ if ($pollCount -ge $maxPoll) {
              格式：## 会话压缩记忆 + 表格形式摘要
    Step R-3: 用压缩摘要覆盖写入 history/应用助手4.md（原文件缩减至 ≤ 3000 字符）
    Step R-4: 输出回忆确认：列出记住的关键事项（系统状态/已完成任务/关键路径）
-   Step R-5: 继续执行当前任务或进入 [POLL]
+   Step R-5: 调用 POST http://localhost:7439/agent/relaunch 接口（传入当前 sessionId），
+             由系统自动终止本进程并以相同参数（含压缩后历史文档）重新启动 Agent，进入 [POLL]
    ```
 
-   **重置完成标志**：输出 `✅ 上下文已重置，历史已压缩，当前可用空间充足。` 后继续。
+   **Step R-5 调用示例（PowerShell）**：
+   ```powershell
+   Invoke-RestMethod -Uri "http://localhost:7439/agent/relaunch" `
+     -Method POST -ContentType "application/json" `
+     -Body '{"sessionId":"<当前SessionId>"}'
+   ```
+
+   **重置完成标志**：输出 `✅ 上下文已重置，历史已压缩，当前可用空间充足。` 后立即执行 Step R-5。
 
 ---
 

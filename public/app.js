@@ -1,4 +1,4 @@
-/* ============================================
+﻿/* ============================================
    DocSpace - Application Logic
    ============================================ */
 
@@ -1424,6 +1424,7 @@ function toggleAgentPanel() {
   const isOpen = panel.classList.toggle('open');
   btn.classList.toggle('active', isOpen);
   sessionPanel.classList.toggle('open', isOpen);
+  document.body.classList.toggle('agent-panel-open', isOpen);
   if (isOpen) {
     populateAgentDocSelector();
     loadAgentModels();
@@ -2737,3 +2738,261 @@ function clearConsoleHistory() {
   localStorage.removeItem('apiConsoleHistory');
   renderConsoleHistory();
 }
+
+
+// ===== SESSION STATUS BUBBLES =====
+(function () {
+  const STATUS_LABELS = {
+    running: '运行中',
+    waiting: '等待输入',
+    done:    '已完成',
+    error:   '出错',
+    idle:    '空闲',
+  };
+  const STATUS_ICONS = {
+    running: null,       // spinner div
+    waiting: '⏳',
+    done:    '✅',
+    error:   '❌',
+    idle:    '💤',
+  };
+
+  let lastBubbleData = '';
+
+  function renderBubbles(sessions) {
+    const container = document.getElementById('sessionBubbles');
+    if (!container) return;
+
+    // Only show non-idle sessions; show 'done' briefly
+    const active = sessions.filter(s => s.status !== 'idle');
+    const key = JSON.stringify(active);
+    if (key === lastBubbleData) return;
+    lastBubbleData = key;
+
+    if (!active.length) { container.innerHTML = ''; return; }
+
+    container.innerHTML = active.map(s => {
+      const colorClass = { running: 'accent', waiting: 'warning', done: 'success', error: 'danger' }[s.status] || '';
+      const label  = STATUS_LABELS[s.status] || s.status;
+      const icon   = STATUS_ICONS[s.status];
+      const iconHtml = icon
+        ? `<span style="font-size:15px;flex-shrink:0">${icon}</span>`
+        : `<div class="alith-spinner"></div>`;
+      const name   = (s.name || s.id || '会话').slice(0, 30);
+      const task   = (s.task || '准备中…').slice(0, 80);
+      const elapsed = s.elapsedSec != null ? `${s.elapsedSec}s` : '';
+      return `<div class="alith-bubble sess-bubble ${colorClass}">
+        ${iconHtml}
+        <div class="alith-bubble-body">
+          <div class="alith-bubble-label">${escapeHtml(name)} · ${label}</div>
+          <div class="alith-bubble-main">${escapeHtml(task)}</div>
+          ${elapsed ? `<div class="alith-bubble-sub">⏱ ${elapsed}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function pollSessionBubbles() {
+    try {
+      // Get agent session statuses
+      const [sessRes, dialRes] = await Promise.all([
+        fetch('/agent/sessions'),
+        fetch('/api/dialogue'),
+      ]);
+      const sessData = await sessRes.json();
+      const dialData = await dialRes.json();
+
+      const nameMap = {};
+      const sessions = dialData.sessions || [];
+      sessions.forEach(d => { nameMap[d.id] = d.name; });
+
+      // Also get elapsed time for running sessions
+      const agentSessions = sessData.sessions || [];
+      const enriched = await Promise.all(agentSessions
+        .filter(s => s.status !== 'idle')
+        .map(async s => {
+          try {
+            const r = await fetch(`/agent/status?sessionId=${encodeURIComponent(s.id)}`);
+            const d = await r.json();
+            return { ...s, name: nameMap[s.id] || s.id, elapsedSec: d.elapsedSec };
+          } catch (_) {
+            return { ...s, name: nameMap[s.id] || s.id };
+          }
+        })
+      );
+
+      renderBubbles(enriched);
+    } catch (_) {}
+  }
+
+  // Start polling every 3 seconds
+  setInterval(pollSessionBubbles, 3000);
+  pollSessionBubbles();
+
+  // Also expose for external trigger
+  window.refreshSessionBubbles = pollSessionBubbles;
+})();
+
+// ===== ZONE HIGHLIGHT MODE (Live Element Picker) =====
+(function () {
+  let active = false;
+  let currentInfo = '';
+
+  const PANEL_IDS = new Set(['zonePickResult','zonePickInfo','zonePickTitle','zonePickCopyBtn','zonePickClose','zoneOverlay','zoneLabel','zoneHighlightBtn']);
+
+  function getOverlay() { return document.getElementById('zoneOverlay'); }
+  function getLabel()   { return document.getElementById('zoneLabel'); }
+  function getBtn()     { return document.getElementById('zoneHighlightBtn'); }
+  function getPanel()   { return document.getElementById('zonePickResult'); }
+  function getInfo()    { return document.getElementById('zonePickInfo'); }
+  function getCopyBtn() { return document.getElementById('zonePickCopyBtn'); }
+
+  function elInfo(el) {
+    if (!el) return '';
+    const tag = el.tagName.toLowerCase();
+    const id  = el.id ? '#' + el.id : '';
+    const cls = typeof el.className === 'string' && el.className.trim()
+                ? '.' + el.className.trim().split(/\s+/).slice(0, 4).join('.') : '';
+    const txt = (el.title || el.getAttribute('aria-label') || el.textContent || '')
+                  .trim().replace(/\s+/g, ' ').slice(0, 50);
+    return tag + id + cls + (txt ? ' "' + txt + '"' : '');
+  }
+
+  function isInPanel(el) {
+    let node = el;
+    while (node) {
+      if (PANEL_IDS.has(node.id)) return true;
+      node = node.parentElement;
+    }
+    return false;
+  }
+
+  function setActive(on) {
+    active = on;
+    document.body.classList.toggle('zone-highlight-mode', on);
+    const btn = getBtn();
+    if (btn) btn.classList.toggle('active', on);
+    const ov  = getOverlay();
+    const lbl = getLabel();
+    // Always hide overlay & cursor label when exiting
+    if (!on) {
+      if (ov)  { ov.style.display = 'none'; }
+      if (lbl) { lbl.style.display = 'none'; }
+      // NOTE: panel stays open! User closes it manually with ✕
+    } else {
+      // Show panel when activating
+      const panel = getPanel();
+      if (panel) { panel.style.display = 'flex'; }
+    }
+  }
+
+  window.toggleZoneHighlight = function () { setActive(!active); };
+
+  // Copy button handler (real user gesture → clipboard works)
+  document.addEventListener('click', function (e) {
+    const cb = getCopyBtn();
+    if (!cb) return;
+    if (e.target === cb || cb.contains(e.target)) {
+      e.stopPropagation();
+      if (!currentInfo) return;
+      const text = currentInfo;
+      // Try modern API first (works on HTTPS/localhost)
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () {
+          flashCopied(cb);
+        }).catch(function () { fallbackCopy(text, cb); });
+      } else {
+        fallbackCopy(text, cb);
+      }
+    }
+  }, true);
+
+  function fallbackCopy(text, btn) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); flashCopied(btn); } catch(e) {}
+    document.body.removeChild(ta);
+  }
+
+  function flashCopied(btn) {
+    if (!btn) return;
+    btn.classList.add('copied');
+    btn.textContent = '✓ 已复制';
+    setTimeout(function () {
+      btn.classList.remove('copied');
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> 复制';
+    }, 1500);
+  }
+
+  // Close button
+  document.addEventListener('click', function (e) {
+    const cl = document.getElementById('zonePickClose');
+    if (cl && (e.target === cl || cl.contains(e.target))) {
+      setActive(false);
+    }
+  }, true);
+
+  // Mouse move: update overlay + bubble info
+  window.addEventListener('mousemove', function (e) {
+    if (!active) return;
+    const ov  = getOverlay();
+    const lbl = getLabel();
+    const infoEl = getInfo();
+
+    // Find element under cursor, skip our own UI
+    let el = document.elementFromPoint(e.clientX, e.clientY);
+    while (el && isInPanel(el)) el = el.parentElement;
+    if (!el || el === document.documentElement || el === document.body) {
+      if (ov)  ov.style.display = 'none';
+      if (lbl) lbl.style.display = 'none';
+      return;
+    }
+
+    const info = elInfo(el);
+    currentInfo = info;
+
+    // Update overlay box
+    if (ov) {
+      const r = el.getBoundingClientRect();
+      ov.style.top    = r.top    + 'px';
+      ov.style.left   = r.left   + 'px';
+      ov.style.width  = r.width  + 'px';
+      ov.style.height = r.height + 'px';
+      ov.style.display = 'block';
+    }
+
+    // Update bubble info
+    if (infoEl) infoEl.textContent = info;
+
+    // Small cursor tooltip
+    if (lbl) {
+      const W = window.innerWidth, pad = 14;
+      let left = e.clientX + pad;
+      if (left + 200 > W) left = e.clientX - 200;
+      lbl.style.left = left + 'px';
+      lbl.style.top  = (e.clientY - 28) + 'px';
+      lbl.textContent = el.tagName.toLowerCase() + (el.id ? '#'+el.id : '');
+      lbl.style.display = 'block';
+    }
+  }, false);
+
+  // ESC: exit
+  window.addEventListener('keydown', function (e) {
+    if (!active) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setActive(false);
+    }
+  }, true);
+
+  window.addEventListener('mouseleave', function () {
+    if (!active) return;
+    const ov = getOverlay(), lbl = getLabel();
+    if (ov)  ov.style.display  = 'none';
+    if (lbl) lbl.style.display = 'none';
+  });
+})();
