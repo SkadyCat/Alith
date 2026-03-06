@@ -54,7 +54,7 @@ if exist "!TARGET_DIR!\.git" (
 :deps
 echo.
 echo [INFO] Installing npm dependencies...
-npm install
+npm install --no-audit
 if errorlevel 1 (
   echo [ERROR] npm install failed.
   pause & exit /b 1
