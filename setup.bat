@@ -80,6 +80,35 @@ if not exist "docs\application_doc\magicworld\config.json" (
   echo [OK] MagicWorld config file created.
 )
 
+:: ── Install PowerShell Core 7 (portable) ────────────────────────
+echo.
+echo [INFO] Checking PowerShell Core 7 (tools\pwsh7\pwsh.exe)...
+if exist "tools\pwsh7\pwsh.exe" (
+  echo [OK] PowerShell Core 7 already installed.
+) else (
+  echo [INFO] PowerShell Core 7 not found. Downloading portable package...
+  if not exist "tools" mkdir tools
+  if not exist "tools\pwsh7" mkdir tools\pwsh7
+  set PWSH_ZIP=%TEMP%\pwsh7.zip
+  set PWSH_URL=https://github.com/PowerShell/PowerShell/releases/download/v7.5.0/PowerShell-7.5.0-win-x64.zip
+  echo [INFO] Downloading from: !PWSH_URL!
+  powershell -NoProfile -Command "try { $p=@{}; if ($env:HTTPS_PROXY) {$p.Proxy=$env:HTTPS_PROXY}; Invoke-WebRequest -Uri '!PWSH_URL!' -OutFile '!PWSH_ZIP!' @p -UseBasicParsing } catch { Write-Host '[ERROR] Download failed:' $_.Exception.Message; exit 1 }"
+  if errorlevel 1 (
+    echo [WARN] Auto-download failed. Please manually install PowerShell Core 7:
+    echo        https://aka.ms/powershell
+    echo        Or extract PowerShell-7.x-win-x64.zip to: tools\pwsh7\
+  ) else (
+    echo [INFO] Extracting...
+    powershell -NoProfile -Command "Expand-Archive -Path '!PWSH_ZIP!' -DestinationPath 'tools\pwsh7' -Force"
+    if errorlevel 1 (
+      echo [WARN] Extraction failed. Please manually extract PowerShell 7 to tools\pwsh7\
+    ) else (
+      del /q "!PWSH_ZIP!" 2>nul
+      echo [OK] PowerShell Core 7 installed to tools\pwsh7\
+    )
+  )
+)
+
 :: ── Install GitHub CLI (gh) ─────────────────────────────────────
 echo.
 echo [INFO] Checking GitHub CLI (gh)...
