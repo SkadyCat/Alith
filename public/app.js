@@ -2514,7 +2514,11 @@ function applyDialogue(cfg) {
   document.getElementById('agentStartBtn').disabled = false;
   document.getElementById('agentStopBtn').disabled = true;
 
-  // 从 historyDoc 文件载入历史，然后接上 SSE 实时流
+  // 清空输出区，立即建立 SSE 连接（同步），确保在用户点击"启动"前连接已就绪，避免竞态丢失事件
+  document.getElementById('agentOutput').innerHTML = '';
+  connectAgentStream(cfg.id, /* noReplay= */ true);
+
+  // 异步载入历史记录（不再在内部重连 SSE）
   if (_loadSessionAC) _loadSessionAC.abort();
   _loadSessionAC = new AbortController();
   loadSessionHistoryDoc(cfg.historyDoc, cfg.id, _loadSessionAC.signal);
@@ -2546,7 +2550,10 @@ window.switchToSession = function(sid) {
 
 async function loadSessionHistoryDoc(historyDoc, sessionId, signal) {
   const output = document.getElementById('agentOutput');
-  output.innerHTML = '';
+  // 先插入一个占位符，历史内容将被插入到它之前（这样不会覆盖已到达的 SSE 实时输出）
+  const placeholder = document.createElement('div');
+  placeholder.className = 'agent-history-placeholder';
+  output.insertBefore(placeholder, output.firstChild);
 
   if (historyDoc) {
     try {
@@ -2555,39 +2562,40 @@ async function loadSessionHistoryDoc(historyDoc, sessionId, signal) {
         signal: signal || AbortSignal.timeout(10000),
       });
       // 被 abort 时直接退出，不更新 UI（用户已切换到其他会话）
-      if (signal && signal.aborted) return;
+      if (signal && signal.aborted) { placeholder.remove(); return; }
       const data = await res.json();
-      if (signal && signal.aborted) return;
+      if (signal && signal.aborted) { placeholder.remove(); return; }
       if (data.success && data.content) {
-        // 渲染 markdown 历史内容
+        // 渲染 markdown 历史内容，插入到占位符位置（在所有实时输出之前）
         const block = document.createElement('div');
         block.className = 'agent-md-block agent-history-block';
         block.innerHTML = marked.parse(data.content);
         block.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
-        output.appendChild(block);
-        // 添加分隔线，表示以下是新实时内容
         const divider = document.createElement('div');
         divider.className = 'agent-history-divider';
         divider.textContent = '── 以上为历史记录 ──';
-        output.appendChild(divider);
+        output.insertBefore(divider, placeholder);
+        output.insertBefore(block, divider);
+        placeholder.remove();
         output.scrollTop = output.scrollHeight;
         setAgentStatus('idle', '空闲');
       } else {
-        appendAgentLine('（暂无历史记录）', 'system');
+        placeholder.textContent = '（暂无历史记录）';
+        placeholder.className = 'agent-line system';
       }
     } catch (e) {
-      if (e.name === 'AbortError') return; // 正常中断，不报错
-      appendAgentLine('（历史记录加载失败）', 'system');
+      if (e.name === 'AbortError') { placeholder.remove(); return; }
+      placeholder.textContent = '（历史记录加载失败）';
+      placeholder.className = 'agent-line system';
     }
   } else {
-    appendAgentLine('（此会话未配置历史文档）', 'system');
+    placeholder.textContent = '（此会话未配置历史文档）';
+    placeholder.className = 'agent-line system';
   }
 
   if (signal && signal.aborted) return;
 
-  // 连接该会话的 SSE 流（只监听实时新事件，不 replay）
-  connectAgentStream(sessionId, /* noReplay= */ true);
-
+  // SSE 连接已在 applyDialogue 中同步建立，此处只同步后端状态到 UI
   // noReplay=true 时不会收到历史事件，需要主动查询后端状态来同步 UI
   try {
     const stRes = await fetch('/agent/status?sessionId=' + encodeURIComponent(sessionId), {
