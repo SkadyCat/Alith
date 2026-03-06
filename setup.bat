@@ -102,33 +102,45 @@ if errorlevel 1 (
 )
 :pwsh_done
 
-:: --- Python virtual environment ---
+:: --- Embedded Python 3.11 ---
 echo.
-echo [INFO] Checking Python...
-where python >nul 2>&1
-if errorlevel 1 (
-  echo [WARN] Python not found. Skipping venv setup.
-  echo        Install Python from https://www.python.org and re-run setup.
+echo [INFO] Checking embedded Python...
+if exist "tools\python\python.exe" (
+  echo [OK] Embedded Python found at tools\python\
   goto :python_done
 )
-for /f "tokens=*" %%v in ('python --version 2^>^&1') do echo [OK] %%v
-if exist "tools\venv\Scripts\python.exe" (
-  echo [OK] Python venv already exists.
+if not exist "tools" mkdir tools
+echo [INFO] Downloading Python 3.11 embeddable (~12MB)...
+set PY_ZIP=!TEMP!\python-embed.zip
+powershell -NoProfile -Command "$proxy=$env:HTTPS_PROXY; $wc=New-Object Net.WebClient; if($proxy){$wc.Proxy=New-Object Net.WebProxy($proxy)}; try{$wc.DownloadFile('https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip','!PY_ZIP!');exit 0}catch{Write-Host $_.Exception.Message;exit 1}"
+if errorlevel 1 (
+  echo [WARN] Python download failed. /tools/python endpoint will use system python.
   goto :python_done
 )
-echo [INFO] Creating Python venv at tools\venv\...
-python -m venv tools\venv
+echo [INFO] Extracting Python...
+powershell -NoProfile -Command "Expand-Archive -Path '!PY_ZIP!' -DestinationPath 'tools\python' -Force"
+del /q "!PY_ZIP!" 2>nul
+:: Enable pip (uncomment 'import site' in ._pth file)
+powershell -NoProfile -Command "(Get-Content 'tools\python\python311._pth' -Raw) -replace '#import site','import site' | Set-Content 'tools\python\python311._pth'"
+:: Download and run get-pip.py
+echo [INFO] Installing pip...
+powershell -NoProfile -Command "$proxy=$env:HTTPS_PROXY; $wc=New-Object Net.WebClient; if($proxy){$wc.Proxy=New-Object Net.WebProxy($proxy)}; $wc.DownloadFile('https://bootstrap.pypa.io/get-pip.py','tools\python\get-pip.py')"
+tools\python\python.exe tools\python\get-pip.py --no-warn-script-location -q
 if errorlevel 1 (
-  echo [WARN] venv creation failed. Skipping.
+  echo [WARN] pip install failed. Python tools may not work fully.
   goto :python_done
 )
-echo [INFO] Installing Python dependencies...
-tools\venv\Scripts\pip.exe install -r tools\requirements.txt -q
-if errorlevel 1 (
-  echo [WARN] pip install had issues, some Python tools may not work.
-) else (
-  echo [OK] Python venv ready at tools\venv\
+:: Install requirements
+if exist "tools\requirements.txt" (
+  echo [INFO] Installing Python dependencies...
+  tools\python\Scripts\pip.exe install -r tools\requirements.txt -q --no-warn-script-location
+  if errorlevel 1 (
+    echo [WARN] Some Python packages failed to install.
+  ) else (
+    echo [OK] Python dependencies installed.
+  )
 )
+echo [OK] Embedded Python ready at tools\python\
 :python_done
 
 :: --- GitHub CLI ---

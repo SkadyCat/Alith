@@ -18,10 +18,12 @@ const router = express.Router();
 const TOOLS_DIR = path.join(__dirname, '..', 'tools');
 const PWSH_EXE  = path.join(TOOLS_DIR, 'pwsh7', 'pwsh.exe');  // PowerShell 7 本地可移植版
 
-// 优先使用 tools/venv 中的 Python（setup.bat 自动创建）
+// 优先使用 tools/python（嵌入式 Python），其次 tools/venv，最后系统 python
+const EMBED_PY     = path.join(TOOLS_DIR, 'python', 'python.exe');
 const VENV_PY_WIN  = path.join(TOOLS_DIR, 'venv', 'Scripts', 'python.exe');
 const VENV_PY_UNIX = path.join(TOOLS_DIR, 'venv', 'bin', 'python');
-const PYTHON_CMD = fs.existsSync(VENV_PY_WIN)  ? VENV_PY_WIN
+const PYTHON_CMD = fs.existsSync(EMBED_PY)    ? EMBED_PY
+                 : fs.existsSync(VENV_PY_WIN) ? VENV_PY_WIN
                  : fs.existsSync(VENV_PY_UNIX) ? VENV_PY_UNIX
                  : 'python';
 

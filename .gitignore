@@ -33,3 +33,6 @@ npm-debug.log*
 
 # Python virtual environment
 tools/venv/
+
+# Embedded Python (large binary)
+tools/python/
