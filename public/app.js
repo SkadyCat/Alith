@@ -2440,7 +2440,28 @@ function applyDialogue(cfg) {
   showToast(`已切换: ${cfg.name}`, 'success');
 }
 
-// 从 historyDoc 文件读取历史内容渲染到输出区，然后连接 SSE
+// 通过 session ID 切换到对应会话（供气泡点击使用）
+window.switchToSession = function(sid) {
+  const panel = document.getElementById('agentPanel');
+  const openPanel = () => {
+    if (!panel.classList.contains('open')) toggleAgentPanel();
+  };
+  // 如果 dialogueSessions 已有数据，直接找并切换
+  const cfg = dialogueSessions.find(s => s.id === sid);
+  if (cfg) {
+    openPanel();
+    applyDialogue(cfg);
+    return;
+  }
+  // 面板未开或数据未加载：先打开面板，等 loadDialogues 后再切换
+  openPanel();
+  loadDialogues().then(() => {
+    const found = dialogueSessions.find(s => s.id === sid);
+    if (found) applyDialogue(found);
+  });
+};
+
+
 async function loadSessionHistoryDoc(historyDoc, sessionId) {
   const output = document.getElementById('agentOutput');
   output.innerHTML = '';
@@ -2806,7 +2827,7 @@ function clearConsoleHistory() {
       // Use cached action (updated via SSE) over API-polled value
       const cachedAction = _actionCache[s.id] || s.currentAction;
       const actionLabel = cachedAction && cachedAction.type !== 'idle' ? cachedAction.label : '';
-      return `<div class="alith-bubble sess-bubble ${colorClass}" data-sid="${escapeHtml(s.id)}">
+      return `<div class="alith-bubble sess-bubble ${colorClass}" data-sid="${escapeHtml(s.id)}" onclick="window.switchToSession('${escapeHtml(s.id).replace(/'/g, "\\'")}')" style="cursor:pointer" title="点击切换到此会话">
         ${iconHtml}
         <div class="alith-bubble-body">
           <div class="alith-bubble-label">${escapeHtml(name)} · ${label}</div>
