@@ -992,7 +992,10 @@ router.post('/set-status', (req, res) => {
   const body = req.body || {};
   const sid  = String(body.sessionId || 'default');
   const sess = getSession(sid);
-  if (body.status)          sess.agentStatus  = body.status;
+  // 只允许从 running → waiting（防止 POLL 脚本将 idle 会话伪装成 waiting 气泡）
+  if (body.status && !(body.status === 'waiting' && sess.agentStatus === 'idle')) {
+    sess.agentStatus = body.status;
+  }
   if (body.task !== undefined) sess.currentTask = body.task;
   // 同时广播标签事件（向前兼容旧用法）
   if (body.label !== undefined || body.type !== undefined) {
