@@ -38,6 +38,7 @@
 - **禁止**：输出"任务完成"类结尾语后停止工具调用
 - **禁止**：以任何理由跳过 [POLL] 直接退出会话
 - **禁止**：重启服务（已支持代码热重载，修改代码后自动生效）
+- **禁止**：在 POLL async shell 运行期间主动轮询 `read_powershell`；必须等待系统通知 "shell completed" 后再调用一次 `read_powershell` 读取结果
 
 ## ✅ 合法的退出条件（满足其一才可退出）
 
@@ -71,7 +72,8 @@ try {
 } catch { $watcher = $null }
 
 function Check-Input {
-  $resp = Invoke-RestMethod -Uri "$baseUrl/agent/input?sessionId=$sessionId" -Method GET -ErrorAction SilentlyContinue
+  $resp = Invoke-RestMethod -Uri "$baseUrl/agent/input?sessionId=$sessionId" -Method GET `
+    -OperationTimeoutSeconds 10 -ConnectionTimeoutSeconds 5 -ErrorAction SilentlyContinue
   if ($resp -and $resp.hasContent) {
     Write-Host "NEW_TASK: $($resp.content)"
     return $true
@@ -83,7 +85,8 @@ while ($pollCount -lt $maxPoll) {
   $pollCount++
   Set-Content $statusFile "Waiting for task... ($pollCount/$maxPoll) - $(Get-Date -Format 'HH:mm:ss')"
   $body = "{`"sessionId`":`"$sessionId`",`"status`":`"waiting`",`"task`":`"POLL 等待中 ($pollCount/$maxPoll)`",`"contextProgress`":$ctxProgress}"
-  Invoke-RestMethod -Uri "$baseUrl/agent/set-status" -Method POST -ContentType "application/json" -Body $body -ErrorAction SilentlyContinue | Out-Null
+  Invoke-RestMethod -Uri "$baseUrl/agent/set-status" -Method POST -ContentType "application/json" -Body $body `
+    -OperationTimeoutSeconds 5 -ConnectionTimeoutSeconds 3 -ErrorAction SilentlyContinue | Out-Null
 
   # 先立即检查一次（防止在进入等待前消息已到达）
   if (Check-Input) { break }
