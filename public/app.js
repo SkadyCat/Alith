@@ -2659,24 +2659,57 @@ async function saveCurrentDialogue(id) {
 async function createDialogue() {
   const name = prompt('新建会话名称：');
   if (!name || !name.trim()) return;
+  const trimName = name.trim();
   const model = document.getElementById('agentModel').value || 'claude-sonnet-4.6';
-  const historyDoc = document.getElementById('agentHistoryDoc').value || '';
-  const taskPrefixDoc = document.getElementById('agentTaskPrefix').value || '';
-  const systemDocs = selectedSystemDocs.slice();
-  const saveAs = document.getElementById('agentSaveAs').value.trim() || '';
-  const maxContinues = parseInt(document.getElementById('agentMaxCont').value) || 10;
-  const useHistory = document.getElementById('agentUseHistory').checked;
-  const hideTrace = document.getElementById('agentHideTrace').checked;
+
+  // 默认配置
+  const defaultTaskPrefixDoc = 'agent/setting/thinking.md';
+  const defaultSystemDocs    = ['agent/application.md', 'agent/工具文档.md'];
+  const defaultHideTrace     = true;
+  const defaultUseHistory    = true;
+  const defaultMaxContinues  = 10;
+
+  // 自动创建历史文档（docs/history/<会话名>.md）
+  let historyDoc = '';
+  try {
+    const safeFileName = trimName.replace(/[\/\\:*?"<>|]/g, '_');
+    const histRes = await fetch('/open/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename: `history/${safeFileName}`,
+        content: `# ${trimName}\n\n> 会话创建于 ${new Date().toLocaleString('zh-CN')}\n`,
+        overwrite: false,
+      }),
+    });
+    const histData = await histRes.json();
+    if (histData.success) {
+      // path 形如 "history/xxx.md"，去掉前缀 "history/" 得到 historyDoc 值
+      historyDoc = histData.path.replace(/^history\//, '');
+    }
+  } catch (_) {}
+
   const res = await fetch('/api/dialogue', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: name.trim(), model, historyDoc, taskPrefixDoc, systemDocs, saveAs, maxContinues, useHistory, hideTrace }),
+    body: JSON.stringify({
+      name: trimName,
+      model,
+      historyDoc,
+      taskPrefixDoc: defaultTaskPrefixDoc,
+      systemDocs:    defaultSystemDocs,
+      saveAs:        '',
+      maxContinues:  defaultMaxContinues,
+      useHistory:    defaultUseHistory,
+      hideTrace:     defaultHideTrace,
+    }),
   });
   const data = await res.json();
   if (data.success) {
     activeDialogueId = data.id;
     await loadDialogues();
-    showToast(`已创建: ${name.trim()}`, 'success');
+    const histMsg = historyDoc ? `，历史文档: history/${historyDoc}` : '';
+    showToast(`已创建: ${trimName}${histMsg}`, 'success');
   }
 }
 
