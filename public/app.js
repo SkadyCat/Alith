@@ -168,7 +168,7 @@ async function updatePollBubble() {
 
 async function loadFileTree() {
   try {
-    const res = await fetch('/open/tree');
+    const res = await fetch('/api/tree');
     const data = await res.json();
     state.allFiles = [];
     if (data.success) {
@@ -484,7 +484,7 @@ async function restartServer() {
   // Poll until server is back
   const poll = async () => {
     try {
-      const r = await fetch('/open/tree', { cache: 'no-store' });
+      const r = await fetch('/api/tree', { cache: 'no-store' });
       if (r.ok) { location.reload(); return; }
     } catch (_) {}
     setTimeout(poll, 800);
@@ -1544,6 +1544,12 @@ function connectAgentStream(sessionId, noReplay) {
       bgConfirm();
       return;
     }
+    // 立即解锁 UI，不等 done 事件（防止 SSE 断开导致按钮永久禁用）
+    agentRunning = false;
+    _permLocked = false;
+    clearInterval(agentElapsedTimer);
+    document.getElementById('agentStartBtn').disabled = false;
+    document.getElementById('agentStopBtn').disabled = true;
     setAgentStatus(ok ? 'done' : 'error', ok ? `完成 (${elapsed}s)` : `错误 (code ${code})`);
     updateAgentActionBar('idle', '');
     if (ok && _contextPressure && !_contextCompressing) {

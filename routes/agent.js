@@ -284,18 +284,15 @@ function filterCliTrace(text) {
   return out.join('\n');
 }
 
-// ── historyDoc 写入过滤：只保留中文含量 ≥ 50% 的行，并压缩多余空行 ──
+// ── historyDoc 写入过滤：去除纯 ANSI/控制字符行，压缩多余空行，保留所有有意义内容 ──
 function filterForHistoryDoc(text) {
   const lines = text.split('\n');
   const kept = lines.filter(line => {
-    const trimmed = line.trim();
-    // Keep empty lines (structural)
-    if (!trimmed) return true;
-    // Keep lines starting with markdown heading markers
-    if (trimmed.startsWith('#') || trimmed.startsWith('>') || trimmed.startsWith('-') || trimmed.startsWith('*')) return true;
-    // Keep lines with Chinese characters (threshold: at least one Chinese char)
-    const chinese = (trimmed.match(/[\u4e00-\u9fff\u3400-\u4dbf\uff00-\uffef\u3000-\u303f\u2e80-\u2eff]/g) || []).length;
-    return chinese > 0;
+    // Remove lines that are purely ANSI escape sequences or empty control chars
+    const stripped = line.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').trim();
+    // Drop lines that become empty after stripping control chars
+    if (!stripped) return line.trim() === '';  // keep truly blank lines for structure
+    return true;
   });
   // Compress 3+ consecutive empty lines to 2
   return kept.join('\n').replace(/\n{3,}/g, '\n\n');
@@ -568,6 +565,7 @@ router.post('/start', async (req, res) => {
   sess.hideTrace    = !!hideTrace;
 
   broadcast(sessionId, 'start', { task, time: new Date().toISOString(), tokenEst: Math.round(promptChars / 4), maxTokens: modelInfo.maxTokens });
+  broadcast(sessionId, 'output', { text: '⏳ Copilot CLI 正在启动，首次运行需要认证，请稍候…\n', stream: 'stdout' });
   // ── 实时写入历史文档：先写会话头部 ─────────────────────
   let liveWriteTimer = null;
   let liveWriteBuf   = '';    // 待刷入文件的增量缓冲
