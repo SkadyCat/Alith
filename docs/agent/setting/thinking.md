@@ -75,6 +75,10 @@ function Check-Input {
   $resp = Invoke-RestMethod -Uri "$baseUrl/agent/input?sessionId=$sessionId" -Method GET `
     -OperationTimeoutSeconds 10 -ConnectionTimeoutSeconds 5 -ErrorAction SilentlyContinue
   if ($resp -and $resp.hasContent) {
+    # 立即切换为 running（思考中），气泡变蓝
+    $rb = "{`"sessionId`":`"$sessionId`",`"status`":`"running`",`"task`":`"🤔 思考中…`"}"
+    Invoke-RestMethod -Uri "$baseUrl/agent/set-status" -Method POST -ContentType "application/json" -Body $rb `
+      -OperationTimeoutSeconds 5 -ConnectionTimeoutSeconds 3 -ErrorAction SilentlyContinue | Out-Null
     Write-Host "NEW_TASK: $($resp.content)"
     return $true
   }
