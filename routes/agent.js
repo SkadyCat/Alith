@@ -995,13 +995,17 @@ router.post('/set-status', (req, res) => {
   // 只允许从 running → waiting（防止 POLL 脚本将 idle 会话伪装成 waiting 气泡）
   if (body.status && !(body.status === 'waiting' && sess.agentStatus === 'idle')) {
     sess.agentStatus = body.status;
+    // 设为 idle 时从 Map 清理，防止已删除会话的气泡残留
+    if (body.status === 'idle' && !sess.agentProcess) {
+      sessions.delete(sid);
+    }
   }
   if (body.task !== undefined) sess.currentTask = body.task;
   // 同时广播标签事件（向前兼容旧用法）
   if (body.label !== undefined || body.type !== undefined) {
     broadcast(sid, 'agent-action', { type: body.type || 'poll', label: body.label || '' });
   }
-  res.json({ success: true, sessionId: sid, status: sess.agentStatus });
+  res.json({ success: true, sessionId: sid, status: body.status === 'idle' ? 'idle' : sess.agentStatus });
 });
 
 /* ─────────────────────────────────────────────────────────
@@ -1009,7 +1013,15 @@ router.post('/set-status', (req, res) => {
 ──────────────────────────────────────────────────────── */
 router.get('/sessions', (req, res) => {
   const list = [];
+  const toDelete = [];
   sessions.forEach((sess, id) => {
+    // 自动清理孤儿会话：进程已结束 + 没有 pendingDone + 状态为 waiting/running
+    const isOrphaned = !sess.agentProcess && !sess.pendingDone
+      && (sess.agentStatus === 'waiting' || sess.agentStatus === 'running');
+    if (isOrphaned) {
+      toDelete.push(id);
+      return; // 不加入列表，相当于已隐藏
+    }
     list.push({
       id,
       status: sess.agentStatus,
@@ -1017,6 +1029,7 @@ router.get('/sessions', (req, res) => {
       task: sess.currentTask ? sess.currentTask.slice(0, 60) : null,
     });
   });
+  toDelete.forEach(id => sessions.delete(id));
   res.json({ success: true, sessions: list });
 });
 

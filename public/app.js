@@ -2580,6 +2580,17 @@ async function deleteDialogue(id) {
   if (!confirm(`删除会话「${s ? s.name : id}」？`)) return;
   try {
     await fetch(`/api/dialogue/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    // 清理 agent 状态，让气泡消失
+    await fetch('/agent/stop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: id }),
+    }).catch(() => {});
+    await fetch('/agent/set-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: id, status: 'idle', task: '' }),
+    }).catch(() => {});
     if (activeDialogueId === id) activeDialogueId = null;
     await loadDialogues();
   } catch (e) {
@@ -2838,7 +2849,8 @@ function clearConsoleHistory() {
       // Use cached action (updated via SSE) over API-polled value
       const cachedAction = _actionCache[s.id] || s.currentAction;
       const actionLabel = cachedAction && cachedAction.type !== 'idle' ? cachedAction.label : '';
-      return `<div class="alith-bubble sess-bubble ${colorClass}" data-sid="${escapeHtml(s.id)}" onclick="window.switchToSession('${escapeHtml(s.id).replace(/'/g, "\\'")}')" style="cursor:pointer" title="点击切换到此会话">
+      const sidEsc = escapeHtml(s.id).replace(/'/g, "\\'");
+      return `<div class="alith-bubble sess-bubble ${colorClass}" data-sid="${escapeHtml(s.id)}" onclick="window.switchToSession('${sidEsc}')" style="cursor:pointer" title="点击切换到此会话">
         ${iconHtml}
         <div class="alith-bubble-body">
           <div class="alith-bubble-label">${escapeHtml(name)} · ${label}</div>
@@ -2846,9 +2858,24 @@ function clearConsoleHistory() {
           ${actionLabel ? `<div class="alith-bubble-sub bubble-action-sub">⚙️ ${escapeHtml(actionLabel)}</div>` : '<div class="alith-bubble-sub bubble-action-sub" style="display:none"></div>'}
           ${elapsed ? `<div class="alith-bubble-sub bubble-elapsed-sub">⏱ ${elapsed}</div>` : ''}
         </div>
+        <button class="alith-bubble-close" title="关闭此气泡" onclick="event.stopPropagation();window.dismissSessionBubble('${sidEsc}')">✕</button>
       </div>`;
     }).join('');
   }
+
+  window.dismissSessionBubble = async function(sid) {
+    try {
+      await fetch('/agent/set-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: sid, status: 'idle', task: '' }),
+      });
+      // 立即从 DOM 移除，不等下次 poll
+      const el = document.querySelector(`#sessionBubbles [data-sid="${sid}"]`);
+      if (el) el.remove();
+      lastBubbleData = null; // 强制下次 poll 重新渲染
+    } catch (_) {}
+  };
 
   async function pollSessionBubbles() {
     try {
@@ -3054,3 +3081,90 @@ function clearConsoleHistory() {
     if (lbl) lbl.style.display = 'none';
   });
 })();
+
+// ===== POWER REPAIR =====
+function powerRepair() {
+  const fixes = [];
+
+  // 1. 关闭 Agent 面板
+  const agentPanel = document.getElementById('agentPanel');
+  const sessionPanel = document.getElementById('sessionPanel');
+  const agentBtn = document.getElementById('agentToggleBtn');
+  if (agentPanel && agentPanel.classList.contains('open')) {
+    agentPanel.classList.remove('open');
+    if (sessionPanel) sessionPanel.classList.remove('open');
+    if (agentBtn) agentBtn.classList.remove('active');
+    document.body.classList.remove('agent-panel-open');
+    fixes.push('关闭 Agent 面板');
+  }
+
+  // 2. 关闭 API 控制台
+  const apiConsole = document.getElementById('apiConsole');
+  const consoleBtn = document.getElementById('consoleToggleBtn');
+  if (apiConsole && apiConsole.classList.contains('open')) {
+    apiConsole.classList.remove('open');
+    if (consoleBtn) consoleBtn.classList.remove('active');
+    window.consoleOpen = false;
+    fixes.push('关闭 API 控制台');
+  }
+
+  // 3. 退出 Zone Highlight 模式
+  if (document.body.classList.contains('zone-highlight-mode')) {
+    document.body.classList.remove('zone-highlight-mode');
+    const zhBtn = document.getElementById('zoneHighlightBtn');
+    if (zhBtn) zhBtn.classList.remove('active');
+    const ov = document.getElementById('zoneOverlay');
+    const lbl = document.getElementById('zoneLabel');
+    if (ov) ov.style.display = 'none';
+    if (lbl) lbl.style.display = 'none';
+    fixes.push('退出 Zone 拾取模式');
+  }
+
+  // 4. 清除 body 上所有残留 class 异常（保留合法 class）
+  const safeBodyClasses = new Set(['agent-panel-open', 'zone-highlight-mode', 'sidebar-collapsed']);
+  const strayClasses = [...document.body.classList].filter(c => !safeBodyClasses.has(c) && c.startsWith('is-') || c.startsWith('modal-'));
+  strayClasses.forEach(c => { document.body.classList.remove(c); });
+  if (strayClasses.length) fixes.push('清除残留 body class');
+
+  // 5. 重置 main-layout padding（强制刷新）
+  const mainLayout = document.querySelector('.main-layout');
+  if (mainLayout) {
+    mainLayout.style.paddingRight = '';
+    setTimeout(() => { mainLayout.style.paddingRight = ''; }, 50);
+  }
+
+  // 6. 关闭可能残留的 modal / overlay
+  document.querySelectorAll('.modal-overlay, .modal-backdrop').forEach(el => {
+    el.style.display = 'none';
+    fixes.push('关闭残留 modal');
+  });
+
+  // 7. 刷新 session 气泡
+  if (typeof window.refreshSessionBubbles === 'function') {
+    window.refreshSessionBubbles();
+    fixes.push('刷新 Session 气泡');
+  }
+
+  // 8. 刷新文件树
+  if (typeof refreshTree === 'function') {
+    refreshTree();
+    fixes.push('刷新文件树');
+  }
+
+  // 9. 重置保存状态栏
+  const saveStatus = document.getElementById('saveStatus');
+  if (saveStatus && saveStatus.textContent.includes('错误')) {
+    saveStatus.textContent = '';
+    fixes.push('清除错误状态');
+  }
+
+  // 10. 修复按钮动画反馈
+  const repairBtn = document.getElementById('repairBtn');
+  if (repairBtn) {
+    repairBtn.classList.add('repair-done');
+    setTimeout(() => repairBtn.classList.remove('repair-done'), 1200);
+  }
+
+  const summary = fixes.length ? fixes.join(' · ') : '界面状态正常，无需修复';
+  showToast(`🔧 修复完成：${summary}`, 'success');
+}
