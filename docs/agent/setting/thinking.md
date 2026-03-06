@@ -10,18 +10,17 @@
 ```
 [START] → 执行当前任务 → [POLL]
                               │
-                    读取 E:\docs-service\runtime\user_input 文件
-                    （注意：文件可能不存在，不存在等同于空文件）
+                    GET http://localhost:7439/agent/input?sessionId=<id>
+                    （接口返回 { hasContent, content }，读取后服务端自动清空）
                               │
-              ┌───── 文件有内容 ──────────────────────────────────┐
+              ┌───── hasContent=true ─────────────────────────────────┐
               │                                                   │
-              │  1. 立即将文件内容清空（写入空字符串）             │
-              │  2. 将文件内容作为新任务                          │
-              │  3. 重置等待计数器为 0                            │
-              │  4. 回到 [执行当前任务]                           │
+              │  1. 将 content 作为新任务                          │
+              │  2. 重置等待计数器为 0                            │
+              │  3. 回到 [执行当前任务]                           │
               └───────────────────────────────────────────────────┘
               │
-              └───── 文件为空或不存在 ──────────────────────────┐
+              └───── hasContent=false ─────────────────────────────┐
                                                                 │
                   等待计数器 +1                                 │
                   等待 30 秒                                    │
@@ -49,28 +48,63 @@
 
 每次任务执行完毕后，必须立即执行以下 PowerShell 脚本，不得省略：
 
+> ⚠️ **留言机制说明**：留言通过爱丽丝服务接口收发，禁止直接读写文件。
+> - **写入留言**：`POST http://localhost:7439/agent/input`，Body: `{ sessionId, text }`
+> - **读取留言**：`GET http://localhost:7439/agent/input?sessionId=<id>`，返回 `{ hasContent, content, remaining }`，读后自动出队
+
 ```powershell
 $pollCount = 0
 $maxPoll = 100
 $statusFile = "E:\docs-service\runtime\poll_status.md"
-$inputFile  = "E:\docs-service\runtime\user_input_<SESSION_ID>"
 $sessionId  = "<SESSION_ID>"
+$baseUrl    = "http://localhost:7439"
+$inputFile  = "E:\docs-service\runtime\user_input_$sessionId.md"
+
+# 创建 FileSystemWatcher 实现即时检测（<1秒响应）
+$watcher = $null
+try {
+  $watcher = New-Object System.IO.FileSystemWatcher("E:\docs-service\runtime")
+  $watcher.Filter = "user_input_$sessionId.md"
+  $watcher.NotifyFilter = [System.IO.NotifyFilters]::LastWrite -bor [System.IO.NotifyFilters]::FileName
+  $watcher.EnableRaisingEvents = $true
+} catch { $watcher = $null }
+
+function Check-Input {
+  $resp = Invoke-RestMethod -Uri "$baseUrl/agent/input?sessionId=$sessionId" -Method GET -ErrorAction SilentlyContinue
+  if ($resp -and $resp.hasContent) {
+    Write-Host "NEW_TASK: $($resp.content)"
+    return $true
+  }
+  return $false
+}
 
 while ($pollCount -lt $maxPoll) {
   $pollCount++
   Set-Content $statusFile "Waiting for task... ($pollCount/$maxPoll) - $(Get-Date -Format 'HH:mm:ss')"
-  # 同步更新 session 状态，让气泡显示 POLL 状态
   $body = "{`"sessionId`":`"$sessionId`",`"status`":`"waiting`",`"task`":`"POLL 等待中 ($pollCount/$maxPoll)`"}"
-  Invoke-RestMethod -Uri "http://localhost:7439/agent/set-status" -Method POST -ContentType "application/json" -Body $body -ErrorAction SilentlyContinue | Out-Null
-  Start-Sleep -Seconds 30
-  $content = (Get-Content $inputFile -ErrorAction SilentlyContinue) -join "`n"
-  if ($content.Trim() -ne "") {
-    Set-Content $statusFile "New task received at $(Get-Date -Format 'HH:mm:ss')"
-    Set-Content $inputFile ""
-    Write-Host "NEW_TASK: $content"
-    break
+  Invoke-RestMethod -Uri "$baseUrl/agent/set-status" -Method POST -ContentType "application/json" -Body $body -ErrorAction SilentlyContinue | Out-Null
+
+  # 先立即检查一次（防止在进入等待前消息已到达）
+  if (Check-Input) { break }
+
+  if ($watcher) {
+    # FileSystemWatcher 模式：最快 <1 秒响应
+    $result = $watcher.WaitForChanged([System.IO.WatcherChangeTypes]::All, 30000)
+    if (-not $result.TimedOut) {
+      Start-Sleep -Milliseconds 100  # 等待写入完成
+      if (Check-Input) { break }
+    }
+  } else {
+    # 降级：每 5 秒轮询一次（共 6 次 = 30 秒）
+    for ($i = 0; $i -lt 6; $i++) {
+      Start-Sleep -Seconds 5
+      if (Check-Input) { $pollCount = $maxPoll + 1; break }
+    }
+    if ($pollCount -gt $maxPoll) { $pollCount = $maxPoll; break }
   }
 }
+
+if ($watcher) { $watcher.Dispose() }
 if ($pollCount -ge $maxPoll) {
   Set-Content $statusFile ""
   Write-Host "POLL TIMEOUT"

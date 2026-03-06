@@ -398,11 +398,15 @@ router.post('/start', async (req, res) => {
   const sessionId = String(rawSessionId || 'default');
   const sess = getSession(sessionId);
 
-  if (sess.agentStatus === 'running') {
+  // 检测进程是否真正活跃（exitCode===null 表示进程尚未退出）
+  // POLL 脚本会通过 /set-status 将 agentStatus 改为 'waiting'，导致 'running' 检查被绕过
+  // 必须同时检查进程活跃状态，防止重复启动覆盖旧进程引发冲突
+  const processAlive = sess.agentProcess && sess.agentProcess.exitCode === null;
+  if (sess.agentStatus === 'running' || processAlive) {
     return res.status(409).json({ success: false, error: 'Agent 正在运行中，请先停止' });
   }
   // 进程已结束但仍在等待用户确认 → 自动放弃上次结果，允许直接开始新任务
-  if (sess.agentStatus === 'waiting' && !sess.agentProcess) {
+  if ((sess.agentStatus === 'waiting' || sess.agentStatus === 'working') && !sess.agentProcess) {
     sess.pendingDone = null;
     sess.agentStatus = 'idle';
     broadcast(sessionId, 'done', { code: -1, elapsed: 0, task: sess.currentTask || '' });
@@ -927,12 +931,14 @@ router.post('/input', (req, res) => {
   const sess = getSession(sessionId);
   const { text = '', saveTo, historyDoc: reqHistoryDoc } = req.body;
 
-  // 始终将输入内容保存到会话专属文件（default 会话用 user_input，其他用 user_input_{sessionId}）
-  const relPath = saveTo || (sessionId === 'default' ? 'user_input' : `user_input_${sessionId}`);
+  // 统一使用 .md 扩展名；队列追加模式（用 ---MSG--- 分隔符），避免多条消息覆盖丢失
+  const relPath = saveTo || (sessionId === 'default' ? 'user_input.md' : `user_input_${sessionId}.md`);
   const savePath = path.join(RUNTIME_DIR, relPath);
   try {
     fs.mkdirSync(path.dirname(savePath), { recursive: true });
-    fs.writeFileSync(savePath, text, 'utf-8');
+    const existing = fs.existsSync(savePath) ? fs.readFileSync(savePath, 'utf-8').trim() : '';
+    const newContent = existing ? `${existing}\n---MSG---\n${text}` : text;
+    fs.writeFileSync(savePath, newContent, 'utf-8');
   } catch (_) {}
 
   // 若 agent 正在运行，同时写入 stdin
@@ -964,6 +970,47 @@ router.post('/input', (req, res) => {
 });
 
 /* ─────────────────────────────────────────────────────────
+   GET /agent/input  —— 读取并清空会话留言（供 POLL 脚本轮询）
+   Query: sessionId（可选，默认 default）
+   响应: { success, hasContent, content }
+   - hasContent: 是否有新留言
+   - content: 留言内容（读取后立即清空）
+──────────────────────────────────────────────────────── */
+router.get('/input', (req, res) => {
+  const sessionId = String(req.query.sessionId || 'default');
+  const relPath = sessionId === 'default' ? 'user_input.md' : `user_input_${sessionId}.md`;
+  const filePath = path.join(RUNTIME_DIR, relPath);
+
+  // 兼容旧版无扩展名文件：如果 .md 不存在但旧文件存在，迁移过来
+  const legacyPath = filePath.replace(/\.md$/, '');
+  if (!fs.existsSync(filePath) && fs.existsSync(legacyPath)) {
+    try {
+      const legacyContent = fs.readFileSync(legacyPath, 'utf-8').trim();
+      if (legacyContent) fs.writeFileSync(filePath, legacyContent, 'utf-8');
+      fs.writeFileSync(legacyPath, '', 'utf-8');
+    } catch (_) {}
+  }
+
+  try {
+    if (!fs.existsSync(filePath)) {
+      return res.json({ success: true, hasContent: false, content: '' });
+    }
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    if (raw.trim() === '') {
+      return res.json({ success: true, hasContent: false, content: '' });
+    }
+    // 队列模式：取出第一条消息，其余保留
+    const msgs = raw.split('---MSG---').map(m => m.trim()).filter(Boolean);
+    const first = msgs[0];
+    const remaining = msgs.slice(1).join('\n---MSG---\n');
+    fs.writeFileSync(filePath, remaining, 'utf-8');
+    return res.json({ success: true, hasContent: true, content: first, remaining: msgs.length - 1 });
+  } catch (err) {
+    return res.json({ success: false, hasContent: false, content: '', error: err.message });
+  }
+});
+
+/* ─────────────────────────────────────────────────────────
    POST /agent/request-input  —— 主动要求用户在前端打开输入框
    可由外部脚本、工具或 AI 调用，通过 SSE 广播触发前端弹出"注入输入"面板
 
@@ -992,12 +1039,18 @@ router.post('/set-status', (req, res) => {
   const body = req.body || {};
   const sid  = String(body.sessionId || 'default');
   const sess = getSession(sid);
-  // 只允许从 running → waiting（防止 POLL 脚本将 idle 会话伪装成 waiting 气泡）
-  if (body.status && !(body.status === 'waiting' && sess.agentStatus === 'idle')) {
-    sess.agentStatus = body.status;
-    // 设为 idle 时从 Map 清理，防止已删除会话的气泡残留
-    if (body.status === 'idle' && !sess.agentProcess) {
-      sessions.delete(sid);
+  // 状态更新规则：
+  //  - 'waiting' 不能覆盖真正空闲（idle）的会话（防止孤儿气泡），
+  //    但可以从 running/done/error 切换（POLL 气泡正常显示）
+  //  - 'idle' 在进程无活跃进程时触发 session 清理
+  //  - 真正的双启动保护在 /agent/start 的 processAlive 检查中完成
+  if (body.status) {
+    const blocked = body.status === 'waiting' && sess.agentStatus === 'idle';
+    if (!blocked) {
+      sess.agentStatus = body.status;
+      if (body.status === 'idle' && !sess.agentProcess) {
+        sessions.delete(sid);
+      }
     }
   }
   if (body.task !== undefined) sess.currentTask = body.task;
