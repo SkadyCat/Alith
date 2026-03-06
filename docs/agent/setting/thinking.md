@@ -10,7 +10,7 @@
 ```
 [START] → 执行当前任务 → [POLL]
                               │
-                    GET http://localhost:7439/agent/input?sessionId=<id>
+                    GET {{BASE_URL}}/agent/input?sessionId=<id>
                     （接口返回 { hasContent, content }，读取后服务端自动清空）
                               │
               ┌───── hasContent=true ─────────────────────────────────┐
@@ -49,21 +49,21 @@
 每次任务执行完毕后，必须立即执行以下 PowerShell 脚本，不得省略：
 
 > ⚠️ **留言机制说明**：留言通过爱丽丝服务接口收发，禁止直接读写文件。
-> - **写入留言**：`POST http://localhost:7439/agent/input`，Body: `{ sessionId, text }`
-> - **读取留言**：`GET http://localhost:7439/agent/input?sessionId=<id>`，返回 `{ hasContent, content, remaining }`，读后自动出队
+> - **写入留言**：`POST {{BASE_URL}}/agent/input`，Body: `{ sessionId, text }`
+> - **读取留言**：`GET {{BASE_URL}}/agent/input?sessionId=<id>`，返回 `{ hasContent, content, remaining }`，读后自动出队
 
 ```powershell
 $pollCount = 0
 $maxPoll = 100
-$statusFile = "E:\docs-service\runtime\poll_status.md"
-$sessionId  = "<SESSION_ID>"
-$baseUrl    = "http://localhost:7439"
-$inputFile  = "E:\docs-service\runtime\user_input_$sessionId.md"
+$statusFile = "{{RUNTIME_DIR}}\poll_status.md"
+$sessionId  = "{{SESSION_ID}}"
+$baseUrl    = "{{BASE_URL}}"
+$inputFile  = "{{RUNTIME_DIR}}\user_input_$sessionId.md"
 
 # 创建 FileSystemWatcher 实现即时检测（<1秒响应）
 $watcher = $null
 try {
-  $watcher = New-Object System.IO.FileSystemWatcher("E:\docs-service\runtime")
+  $watcher = New-Object System.IO.FileSystemWatcher("{{RUNTIME_DIR}}")
   $watcher.Filter = "user_input_$sessionId.md"
   $watcher.NotifyFilter = [System.IO.NotifyFilters]::LastWrite -bor [System.IO.NotifyFilters]::FileName
   $watcher.EnableRaisingEvents = $true
@@ -131,20 +131,20 @@ if ($pollCount -ge $maxPoll) {
    ```
    [RESET 触发条件：上下文 ≥ 80%]
    
-   Step R-1: 读取 E:\docs-service\docs\history\应用助手4.md 当前内容
+   Step R-1: 读取 {{HISTORY_FILE}} 当前内容
    Step R-2: 将内容压缩为极简摘要（保留关键任务结果、文件路径、系统状态，删除过程细节）
              格式：## 会话压缩记忆 + 表格形式摘要
    Step R-3: 用压缩摘要覆盖写入 history/应用助手4.md（原文件缩减至 ≤ 3000 字符）
    Step R-4: 输出回忆确认：列出记住的关键事项（系统状态/已完成任务/关键路径）
-   Step R-5: 调用 POST http://localhost:7439/agent/relaunch 接口（传入当前 sessionId），
+   Step R-5: 调用 POST {{BASE_URL}}/agent/relaunch 接口（传入当前 sessionId），
              由系统自动终止本进程并以相同参数（含压缩后历史文档）重新启动 Agent，进入 [POLL]
    ```
 
    **Step R-5 调用示例（PowerShell）**：
    ```powershell
-   Invoke-RestMethod -Uri "http://localhost:7439/agent/relaunch" `
+   Invoke-RestMethod -Uri "{{BASE_URL}}/agent/relaunch" `
      -Method POST -ContentType "application/json" `
-     -Body '{"sessionId":"<当前SessionId>"}'
+     -Body '{"sessionId":"{{SESSION_ID}}"}'
    ```
 
    **重置完成标志**：输出 `✅ 上下文已重置，历史已压缩，当前可用空间充足。` 后立即执行 Step R-5。

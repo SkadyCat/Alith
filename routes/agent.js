@@ -26,6 +26,7 @@ const DATA_DIR = path.join(__dirname, '..', 'data');
 const HIST_FILE = path.join(DATA_DIR, 'agent-history.md');
 const HISTORY_DIR = path.join(DOCS_DIR, 'history');  // 会话历史文档目录
 const RUNTIME_DIR = path.join(__dirname, '..', 'runtime'); // 运行时氚临文件目录
+const BASE_URL = 'http://localhost:7439';
 
 // Windows 命令行长度上限约 32767 字节，留足够安全边距
 const MAX_CMD_CHARS = 20000;
@@ -455,6 +456,13 @@ router.post('/start', async (req, res) => {
     const prefPath = path.join(DOCS_DIR, taskPrefixDoc);
     if (prefPath.startsWith(DOCS_DIR) && fs.existsSync(prefPath)) {
       let prefContent = fs.readFileSync(prefPath, 'utf-8');
+      // 替换占位符为实际运行时值，使 thinking.md 与具体路径/地址解耦
+      const histFullPath = historyDoc ? path.join(HISTORY_DIR, historyDoc) : '';
+      prefContent = prefContent
+        .replace(/\{\{RUNTIME_DIR\}\}/g, RUNTIME_DIR)
+        .replace(/\{\{BASE_URL\}\}/g, BASE_URL)
+        .replace(/\{\{SESSION_ID\}\}/g, sessionId || '')
+        .replace(/\{\{HISTORY_FILE\}\}/g, histFullPath);
       if (prefContent.length > PREFIX_BUDGET) {
         prefContent = prefContent.slice(0, PREFIX_BUDGET) + '\n[…已截断]';
       }
