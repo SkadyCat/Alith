@@ -1,4 +1,4 @@
-﻿/* ============================================
+/* ============================================
    DocSpace - Application Logic
    ============================================ */
 
@@ -2610,12 +2610,6 @@ function renderSessionList() {
       }
     };
 
-    const open = document.createElement('button');
-    open.className = 'session-open-btn';
-    open.title = '在编辑器中打开会话文件';
-    open.textContent = '📂';
-    open.onclick = (e) => { e.stopPropagation(); openFile('dialogue/' + s.id); };
-
     const del = document.createElement('button');
     del.className = 'session-del-btn';
     del.title = '删除会话';
@@ -2623,7 +2617,6 @@ function renderSessionList() {
     del.onclick = (e) => { e.stopPropagation(); deleteDialogue(s.id); };
 
     item.appendChild(btn);
-    item.appendChild(open);
     item.appendChild(del);
     list.appendChild(item);
   });
@@ -2701,9 +2694,9 @@ function applyDialogue(cfg) {
   updateAgentActionBar('idle', '');
   hideAgentConfirmBar();
 
-  // 【核心修复】直接从 session 文件的 isRunning/isLaunched 字段立即设置按钮状态
-  // 优先使用 isRunning（新字段），兼容旧字段 isLaunched
-  const _fileIsLaunched = !!(cfg.isRunning ?? cfg.isLaunched);
+  // 【核心修复】直接从 session 文件的 isLaunched 字段立即设置按钮状态
+  // 爱丽丝启动时/切换会话时从文件读取，保证状态持久且无竞态
+  const _fileIsLaunched = !!(cfg.isLaunched);
   document.getElementById('agentStartBtn').disabled = _fileIsLaunched;
   document.getElementById('agentStopBtn').disabled  = !_fileIsLaunched;
 
@@ -2718,7 +2711,7 @@ function applyDialogue(cfg) {
     .then(d => {
       try {
         const fresh = JSON.parse(d.content || '{}');
-        const isLaunched = !!(fresh.isRunning ?? fresh.isLaunched);
+        const isLaunched = !!(fresh.isLaunched);
         // 更新内存中的会话配置，防止下次切回时用旧数据
         const idx = dialogueSessions.findIndex(s => s.id === cfg.id);
         if (idx >= 0) dialogueSessions[idx] = { ...dialogueSessions[idx], ...fresh, id: cfg.id };
@@ -2729,13 +2722,12 @@ function applyDialogue(cfg) {
     })
     .catch(() => {});
 
-  // 额外查询进程级状态（status=running/waiting 等），仅用于更新状态文字，不再覆盖按钮
-  // 按钮状态由第二层 fetch（读取文件 isRunning）决定，isRunning 是唯一状态源
+  // 再额外查询进程级状态（status=running/waiting 等），用于显示状态文字
   fetch(`/agent/status?sessionId=${encodeURIComponent(cfg.id)}`)
     .then(r => r.json())
     .then(data => {
-      const active = data.isRunning ?? data.isLaunched;
-      // 用文件 isRunning 同步按钮（唯一源），确保与第二层一致
+      const active = data.processAlive || data.isLaunched;
+      // 以进程级状态为准覆盖按钮（processAlive 为实时值，比文件更权威）
       document.getElementById('agentStartBtn').disabled = !!active;
       document.getElementById('agentStopBtn').disabled  = !active;
       if (active) {
@@ -2744,8 +2736,8 @@ function applyDialogue(cfg) {
         } else if (data.status === 'running') {
           agentRunning = true;
           setAgentStatus('running', '运行中');
-        } else {
-          // isRunning=true 但无进程（手动标记或重启过渡）
+        } else if (data.isLaunched) {
+          // 进程已退出但标记仍存在（relaunch 过渡期），显示为活跃
           setAgentStatus('running', '活跃中');
         }
       }
@@ -3316,7 +3308,6 @@ function clearConsoleHistory() {
           ${actionLabel ? `<div class="alith-bubble-sub bubble-action-sub">⚙️ ${escapeHtml(actionLabel)}</div>` : '<div class="alith-bubble-sub bubble-action-sub" style="display:none"></div>'}
           ${elapsed ? `<div class="alith-bubble-sub bubble-elapsed-sub">⏱ ${elapsed}</div>` : ''}
         </div>
-        <button class="alith-bubble-open" title="在编辑器中打开会话文件" onclick="event.stopPropagation();openFile('dialogue/${escapeHtml(s.id)}')">📂</button>
         <button class="alith-bubble-close" title="关闭此气泡" onclick="event.stopPropagation();window.dismissSessionBubble('${sidEsc}')">✕</button>
       </div>`;
     }).join('');
@@ -3965,81 +3956,24 @@ async function submitErrorReport() {
     selectedPySystemDocs = Array.isArray(cfg.systemDocs) ? cfg.systemDocs.slice() : [];
     renderPySysdocTags();
 
-    // Reset UI — 先用 cfg.isRunning 立即设置按钮（isRunning 是唯一状态源）
+    // Reset UI
     _pyOutputBuf = '';  // clear streaming line buffer
     document.getElementById('pyagentTask').value = '';
     document.getElementById('pyagentOutput').innerHTML = '';
     document.getElementById('pyagentStatusText').textContent = '空闲';
     document.getElementById('pyagentStatusDot').className = 'agent-status-dot';
-    const _pyFileIsRunning = !!(cfg.isRunning ?? cfg.isLaunched);
-    document.getElementById('pyagentStartBtn').disabled = _pyFileIsRunning;
-    document.getElementById('pyagentStopBtn').disabled  = !_pyFileIsRunning;
+    document.getElementById('pyagentStartBtn').disabled = false;
+    document.getElementById('pyagentStopBtn').disabled = true;
     document.getElementById('pyagentInputBar').style.display = 'none';
     document.getElementById('pyagentStatusInfo').textContent = '';
     document.getElementById('pyagentElapsed').textContent = '';
     stopPyElapsedTimer();
     updatePyActionBar('', '');
     hidePyConfirmBar();
-    pyagentRunning = _pyFileIsRunning;
-
-    // 从服务端刷新最新 isRunning（文件唯一源），确保状态最新
-    fetch(`/agent/status?sessionId=${encodeURIComponent(cfg.id)}`)
-      .then(r => r.json())
-      .then(data => {
-        const active = !!(data.isRunning ?? data.isLaunched);
-        document.getElementById('pyagentStartBtn').disabled = active;
-        document.getElementById('pyagentStopBtn').disabled  = !active;
-        pyagentRunning = active;
-        if (active) {
-          if (data.status === 'waiting') {
-            document.getElementById('pyagentStatusText').textContent = 'POLL 等待中';
-          } else if (data.status === 'running') {
-            document.getElementById('pyagentStatusText').textContent = '运行中';
-          } else {
-            document.getElementById('pyagentStatusText').textContent = '活跃中';
-          }
-        }
-      })
-      .catch(() => {});
+    pyagentRunning = false;
 
     // Reconnect SSE stream for this session
     connectPyAgentStream(cfg.id);
-
-    // 加载历史文档内容到 pyagentOutput
-    (async () => {
-      const output = document.getElementById('pyagentOutput');
-      if (!output) return;
-      const historyDoc = cfg.historyDoc || '';
-      if (historyDoc) {
-        try {
-          const res = await fetch(`/api/file?path=${encodeURIComponent('history/' + historyDoc)}`);
-          const data = await res.json();
-          if (data.success && data.content) {
-            const block = document.createElement('div');
-            block.className = 'agent-md-block agent-history-block';
-            block.innerHTML = marked.parse(data.content);
-            block.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
-            const divider = document.createElement('div');
-            divider.className = 'agent-history-divider';
-            divider.textContent = '── 以上为历史记录 ──';
-            output.insertBefore(divider, output.firstChild);
-            output.insertBefore(block, divider);
-            output.scrollTop = output.scrollHeight;
-          } else {
-            const p = document.createElement('div');
-            p.className = 'agent-line system';
-            p.textContent = '（暂无历史记录）';
-            output.insertBefore(p, output.firstChild);
-          }
-        } catch (_) {}
-      } else {
-        const p = document.createElement('div');
-        p.className = 'agent-line system';
-        p.textContent = '（此会话未配置历史文档）';
-        output.insertBefore(p, output.firstChild);
-      }
-    })();
-
     showToast(`已切换: ${cfg.name}`, 'success');
   };
 
@@ -4149,26 +4083,23 @@ async function submitErrorReport() {
     try {
       if (statusText) statusText.textContent = '正在连接…';
 
-      const remoteIp = activePyAgentSession.ip; // e.g. "localhost:9002"
-
-    const startParams = JSON.stringify({
+      const startParams = JSON.stringify({
         task,
         sessionId: activePyAgentSession.id,
         model: (document.getElementById('pyagentModel') || {}).value || '',
         historyDoc: (document.getElementById('pyagentHistoryDoc') || {}).value || '',
         taskPrefixDoc: (document.getElementById('pyagentTaskPrefix') || {}).value || '',
         systemDocs: selectedPySystemDocs.slice(),
-        ...(remoteIp ? { ip: remoteIp } : {}),
       });
 
-      // 始终走本地服务端代理（服务端会根据 ip 字段决定是否转发到远程）
+      // 尝试直接启动
       let res = await fetch('/pyagent/start', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: startParams,
       });
       let data = await res.json();
 
-      // 若 PyAgent 服务未运行（ECONNREFUSED），自动拉起后重试（仅限本地）
-      if (!remoteIp && !res.ok && data.error && (data.error.includes('ECONNREFUSED') || data.error.includes('无法连接') || data.error.includes('启动失败'))) {
+      // 若 PyAgent 服务未运行（ECONNREFUSED），自动拉起后重试
+      if (!res.ok && data.error && (data.error.includes('ECONNREFUSED') || data.error.includes('无法连接') || data.error.includes('启动失败'))) {
         if (statusText) statusText.textContent = '正在拉起 PyAgent 服务…';
         const launchRes = await fetch('/agent/launch-pyagent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
         const launchData = await launchRes.json();
@@ -4182,15 +4113,6 @@ async function submitErrorReport() {
       if (!res.ok || data.error) {
         throw new Error(data.error || '启动失败');
       }
-      // 写 isRunning: true 到 session 文件
-      const sid = activePyAgentSession.id;
-      await fetch(`/api/dialogue/${encodeURIComponent(sid)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isRunning: true, isLaunched: true }),
-      });
-      const idx = dialogueSessions.findIndex(s => s.id === sid);
-      if (idx >= 0) { dialogueSessions[idx].isRunning = true; dialogueSessions[idx].isLaunched = true; }
       showToast('PyAgent 已启动', 'success');
     } catch (e) {
       const errLine = document.createElement('div');
@@ -4209,31 +4131,19 @@ async function submitErrorReport() {
   // ── Stop PyAgent ──────────────────────────────────────────────
   window.stopPyAgent = async function () {
     if (!activePyAgentSession) return;
-    const sid = activePyAgentSession.id;
-    const remoteIp = activePyAgentSession.ip; // e.g. "localhost:9002"
-    // 向本地服务端发停止请求（body 携带 ip，服务端负责转发到远程）
-    // 进程不存在时服务端也返回 success，无需担心 failed to fetch
     try {
       await fetch('/pyagent/stop', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sid, ...(remoteIp ? { ip: remoteIp } : {}) }),
+        body: JSON.stringify({ sessionId: activePyAgentSession.id }),
       });
-    } catch (_) { /* 忽略网络错误 */ }
-    // 无论停止请求是否成功，都写 isRunning: false（唯一状态源）
-    try {
-      await fetch(`/api/dialogue/${encodeURIComponent(sid)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isRunning: false, isLaunched: false }),
-      });
-    } catch (_) { /* 忽略 */ }
-    const idx = dialogueSessions.findIndex(s => s.id === sid);
-    if (idx >= 0) { dialogueSessions[idx].isRunning = false; dialogueSessions[idx].isLaunched = false; }
-    setPyAgentRunning(false);
-    updatePyActionBar('', '');
-    hidePyConfirmBar();
-    showToast('PyAgent 已停止', 'success');
+      setPyAgentRunning(false);
+      updatePyActionBar('', '');
+      hidePyConfirmBar();
+      showToast('PyAgent 已停止', 'success');
+    } catch (e) {
+      showToast('停止失败: ' + e.message, 'error');
+    }
   };
 
   // ── Send input to waiting PyAgent ────────────────────────────

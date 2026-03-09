@@ -24,18 +24,25 @@ const routeModules = {
   agent:     { file: './routes/agent',     router: null },
   tools:     { file: './routes/tools',     router: null },
   nodeflow:  { file: './routes/nodeflow',  router: null },
+  pyagent:   { file: './routes/pyagent',   router: null },
 };
 
 function loadRoute(key) {
   const mod = routeModules[key];
-  const fullPath = require.resolve(mod.file);
-  delete require.cache[fullPath];
-  mod.router = require(mod.file);
-  console.log(`🔄 [hot-reload] reloaded: ${mod.file}`);
+  try {
+    const fullPath = require.resolve(mod.file);
+    delete require.cache[fullPath];
+    mod.router = require(mod.file);
+    console.log(`🔄 [hot-reload] reloaded: ${mod.file}`);
+  } catch (err) {
+    console.error(`❌ [hot-reload] failed to load ${mod.file}: ${err.message}`);
+  }
 }
 
 // Initial load
-Object.keys(routeModules).forEach(loadRoute);
+Object.keys(routeModules).forEach(key => {
+  try { loadRoute(key); } catch (e) { console.error(`❌ initial load failed: ${routeModules[key].file}: ${e.message}`); }
+});
 
 // Watch routes/ for changes
 chokidar.watch(path.join(__dirname, 'routes'), { ignoreInitial: true })
@@ -185,6 +192,9 @@ app.use('/tools', (req, res, next) => routeModules.tools.router(req, res, next))
 
 // ─── NodeFlow 可视化流水线 ────────────────────────────────────
 app.use('/nodeflow', (req, res, next) => routeModules.nodeflow.router(req, res, next));
+
+// ─── PyAgent Socket 服务接口 ──────────────────────────────────
+app.use('/pyagent', (req, res, next) => routeModules.pyagent.router(req, res, next));
 
 // ─── Applications ────────────────────────────────────────────
 app.use('/jump_game', express.static(path.join(__dirname, 'application', 'jump_game')));
@@ -427,9 +437,9 @@ app.get('/api/dialogue', (req, res) => {
 });
 
 app.post('/api/dialogue', (req, res) => {
-  const { name, model, historyDoc, systemDocs } = req.body;
   const id = `session-${Date.now()}.md`;
-  const cfg = { name: name || '新会话', model: model || 'claude-sonnet-4.6', historyDoc: historyDoc || '', systemDocs: systemDocs || [] };
+  const defaults = { name: '新会话', model: 'claude-sonnet-4.6', historyDoc: '', systemDocs: [] };
+  const cfg = { ...defaults, ...req.body };
   try {
     fs.mkdirSync(DIALOGUE_DIR, { recursive: true });
     fs.writeFileSync(path.join(DIALOGUE_DIR, id), JSON.stringify(cfg, null, 2), 'utf-8');

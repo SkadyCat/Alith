@@ -29,8 +29,8 @@ const RUNTIME_DIR = path.join(__dirname, '..', 'runtime'); // 运行时氚临文
 const DIALOGUE_DIR = path.join(DOCS_DIR, 'dialogue'); // 会话配置文件目录
 const BASE_URL = 'http://localhost:7439';
 
-// ── 更新会话配置文件中的 isLaunched / isRunning 状态 ────────────
-// sessionId 即会话文件名（如 session-xxx.md），将 isLaunched/isRunning/agentPort 写入文件
+// ── 更新会话配置文件中的 isLaunched 状态 ────────────────────
+// sessionId 即会话文件名（如 session-xxx.md），将 isLaunched/agentPort 写入文件
 // 爱丽丝重启后前端读取文件即可恢复按钮状态，无需额外 runtime 文件
 function updateDialogueState(sessionId, fields) {
   if (!sessionId || sessionId === 'default' || /[/\\]/.test(sessionId)) return;
@@ -39,14 +39,7 @@ function updateDialogueState(sessionId, fields) {
   try {
     let existing = {};
     try { existing = JSON.parse(fs.readFileSync(filePath, 'utf-8')); } catch {}
-    // 同步 isRunning 与 isLaunched，保证两个字段始终一致
-    const merged = { ...fields };
-    if ('isLaunched' in merged && !('isRunning' in merged)) {
-      merged.isRunning = merged.isLaunched;
-    } else if ('isRunning' in merged && !('isLaunched' in merged)) {
-      merged.isLaunched = merged.isRunning;
-    }
-    const updated = { ...existing, ...merged };
+    const updated = { ...existing, ...fields };
     fs.writeFileSync(filePath, JSON.stringify(updated, null, 2), 'utf-8');
   } catch (_) {}
 }
@@ -1248,24 +1241,13 @@ router.get('/sessions', (req, res) => {
 
 /* ─────────────────────────────────────────────────────────
    GET /agent/status  —— 当前状态
-   isRunning 字段（存储在 dialogue 文件）是唯一状态源，内存不再维护
 ───────────────────────────────────────────────────────── */
 router.get('/status', (req, res) => {
   const sessionId = String(req.query.sessionId || 'default');
   const sess = getSession(sessionId);
   const processAlive = !!(sess.agentProcess && sess.agentProcess.exitCode === null);
+  // 持续同步 PID 到 _lastPid，确保重启后能检查进程存活
   if (processAlive && sess.agentProcess.pid) sess._lastPid = sess.agentProcess.pid;
-  // 以 dialogue 文件的 isRunning 为唯一状态源
-  let isRunning = false;
-  try {
-    if (sessionId !== 'default' && !/[/\\]/.test(sessionId)) {
-      const fp = path.join(DIALOGUE_DIR, sessionId);
-      if (fs.existsSync(fp)) {
-        const fc = JSON.parse(fs.readFileSync(fp, 'utf-8'));
-        isRunning = !!(fc.isRunning ?? fc.isLaunched);
-      }
-    }
-  } catch (_) {}
   res.json({
     success: true,
     status: sess.agentStatus,
@@ -1274,8 +1256,7 @@ router.get('/status', (req, res) => {
     elapsedSec: sess.startTime ? Math.floor((Date.now() - sess.startTime) / 1000) : null,
     pid: sess.agentProcess ? sess.agentProcess.pid : null,
     processAlive,
-    isLaunched: isRunning,   // 以文件 isRunning 为唯一源
-    isRunning,               // 明确暴露 isRunning 字段
+    isLaunched: !!(sess.isLaunched),   // 会话已启动标记，切换会话后用于高亮"停止"按钮
     launchedAt: sess.launchedAt || null,
     historyCount: sess.agentHistory.length,
     contextProgress: sess.contextProgress || 0,

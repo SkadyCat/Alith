@@ -1784,6 +1784,31 @@ textarea.doc-drag-over {
   border-color: var(--accent);
   color: white;
 }
+.pyagent-new-btn {
+  font-size: 13px;
+}
+.pyagent-new-btn:hover {
+  background: #22863a;
+  border-color: #22863a;
+  color: white;
+}
+
+/* PyAgent session items */
+.session-item.pyagent-session {
+  border-left: 2px solid #22863a;
+}
+.session-item.pyagent-session.active {
+  background: rgba(34, 134, 58, 0.15);
+  border-color: #22863a;
+}
+
+/* PyAgent panel: reuses agent-panel positioning, add green accent */
+.pyagent-panel .agent-panel-header {
+  border-bottom-color: rgba(34, 134, 58, 0.4);
+}
+.pyagent-panel .agent-panel-title {
+  color: var(--text-primary);
+}
 
 .session-list {
   flex: 1;
@@ -1867,6 +1892,23 @@ textarea.doc-drag-over {
 }
 .session-item:hover .session-del-btn { opacity: 1; }
 .session-del-btn:hover { background: rgba(240,107,107,0.2); color: var(--danger); }
+
+.session-open-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 20px; height: 20px;
+  border-radius: 4px;
+  font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-right: 2px;
+  opacity: 0;
+  transition: all var(--transition);
+}
+.session-item:hover .session-open-btn { opacity: 1; }
+.session-open-btn:hover { background: rgba(99,179,237,0.15); color: var(--accent); }
 
 
 
@@ -2395,6 +2437,25 @@ body.zone-highlight-mode #zoneOverlay {
   transition: color 0.15s;
 }
 .alith-bubble-close:hover { color: var(--danger); }
+
+/* Open-file button on session bubbles */
+.alith-bubble-open {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+.alith-bubble:hover .alith-bubble-open,
+.sess-bubble:hover .alith-bubble-open { opacity: 1; }
+.alith-bubble-open:hover { color: var(--accent); }
+
 
 /* ── Zone Picker specific ── */
 /* ── Unified bubble stack (zone picker + session bubbles) ── */
