@@ -26,7 +26,29 @@ const ROOT_DIR = __dirname;
 const DOCS_DIR = path.join(ROOT_DIR, 'docs');
 const HISTORY_DIR = path.join(DOCS_DIR, 'history');
 const RUNTIME_DIR = path.join(ROOT_DIR, 'runtime');
+const CHAT_DIR = path.join(DOCS_DIR, 'agent', 'chat');
 const BASE_URL = 'http://localhost:7439';
+
+// ── 聊天持久化（直接写文件，不依赖 TCP 广播连接）────────────────────────────
+fs.mkdirSync(CHAT_DIR, { recursive: true });
+
+function getChatPath(sessionId) {
+  const base = sessionId && sessionId.endsWith('.md') ? sessionId : (sessionId || 'pyagent') + '.md';
+  return path.join(CHAT_DIR, base);
+}
+
+function stripAnsi(text) {
+  return String(text)
+    .replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '')
+    .replace(/\x1b\][^\x07]*\x07/g, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+}
+
+function appendToChat(sessionId, text) {
+  if (!sessionId || !text) return;
+  try { fs.appendFileSync(getChatPath(sessionId), text, 'utf-8'); } catch (_) {}
+}
 
 // ── 会话状态 ──────────────────────────────────────────────────────────────────
 const sessions = new Map();
@@ -45,12 +67,37 @@ function getSession(id) {
 
 // ── 广播：推送到所有已连接的 Socket ─────────────────────────────────────────
 const allSockets = new Set();
+const broadcastSockets = new Set();  // 专门接收广播的长连接（来自 routes/pyagent.js）
 
 function broadcast(obj) {
   const line = JSON.stringify(obj) + '\n';
   for (const sock of allSockets) {
     try { sock.write(line); } catch (_) { allSockets.delete(sock); }
   }
+}
+
+// ── 代理可用性缓存 ────────────────────────────────────────────────────────────
+let _proxyAvailable = null;        // null=未检测, true=可用, false=不可用
+let _proxyCheckTs   = 0;
+const PROXY_CACHE_TTL = 30000;    // 30 秒缓存
+
+function checkProxyAvailable(host, port) {
+  const now = Date.now();
+  if (_proxyAvailable !== null && now - _proxyCheckTs < PROXY_CACHE_TTL) {
+    return Promise.resolve(_proxyAvailable);
+  }
+  return new Promise((resolve) => {
+    const sock = new net.Socket();
+    sock.setTimeout(800);
+    sock.connect(port, host, () => {
+      sock.destroy();
+      _proxyAvailable = true;
+      _proxyCheckTs   = Date.now();
+      resolve(true);
+    });
+    sock.on('error', () => { sock.destroy(); _proxyAvailable = false; _proxyCheckTs = Date.now(); resolve(false); });
+    sock.on('timeout', () => { sock.destroy(); _proxyAvailable = false; _proxyCheckTs = Date.now(); resolve(false); });
+  });
 }
 
 // ── 检测 Copilot CLI ──────────────────────────────────────────────────────────
@@ -90,7 +137,7 @@ function detectCopilotCmd() {
 function buildPrompt(params) {
   const { task = '', systemDocs = [], taskPrefixDoc = '', historyDoc = '', sessionId = '' } = params;
   const SYSDOC_BUDGET  = 5000;
-  const PREFIX_BUDGET  = 10000;
+  const PREFIX_BUDGET  = 12000;
   const HIST_BUDGET    = 8000;
 
   let parts = [];
@@ -144,9 +191,117 @@ function buildPrompt(params) {
   return parts.join('\n\n');
 }
 
+// ── doSpawn：实际 spawn Copilot CLI ────────────────────────────────────────────
+function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, params) {
+  try {
+    let child;
+    try {
+      child = spawn(cmd, agentArgs, { env, shell, windowsHide: true, cwd: ROOT_DIR });
+    } catch (epermErr) {
+      if (epermErr.code === 'EPERM' || epermErr.message.includes('EPERM')) {
+        // windowsHide:true 在某些 Windows 环境下会导致 EPERM，降级重试
+        console.warn('[PyAgent] spawn EPERM with windowsHide:true, retrying without...');
+        child = spawn(cmd, agentArgs, { env, shell, windowsHide: false, cwd: ROOT_DIR });
+      } else {
+        throw epermErr;
+      }
+    }
+
+    sess.process    = child;
+    sess.status     = 'running';
+    sess.task       = params.task;
+    sess.runId      = runId;
+    sess.historyDoc = histDoc;
+    sess.outputBuf  = '';
+    if (sess.relaunchCount === undefined) sess.relaunchCount = 0;
+
+    // 写入分隔线到聊天文件（任务文本由 routes/pyagent.js 的 persistPyChat 写入，避免重复）
+    if (sessionId && sess.relaunchCount > 0) {
+      // 重启时写入分隔线标记，初次启动由 routes 写入用户消息
+      appendToChat(sessionId, `\n\n---\n\n`);
+    }
+
+    let _firstOutput = true;
+    child.stdout.on('data', (chunk) => {
+      const text = chunk.toString('utf8');
+      sess.outputBuf += text;
+      if (_firstOutput) {
+        _firstOutput = false;
+        broadcast({ type: 'agent_launched', sessionId, message: 'CopilotCli 启动成功' });
+      }
+      broadcast({ type: 'agent_output', sessionId, stream: 'stdout', text });
+      // 直接写入聊天文件（不依赖广播连接是否建立）
+      const cleaned = stripAnsi(text);
+      if (cleaned) appendToChat(sessionId, cleaned);
+    });
+    child.stderr.on('data', (chunk) => {
+      broadcast({ type: 'agent_output', sessionId, stream: 'stderr', text: chunk.toString('utf8') });
+    });
+    child.on('close', (code) => {
+      if (sess.historyDoc && sess.outputBuf.trim()) {
+        try {
+          const histPath = path.join(HISTORY_DIR, sess.historyDoc);
+          const now = new Date().toLocaleString('zh-CN', { hour12: false });
+          const header = `\n\n---\n**[${now}] 任务：${(sess.task || '').slice(0, 60)}**\n\n`;
+          const footer = `\n\n> 退出码: ${code}\n`;
+          const clean = sess.outputBuf.replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '').replace(/\r\n/g, '\n');
+          fs.appendFileSync(histPath, header + clean + footer, 'utf8');
+          broadcast({ type: 'history-saved', sessionId, path: `history/${sess.historyDoc}` });
+        } catch (_) {}
+      }
+      // 写入退出标记到聊天文件
+      appendToChat(sessionId, `\n\n> 退出码: ${code}\n`);
+
+      sess.outputBuf = '';
+      sess.process   = null;
+
+      // 正常退出（code=0）且未被用户手动停止 → 自动 relaunch（最多 50 次）
+      if (code === 0 && sess.status !== 'stopped' && sess.relaunchCount < 50) {
+        sess.relaunchCount++;
+        sess.status = 'running';
+        const newRunId = Date.now().toString(36) + Math.random().toString(36).slice(2);
+        broadcast({ type: 'agent_output', sessionId, stream: 'stdout',
+          text: `\n[自动重启 #${sess.relaunchCount}]\n` });
+        doSpawn(cmd, agentArgs, env, shell, sess, sessionId, newRunId, histDoc, params);
+        return;
+      }
+
+      sess.status = 'idle';
+      sess.relaunchCount = 0;
+      broadcast({ type: 'status', sessionId, status: 'idle', exitCode: code, runId });
+      broadcast({ type: 'agent_output', sessionId, stream: 'done', text: `\n[Agent 已退出，退出码: ${code}]\n` });
+    });
+    child.on('error', (err) => {
+      sess.process = null;
+      sess.status  = 'error';
+      broadcast({ type: 'status', sessionId, status: 'error', error: err.message, runId });
+      broadcast({ type: 'agent_output', sessionId, stream: 'stderr', text: `[启动失败: ${err.message}]` });
+    });
+  } catch (e) {
+    sess.process = null;
+    sess.status  = 'error';
+    broadcast({ type: 'status', sessionId, status: 'error', error: e.message, runId });
+    broadcast({ type: 'agent_output', sessionId, stream: 'stderr', text: `[spawn 异常: ${e.message}]` });
+  }
+}
+
 // ── 动作处理 ──────────────────────────────────────────────────────────────────
-function handleAction(action, params, respond) {
+function handleAction(action, params, respond, socket) {
   const sessionId = String((params && params.sessionId) || 'default');
+
+  if (action === 'register_broadcast') {
+    // 新模块实例连接时，关闭所有旧的 broadcast socket（热重载时清理僵尸连接）
+    for (const s of broadcastSockets) {
+      if (s !== socket) {
+        try { s.destroy(); } catch (_) {}
+        allSockets.delete(s);
+      }
+    }
+    broadcastSockets.clear();
+    broadcastSockets.add(socket);
+    // 不需要回复，broadcast socket 只接收，不发送
+    return;
+  }
 
   if (action === 'ping') {
     respond({ type: 'pong' });
@@ -167,14 +322,19 @@ function handleAction(action, params, respond) {
   if (action === 'start') {
     const sess = getSession(sessionId);
     if (sess.process && sess.process.exitCode === null) {
-      respond({ type: 'error', error: '会话正在运行中' });
-      return;
+      // 进程还活着，先强制终止再重启（而不是报错拒绝）
+      try { sess.process.kill('SIGTERM'); } catch (_) {}
+      try { sess.process.kill('SIGKILL'); } catch (_) {}
+      sess.process = null;
+      sess.status = 'idle';
     }
 
     const prompt = buildPrompt({ ...params, sessionId });
     const { cmd, args, shell } = detectCopilotCmd();
-    const maxCont = parseInt(params.maxContinues) || 10;
+    const maxCont = parseInt(params.maxContinues) || 100;
     const histDoc = params.historyDoc || '';
+    // 每次启动生成唯一 runId，用于前端区分本轮与历史轮的 SSE 事件
+    const runId = Date.now().toString(36) + Math.random().toString(36).slice(2);
 
     // 立即将用户任务写入历史文档
     if (histDoc) {
@@ -198,71 +358,32 @@ function handleAction(action, params, respond) {
     ];
     if (params.model) agentArgs.push('--model', params.model);
 
-    const env = { ...process.env };
-    if (!env.HTTPS_PROXY && !env.HTTP_PROXY) {
-      env.HTTPS_PROXY = 'http://127.0.0.1:7890';
-      env.HTTP_PROXY  = 'http://127.0.0.1:7890';
-    }
-    // 将 tools/ 目录加入 PATH，使 pwsh.cmd 垫片可被 copilot CLI 找到
-    const toolsDir = path.join(ROOT_DIR, 'tools');
-    const pathSep = process.platform === 'win32' ? ';' : ':';
-    env.PATH = toolsDir + pathSep + (env.PATH || '');
-
-    try {
-      const child = spawn(cmd, agentArgs, {
-        env, shell, windowsHide: true, cwd: ROOT_DIR,
-      });
-
-      sess.process  = child;
-      sess.status   = 'running';
-      sess.task     = params.task;
-      sess.historyDoc = params.historyDoc || '';
-      sess.outputBuf  = '';  // 累积 stdout 用于写入历史
-
-      broadcast({ type: 'status', sessionId, status: 'running', task: params.task });
-
-      child.stdout.on('data', (chunk) => {
-        const text = chunk.toString('utf8');
-        sess.outputBuf += text;
-        broadcast({ type: 'agent_output', sessionId, stream: 'stdout', text });
-      });
-      child.stderr.on('data', (chunk) => {
-        broadcast({ type: 'agent_output', sessionId, stream: 'stderr', text: chunk.toString('utf8') });
-      });
-      child.on('close', (code) => {
-        // 将本次会话输出追加到历史文档
-        if (sess.historyDoc && sess.outputBuf.trim()) {
-          try {
-            const histPath = path.join(HISTORY_DIR, sess.historyDoc);
-            const now = new Date().toLocaleString('zh-CN', { hour12: false });
-            const header = `\n\n---\n**[${now}] 任务：${(sess.task || '').slice(0, 60)}**\n\n`;
-            const footer = `\n\n> 退出码: ${code}\n`;
-            // 简单过滤 ANSI 控制字符
-            const clean = sess.outputBuf.replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '').replace(/\r\n/g, '\n');
-            fs.appendFileSync(histPath, header + clean + footer, 'utf8');
-            broadcast({ type: 'history-saved', sessionId, path: `history/${sess.historyDoc}` });
-          } catch (_) {}
+    // 异步检测代理后再 spawn（不阻塞 TCP 响应，先 respond 再 spawn）
+    checkProxyAvailable('127.0.0.1', 7890).then((proxyOk) => {
+      const env = { ...process.env };
+      if (!env.HTTPS_PROXY && !env.HTTP_PROXY) {
+        if (proxyOk) {
+          env.HTTPS_PROXY = 'http://127.0.0.1:7890';
+          env.HTTP_PROXY  = 'http://127.0.0.1:7890';
+          console.log('[PyAgent] 代理可用，已设置 HTTPS_PROXY=http://127.0.0.1:7890');
+        } else {
+          console.log('[PyAgent] 代理不可用（端口 7890 未开放），使用直连');
         }
-        sess.outputBuf = '';
-        sess.process = null;
-        sess.status  = 'idle';
-        broadcast({ type: 'status', sessionId, status: 'idle', exitCode: code });
-        broadcast({
-          type: 'agent_output', sessionId, stream: 'done',
-          text: `\n[Agent 已退出，退出码: ${code}]\n`,
-        });
-      });
-      child.on('error', (err) => {
-        sess.process = null;
-        sess.status  = 'error';
-        broadcast({ type: 'status', sessionId, status: 'error', error: err.message });
-        broadcast({ type: 'agent_output', sessionId, stream: 'stderr', text: `[启动失败: ${err.message}]` });
-      });
+      }
+      // 将 tools/ 和 tools/pwsh7/ 加入 PATH
+      // - tools/pwsh7/: 让 Copilot CLI 检测 pwsh.exe 时能直接找到 PowerShell 7
+      // - tools/: 保留 pwsh.cmd 等其他垫片
+      const toolsDir  = path.join(ROOT_DIR, 'tools');
+      const pwsh7Dir  = path.join(ROOT_DIR, 'tools', 'pwsh7');
+      const pathSep = process.platform === 'win32' ? ';' : ':';
+      env.PATH = pwsh7Dir + pathSep + toolsDir + pathSep + (env.PATH || '');
 
-      respond({ type: 'started', sessionId });
-    } catch (e) {
-      respond({ type: 'error', error: e.message });
-    }
+      doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, params);
+    });
+
+    respond({ type: 'started', sessionId, runId });
+    broadcast({ type: 'status', sessionId, status: 'running', task: params.task, runId });
+    broadcast({ type: 'process_launched', sessionId, message: '进程已拉起' });
     return;
   }
 
@@ -272,7 +393,8 @@ function handleAction(action, params, respond) {
       try { sess.process.kill('SIGTERM'); } catch (_) {}
       try { sess.process.kill('SIGKILL'); } catch (_) {}
     }
-    sess.status = 'idle';
+    sess.status = 'stopped';  // 标记为手动停止，防止 doSpawn close handler 自动 relaunch
+    sess.relaunchCount = 0;
     respond({ type: 'stopped', sessionId });
     return;
   }
@@ -280,9 +402,17 @@ function handleAction(action, params, respond) {
   if (action === 'continue') {
     const sess = getSession(sessionId);
     const inputText = params.input || 'y';
-    if (sess.process && sess.process.stdin) {
-      try { sess.process.stdin.write(inputText + '\n'); } catch (_) {}
-    }
+
+    // 写入 POLL 脚本可读取的 user_input 文件（/agent/input GET 端点读取此文件）
+    // Copilot CLI 以 --autopilot --no-ask-user 运行，不读 stdin；
+    // 用户留言必须通过文件队列传递给 POLL 脚本
+    const inputFile = path.join(RUNTIME_DIR, `user_input_${sessionId}.md`);
+    try {
+      const existing = fs.existsSync(inputFile) ? fs.readFileSync(inputFile, 'utf-8').trim() : '';
+      const newContent = existing ? `${existing}\n---MSG---\n${inputText}` : inputText;
+      fs.writeFileSync(inputFile, newContent, 'utf-8');
+    } catch (_) {}
+
     // 将用户输入立即追加到历史文档
     if (sess.historyDoc) {
       try {
@@ -291,6 +421,11 @@ function handleAction(action, params, respond) {
         const entry = `\n\n> 💬 **[用户留言 ${now}]**\n>\n> ${inputText.replace(/\n/g, '\n> ')}\n`;
         fs.appendFileSync(histPath, entry, 'utf8');
       } catch (_) {}
+    }
+    // 将用户输入追加到聊天文件
+    {
+      const clean = String(inputText).replace(/\n/g, '\n> ');
+      appendToChat(sessionId, `\n> 💬 **[用户留言]**\n>\n> ${clean}\n\n`);
     }
     respond({ type: 'continued', sessionId });
     return;
@@ -316,12 +451,12 @@ const server = net.createServer((socket) => {
 
       handleAction(msg.action, msg.params || {}, (resp) => {
         try { socket.write(JSON.stringify(resp) + '\n'); } catch (_) {}
-      });
+      }, socket);
     }
   });
 
-  socket.on('close', () => allSockets.delete(socket));
-  socket.on('error', () => allSockets.delete(socket));
+  socket.on('close', () => { allSockets.delete(socket); broadcastSockets.delete(socket); });
+  socket.on('error', () => { allSockets.delete(socket); broadcastSockets.delete(socket); });
 });
 
 server.listen(PORT, HOST, () => {

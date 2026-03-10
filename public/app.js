@@ -694,9 +694,24 @@ function finalizeToast(toast) {
 
 // ===== SEARCH / FILTER =====
 function filterTree(query) {
+  const searchInput = document.getElementById('treeSearchInput');
+  const wasFocused = document.activeElement === searchInput;
+
+  // 在所有同步事件处理器完成后（包括可能乘机调用 ta.focus() 的 _runSearch），
+  // 如果树搜索框原本有焦点且编辑器搜索面板未打开，则恢复焦点
+  const _restoreFocus = () => {
+    if (!wasFocused) return;
+    requestAnimationFrame(() => {
+      if (document.activeElement === searchInput) return; // 焦点还在，无需处理
+      const panel = document.getElementById('editorSearchPanel');
+      if (panel && panel.style.display === 'block') return; // 用户主动打开编辑器搜索，不干预
+      searchInput.focus();
+    });
+  };
+
   const q = query.toLowerCase().trim();
   if (!q) {
-    loadFileTree();
+    loadFileTree().finally(_restoreFocus);
     return;
   }
   
@@ -708,6 +723,7 @@ function filterTree(query) {
   container.innerHTML = '';
   if (matched.length === 0) {
     container.innerHTML = `<div class="empty-tree">未找到匹配的文档</div>`;
+    _restoreFocus();
     return;
   }
   
@@ -728,6 +744,7 @@ function filterTree(query) {
     el.addEventListener('click', () => openFile(f.path));
     container.appendChild(el);
   });
+  _restoreFocus();
 }
 
 // ===== OPEN FILE =====
@@ -898,7 +915,199 @@ function onEditorKeydown(e) {
     textarea.value = textarea.value.substring(0, start) + '  ' + textarea.value.substring(end);
     textarea.selectionStart = textarea.selectionEnd = start + 2;
   }
+  // Ctrl+F — open search panel
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    e.preventDefault();
+    e.stopPropagation();
+    openEditorSearch();
+  }
 }
+
+// ===== EDITOR SEARCH (VSCode-style) =====
+const _search = {
+  matches: [],    // [{start, end}, ...]
+  current: -1,
+  caseSensitive: false,
+  useRegex: false,
+};
+
+function openEditorSearch() {
+  const panel = document.getElementById('editorSearchPanel');
+  panel.style.display = 'block';
+  const input = document.getElementById('searchInput');
+  // Pre-fill with selected text
+  const ta = document.getElementById('editorTextarea');
+  const sel = ta.value.substring(ta.selectionStart, ta.selectionEnd);
+  if (sel && !sel.includes('\n')) input.value = sel;
+  // Defer focus to next tick so browser doesn't steal it back after keydown
+  setTimeout(() => { input.focus(); input.select(); }, 0);
+  _runSearch();
+}
+
+function closeEditorSearch() {
+  document.getElementById('editorSearchPanel').style.display = 'none';
+  _search.matches = [];
+  _search.current = -1;
+  document.getElementById('editorTextarea').focus();
+}
+
+function toggleReplaceRow() {
+  const row = document.getElementById('replaceRow');
+  const chevron = document.getElementById('replaceChevron');
+  const open = row.style.display === 'none';
+  row.style.display = open ? 'flex' : 'none';
+  chevron.style.transform = open ? 'rotate(90deg)' : '';
+  if (open) document.getElementById('replaceInput').focus();
+}
+
+function _buildPattern(term) {
+  if (!term) return null;
+  if (_search.useRegex) {
+    try { return new RegExp(term, _search.caseSensitive ? 'g' : 'gi'); }
+    catch { return null; }
+  }
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(escaped, _search.caseSensitive ? 'g' : 'gi');
+}
+
+function _runSearch() {
+  // 仅在编辑器搜索面板明确打开时执行，防止被其他输入框（如文件树搜索）意外触发
+  const panel = document.getElementById('editorSearchPanel');
+  if (!panel || panel.style.display !== 'block') return;
+
+  const term = document.getElementById('searchInput').value;
+  const ta = document.getElementById('editorTextarea');
+  const countEl = document.getElementById('searchCount');
+  const wrap = document.querySelector('.search-input-wrap');
+  _search.matches = [];
+  _search.current = -1;
+
+  if (!term) {
+    countEl.textContent = '';
+    wrap.classList.remove('search-no-result');
+    countEl.classList.remove('no-result');
+    _updateNavButtons();
+    return;
+  }
+
+  const pat = _buildPattern(term);
+  if (!pat) {
+    countEl.textContent = '无效正则';
+    wrap.classList.add('search-no-result');
+    _updateNavButtons();
+    return;
+  }
+
+  const text = ta.value;
+  let m;
+  while ((m = pat.exec(text)) !== null) {
+    _search.matches.push({ start: m.index, end: m.index + m[0].length });
+    if (pat.lastIndex === m.index) pat.lastIndex++; // guard infinite loop
+  }
+
+  const total = _search.matches.length;
+  if (total === 0) {
+    countEl.textContent = '无结果';
+    countEl.classList.add('no-result');
+    wrap.classList.add('search-no-result');
+  } else {
+    wrap.classList.remove('search-no-result');
+    countEl.classList.remove('no-result');
+    // Select first match after cursor or first overall
+    const cur = ta.selectionStart;
+    let idx = _search.matches.findIndex(m => m.start >= cur);
+    if (idx < 0) idx = 0;
+    _search.current = idx;
+    _highlightMatch(idx);
+    countEl.textContent = `${idx + 1} / ${total}`;
+  }
+  _updateNavButtons();
+}
+
+function _highlightMatch(idx) {
+  if (idx < 0 || idx >= _search.matches.length) return;
+  const ta = document.getElementById('editorTextarea');
+  const m = _search.matches[idx];
+  // 只有编辑器搜索面板明确打开（display==='block'）时才操作 editor，
+  // 防止文件树搜索等其他输入框触发时隐式聚焦 editorTextarea 抢走焦点
+  const panel = document.getElementById('editorSearchPanel');
+  if (!panel || panel.style.display !== 'block') return;
+  ta.focus();
+  ta.setSelectionRange(m.start, m.end);
+  // Scroll into view (approximate line height)
+  const linesBefore = ta.value.substring(0, m.start).split('\n').length - 1;
+  const lineH = parseInt(getComputedStyle(ta).lineHeight) || 20;
+  ta.scrollTop = Math.max(0, linesBefore * lineH - ta.clientHeight / 2);
+  document.getElementById('searchCount').textContent =
+    `${idx + 1} / ${_search.matches.length}`;
+}
+
+function _updateNavButtons() {
+  const has = _search.matches.length > 0;
+  document.getElementById('searchPrev').disabled = !has;
+  document.getElementById('searchNext').disabled = !has;
+}
+
+function navigateSearch(dir) {
+  if (!_search.matches.length) return;
+  _search.current = (_search.current + dir + _search.matches.length) % _search.matches.length;
+  _highlightMatch(_search.current);
+}
+
+function replaceCurrentMatch() {
+  if (_search.current < 0 || !_search.matches.length) return;
+  const ta = document.getElementById('editorTextarea');
+  const replacement = document.getElementById('replaceInput').value;
+  const m = _search.matches[_search.current];
+  ta.focus();
+  ta.setSelectionRange(m.start, m.end);
+  document.execCommand('insertText', false, replacement);
+  _runSearch();
+}
+
+function replaceAllMatches() {
+  const ta = document.getElementById('editorTextarea');
+  const term = document.getElementById('searchInput').value;
+  const replacement = document.getElementById('replaceInput').value;
+  if (!term) return;
+  const pat = _buildPattern(term);
+  if (!pat) return;
+  const newVal = ta.value.replace(pat, replacement);
+  ta.value = newVal;
+  onEditorInput(); // trigger preview re-render & dirty flag
+  _runSearch();
+}
+
+// Wire up live search on input
+(function _initSearch() {
+  const ready = () => {
+    const input = document.getElementById('searchInput');
+    if (!input) { setTimeout(ready, 200); return; }
+    input.addEventListener('input', _runSearch);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        navigateSearch(e.shiftKey ? -1 : 1);
+      }
+      if (e.key === 'Escape') closeEditorSearch();
+    });
+    document.getElementById('searchCaseSensitive').addEventListener('click', function() {
+      _search.caseSensitive = !_search.caseSensitive;
+      this.setAttribute('aria-pressed', _search.caseSensitive);
+      _runSearch();
+    });
+    document.getElementById('searchRegex').addEventListener('click', function() {
+      _search.useRegex = !_search.useRegex;
+      this.setAttribute('aria-pressed', _search.useRegex);
+      _runSearch();
+    });
+    document.getElementById('replaceInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); replaceCurrentMatch(); }
+    });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready);
+  else ready();
+})();
 
 // ===== SAVE =====
 async function saveFile() {
@@ -1055,7 +1264,22 @@ function setupKeyboardShortcuts() {
       e.preventDefault();
       saveFile();
     }
+    // Ctrl+F — open editor search if a file is open
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      const docArea = document.getElementById('docArea');
+      if (docArea && docArea.style.display !== 'none') {
+        e.preventDefault();
+        e.stopPropagation();
+        openEditorSearch();
+      }
+    }
     if (e.key === 'Escape') {
+      // Close search panel first if visible
+      const searchPanel = document.getElementById('editorSearchPanel');
+      if (searchPanel && searchPanel.style.display !== 'none') {
+        closeEditorSearch();
+        return;
+      }
       closeModal();
       hideContextMenu();
       // 关闭 Agent 面板（如果已打开）
@@ -1648,7 +1872,18 @@ function connectAgentStream(sessionId, noReplay) {
       }
       agentMdBuffer = '';
       agentMdBlock = null;
-      if (text) appendAgentLine(text, 'user-msg');
+      if (text) {
+        const clean = text.replace(/^💬\s*/, '');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'agent-md-block user-msg-block';
+        try {
+          msgDiv.innerHTML = marked.parse(`> 💬 **[用户留言]**\n>\n> ${clean.replace(/\n/g, '\n> ')}\n`);
+        } catch (_e) {
+          msgDiv.textContent = `💬 ${clean}`;
+        }
+        document.getElementById('agentOutput').appendChild(msgDiv);
+        document.getElementById('agentOutput').scrollTop = document.getElementById('agentOutput').scrollHeight;
+      }
       return;
     }
     // stdout — 累计 Markdown 内容，实时渲染
@@ -1773,14 +2008,19 @@ function connectAgentStream(sessionId, noReplay) {
     const { status, task, processAlive, isLaunched } = JSON.parse(e.data);
     if (!isActive()) return;
     const active = processAlive || isLaunched;
+    const hintBtn = document.getElementById('agentHintBtn');
     if ((status === 'waiting' || status === 'running') && active) {
       // 进程活着（POLL 或刚唤醒），确保 UI 正确显示活跃状态
       document.getElementById('agentStartBtn').disabled = true;
       document.getElementById('agentStopBtn').disabled = false;
+      // 提示按钮：仅在 running（执行任务中）时显示
+      if (hintBtn) hintBtn.style.display = status === 'running' ? '' : 'none';
       if (status === 'waiting') {
         setAgentStatus('running', 'POLL 等待中');
         if (task) updateAgentActionBar('poll', task.slice(0, 40));
       }
+    } else {
+      if (hintBtn) hintBtn.style.display = 'none';
     }
   });
 
@@ -1954,29 +2194,65 @@ function toggleUserInputBar() {
   openUserInputBar();
 }
 
+// 统一输入框模式: 'task'（发送留言）或 'input'（响应 Agent 请求输入）
+let _agentInputMode = 'task';
+
 function openUserInputBar(prompt = '', placeholder = '') {
-  const bar = document.getElementById('agentUserInputBar');
-  const textarea = document.getElementById('agentUserInputText');
-  const hint = document.getElementById('agentUserInputPrompt');
-  if (!bar) return;
-  const alreadyOpen = bar.style.display !== 'none';
-  bar.style.display = 'flex';
-  if (hint) hint.textContent = prompt || '';
-  if (hint) hint.style.display = prompt ? '' : 'none';
-  if (placeholder) textarea.placeholder = placeholder;
-  else textarea.placeholder = '向 Agent 发送输入（多行，Ctrl+Enter 发送）…';
-  if (!alreadyOpen) textarea.focus();
+  const textarea = document.getElementById('agentTask');
+  const promptBar = document.getElementById('agentUnifiedPrompt');
+  const promptText = document.getElementById('agentUnifiedPromptText');
+  const sendBtn = document.getElementById('agentSendInputBtn');
+  const startBtn = document.getElementById('agentStartBtn');
+  if (!textarea) return;
+  _agentInputMode = 'input';
+  if (promptBar) {
+    promptText.textContent = prompt || '请向 Agent 发送输入：';
+    promptBar.style.display = 'flex';
+  }
+  textarea.placeholder = placeholder || '向 Agent 发送输入（多行，Ctrl+Enter 发送）…';
+  if (sendBtn) sendBtn.style.display = '';
+  if (startBtn) startBtn.style.display = 'none';
+  textarea.focus();
 }
 
 function closeUserInputBar() {
-  const bar = document.getElementById('agentUserInputBar');
-  if (bar) bar.style.display = 'none';
+  const textarea = document.getElementById('agentTask');
+  const promptBar = document.getElementById('agentUnifiedPrompt');
+  const sendBtn = document.getElementById('agentSendInputBtn');
+  const startBtn = document.getElementById('agentStartBtn');
+  _agentInputMode = 'task';
+  if (promptBar) promptBar.style.display = 'none';
+  if (textarea) textarea.placeholder = '输入任务描述...\n例如：分析 docs 目录结构，生成一份摘要报告\n（运行中时，Ctrl+Enter 发送留言给 Agent）';
+  if (sendBtn) sendBtn.style.display = 'none';
+  if (startBtn) startBtn.style.display = '';
 }
 
 async function sendTaskInput() {
   const textarea = document.getElementById('agentTask');
   const text = textarea.value;
   if (!text.trim()) return;
+  // 如果当前是 Agent 请求输入模式，走 sendUserInput 逻辑
+  if (_agentInputMode === 'input') {
+    try {
+      const res = await fetch('/agent/input', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, sessionId: getActiveSessionId() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        textarea.value = '';
+        closeUserInputBar();
+        showToast('已发送', 'success');
+      } else {
+        showToast('发送失败: ' + data.error, 'error');
+      }
+    } catch (e) {
+      showToast('发送失败: ' + e.message, 'error');
+    }
+    return;
+  }
+  // 普通留言模式
   const historyDoc = document.getElementById('agentHistoryDoc')?.value || '';
   try {
     const res = await fetch('/agent/input', {
@@ -1997,11 +2273,16 @@ async function sendTaskInput() {
 }
 
 async function sendUserInput() {
-  const textarea = document.getElementById('agentUserInputText');
-  const text = textarea.value;
-  if (!text.trim()) return;
+  // 兼容旧调用：直接转发给 sendTaskInput（已统一处理）
+  await sendTaskInput();
+}
+
+async function sendAgentHint() {
+  const textarea = document.getElementById('agentTask');
+  const text = textarea.value.trim();
+  if (!text) { showToast('请先输入提示内容', 'warning'); return; }
   try {
-    const res = await fetch('/agent/input', {
+    const res = await fetch('/agent/hint', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text, sessionId: getActiveSessionId() }),
@@ -2009,8 +2290,7 @@ async function sendUserInput() {
     const data = await res.json();
     if (data.success) {
       textarea.value = '';
-      closeUserInputBar();
-      showToast('已发送', 'success');
+      showToast('💡 提示已发送，Agent 下一步会看到', 'success');
     } else {
       showToast('发送失败: ' + data.error, 'error');
     }
@@ -2161,12 +2441,18 @@ function renderSysdocTags() {
     const label = document.createElement('span');
     label.className = 'sysdoc-tag-label';
     label.textContent = p.replace(/\.md$/, '').split('/').pop();
+    const open = document.createElement('button');
+    open.className = 'sysdoc-tag-open';
+    open.textContent = '↗';
+    open.title = '打开文档: ' + p;
+    open.onclick = (e) => { e.stopPropagation(); openFile(p); };
     const del = document.createElement('button');
     del.className = 'sysdoc-tag-del';
     del.textContent = '×';
     del.title = '移除';
     del.onclick = () => removeSysdocTag(p);
     tag.appendChild(label);
+    tag.appendChild(open);
     tag.appendChild(del);
     wrap.appendChild(tag);
   });
@@ -2193,12 +2479,18 @@ function renderPySysdocTags() {
     const label = document.createElement('span');
     label.className = 'sysdoc-tag-label';
     label.textContent = p.replace(/\.md$/, '').split('/').pop();
+    const open = document.createElement('button');
+    open.className = 'sysdoc-tag-open';
+    open.textContent = '↗';
+    open.title = '打开文档: ' + p;
+    open.onclick = (e) => { e.stopPropagation(); openFile(p); };
     const del = document.createElement('button');
     del.className = 'sysdoc-tag-del';
     del.textContent = '×';
     del.title = '移除';
     del.onclick = () => removePySysdocTag(p);
     tag.appendChild(label);
+    tag.appendChild(open);
     tag.appendChild(del);
     wrap.appendChild(tag);
   });
@@ -2855,7 +3147,34 @@ async function loadSessionHistoryDoc(historyDoc, sessionId, signal) {
   placeholder.className = 'agent-history-placeholder';
   output.insertBefore(placeholder, output.firstChild);
 
-  if (historyDoc) {
+  // 优先从 agent/chat/{sessionId} 加载聊天记录
+  let chatLoaded = false;
+  if (sessionId) {
+    try {
+      const chatPath = 'agent/chat/' + sessionId;
+      const res = await fetch(`/api/file?path=${encodeURIComponent(chatPath)}`, {
+        signal: signal || AbortSignal.timeout(10000),
+      });
+      if (signal && signal.aborted) { placeholder.remove(); return; }
+      const data = await res.json();
+      if (signal && signal.aborted) { placeholder.remove(); return; }
+      if (data.success && data.content && data.content.trim()) {
+        const block = document.createElement('div');
+        block.className = 'agent-md-block agent-history-block';
+        block.innerHTML = marked.parse(data.content);
+        block.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+        output.insertBefore(block, placeholder);
+        placeholder.remove();
+        output.scrollTop = output.scrollHeight;
+        setAgentStatus('idle', '空闲');
+        chatLoaded = true;
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') { placeholder.remove(); return; }
+    }
+  }
+
+  if (!chatLoaded && historyDoc) {
     try {
       const filePath = 'history/' + historyDoc;
       const res = await fetch(`/api/file?path=${encodeURIComponent(filePath)}`, {
@@ -2888,8 +3207,8 @@ async function loadSessionHistoryDoc(historyDoc, sessionId, signal) {
       placeholder.textContent = '（历史记录加载失败）';
       placeholder.className = 'agent-line system';
     }
-  } else {
-    placeholder.textContent = '（此会话未配置历史文档）';
+  } else if (!chatLoaded) {
+    placeholder.textContent = '（此会话暂无聊天记录）';
     placeholder.className = 'agent-line system';
   }
 
@@ -3324,11 +3643,22 @@ function clearConsoleHistory() {
 
   window.dismissSessionBubble = async function(sid) {
     try {
-      await fetch('/agent/set-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sid, status: 'idle', task: '' }),
-      });
+      // Check if this is a PyAgent session (dialogue file has type='pyagent')
+      const dialSess = (typeof dialogueSessions !== 'undefined' ? dialogueSessions : []).find(d => d.id === sid);
+      if (dialSess && dialSess.type === 'pyagent') {
+        // PyAgent: mark isRunning=false in dialogue file
+        await fetch(`/api/dialogue/${encodeURIComponent(sid)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isRunning: false }),
+        });
+      } else {
+        await fetch('/agent/set-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: sid, status: 'idle', task: '' }),
+        });
+      }
       // 立即从 DOM 移除，不等下次 poll
       const el = document.querySelector(`#sessionBubbles [data-sid="${sid}"]`);
       if (el) el.remove();
@@ -3367,8 +3697,30 @@ function clearConsoleHistory() {
         })
       );
 
-      renderBubbles(enriched);
-      syncStartBtnWithSessionStatus(enriched);
+      // Also include running PyAgent sessions (type=pyagent, isRunning=true in dialogue file)
+      // Status is read directly from dialogue file (written by agent via POST /agent/set-status)
+      const pyagentRunning = sessions.filter(d => d.type === 'pyagent' && d.isRunning);
+      const pyEnriched = pyagentRunning.map(d => {
+        // agentStatus/agentTask are persisted to dialogue file by /agent/set-status handler
+        const status = d.agentStatus || 'running';
+        const task   = d.agentTask  || '执行中…';
+        return {
+          id: d.id,
+          name: '🐍 ' + (d.name || d.id),
+          status,
+          task,
+          contextProgress: d.contextProgress || 0,
+          _isPyAgent: true,
+        };
+      });
+
+      // Deduplicate: if a PyAgent session is already tracked in /agent/sessions (enriched),
+      // don't add it again from pyEnriched to avoid duplicate bubbles
+      const enrichedIds = new Set(enriched.map(s => s.id));
+      const dedupedPy   = pyEnriched.filter(s => !enrichedIds.has(s.id));
+      const allEnriched = [...enriched, ...dedupedPy];
+      renderBubbles(allEnriched);
+      syncStartBtnWithSessionStatus(allEnriched);
     } catch (_) {}
   }
 
@@ -3731,12 +4083,20 @@ async function submitErrorReport() {
 
 // ===== PYAGENT SESSION PANEL =====
 (function () {
-  let activePyAgentSession = null; // { id, name, ... }
-  let pyagentEventSource   = null; // current SSE connection
-  let pyagentRunning       = false;
-  let pyagentElapsedTimer  = null;
-  let pyagentStartTime     = null;
-  let _pyOutputBuf         = '';   // partial-line buffer for streaming output
+  let activePyAgentSession  = null; // { id, name, ... }
+  let pyagentEventSource    = null; // current SSE connection
+  let pyagentRunning        = false;
+  let pyagentElapsedTimer   = null;
+  let pyagentStartTime      = null;
+  let _pyOutputBuf          = '';   // partial-line buffer (kept for backward compat)
+  let _pyLiveMdBuf          = '';   // accumulated live output text for markdown rendering
+  let _pyMdRenderTimer      = null; // debounce timer for live markdown render
+  let _statusFetchAbortCtrl = null; // AbortController for in-flight applyPyAgentDialogue status fetch
+  let _currentPyRunId = null;       // runId of the currently expected run; ignore status events from other runs
+  let _pyTickInterval = null;       // 500ms tick: keeps button state in sync with server
+  let _pyStarting     = false;      // true during startup: tick won't un-gray button until server confirms running
+  let _pyDisplayGen   = 0;          // incremented on startPyAgent; cancels stale async IIFE in applyPyAgentDialogue
+  const _pySessionBanners = new Map(); // sessionId → { visible, html } per-session banner state
 
   // Strip ANSI escape codes
   function stripAnsi(s) {
@@ -3744,52 +4104,70 @@ async function submitErrorReport() {
     return s.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '').replace(/\x1b\][^\x07]*\x07/g, '');
   }
 
-  // Render pending buffer + new text into the output div, splitting on newlines
-  function appendPyOutput(rawText, output) {
-    const text = stripAnsi(rawText).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    _pyOutputBuf += text;
-    const parts = _pyOutputBuf.split('\n');
-    // All but the last part are complete lines
-    const completeLines = parts.slice(0, -1);
-    _pyOutputBuf = parts[parts.length - 1]; // keep partial last segment
+  // 从 agent/chat 文件刷新显示（替换 history block，保留 live SSE 输出区）
+  // 在 startPyAgent / continuePyAgentTask 成功后调用，显示已持久化的用户输入
+  function refreshPyChatDisplay(sessionId) {
+    const output = document.getElementById('pyagentOutput');
+    if (!output) return;
+    fetch(`/api/file?path=${encodeURIComponent('agent/chat/' + sessionId)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.success || !data.content || !data.content.trim()) return;
+        const out = document.getElementById('pyagentOutput');
+        if (!out) return;
+        // 重置 live buffer
+        _pyLiveMdBuf = '';
+        if (_pyMdRenderTimer) { clearTimeout(_pyMdRenderTimer); _pyMdRenderTimer = null; }
+        // 清空并重建为一个 history block（包含最新的用户输入+已有记录）
+        out.innerHTML = '';
+        const block = document.createElement('div');
+        block.className = 'agent-md-block agent-history-block';
+        try { block.innerHTML = marked.parse(data.content); } catch (_e) { block.textContent = data.content; }
+        block.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+        out.appendChild(block);
+        requestAnimationFrame(() => {
+          out.scrollTop = out.scrollHeight;
+          requestAnimationFrame(() => { out.scrollTop = out.scrollHeight; });
+        });
+        setTimeout(() => { out.scrollTop = out.scrollHeight; }, 150);
+      }).catch(() => {});
+  }
 
-    for (const line of completeLines) {
-      const span = document.createElement('span');
-      span.className = 'agent-line';
-      span.textContent = line;
-      output.appendChild(span);
-      output.appendChild(document.createTextNode('\n'));
+  // Render accumulated live output as markdown into a dedicated block
+  function renderPyLiveMd(output) {
+    if (!_pyLiveMdBuf || !output) return;
+    let live = output.querySelector('.py-live-md');
+    if (!live) {
+      live = document.createElement('div');
+      live.className = 'py-live-md agent-md-block';
+      output.appendChild(live);
     }
-    // If buffer has content but no newline yet, update/create a "pending" span
-    if (_pyOutputBuf) {
-      let pending = output.querySelector('.py-pending-line');
-      if (!pending) {
-        pending = document.createElement('span');
-        pending.className = 'agent-line py-pending-line';
-        output.appendChild(pending);
-      }
-      pending.textContent = _pyOutputBuf;
+    try {
+      live.innerHTML = marked.parse(_pyLiveMdBuf);
+      live.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+    } catch (_) {
+      live.textContent = _pyLiveMdBuf;
     }
     output.scrollTop = output.scrollHeight;
   }
 
-  // Flush the partial-line buffer when output ends
+  // Render pending buffer + new text into the output div (with markdown rendering)
+  function appendPyOutput(rawText, output) {
+    const text = stripAnsi(rawText).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    _pyLiveMdBuf += text;
+    // Debounced markdown render every 300ms to avoid excessive DOM ops during streaming
+    if (_pyMdRenderTimer) clearTimeout(_pyMdRenderTimer);
+    _pyMdRenderTimer = setTimeout(() => {
+      _pyMdRenderTimer = null;
+      renderPyLiveMd(output);
+    }, 300);
+  }
+
+  // Flush: final markdown render when stream ends
   function flushPyOutput(output) {
-    if (_pyOutputBuf) {
-      const pending = output.querySelector('.py-pending-line');
-      if (pending) {
-        pending.classList.remove('py-pending-line');
-        output.appendChild(document.createTextNode('\n'));
-      } else {
-        const span = document.createElement('span');
-        span.className = 'agent-line';
-        span.textContent = _pyOutputBuf;
-        output.appendChild(span);
-        output.appendChild(document.createTextNode('\n'));
-      }
-      _pyOutputBuf = '';
-    }
-    output.scrollTop = output.scrollHeight;
+    if (_pyMdRenderTimer) { clearTimeout(_pyMdRenderTimer); _pyMdRenderTimer = null; }
+    renderPyLiveMd(output);
+    _pyOutputBuf = '';
   }
 
   function startPyElapsedTimer() {
@@ -3842,12 +4220,29 @@ async function submitErrorReport() {
     const task = (document.getElementById('pyagentTask').value || '').trim();
     const combined = extra || task;
     if (!combined) { showToast('请输入追加任务', 'error'); return; }
+
+    // 立即在输出区显示用户追加的输入（不等 fetch 完成）
+    const output = document.getElementById('pyagentOutput');
+    if (output) {
+      const userMsgDiv = document.createElement('div');
+      userMsgDiv.className = 'agent-md-block user-msg-block';
+      try {
+        userMsgDiv.innerHTML = marked.parse(`> 💬 **[用户追加输入]**\n>\n> ${combined.replace(/\n/g, '\n> ')}\n`);
+      } catch (_e) {
+        userMsgDiv.textContent = `💬 ${combined}`;
+      }
+      output.appendChild(userMsgDiv);
+      requestAnimationFrame(() => { output.scrollTop = output.scrollHeight; });
+    }
+
     try {
       await fetch('/pyagent/continue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: activePyAgentSession.id, input: combined }),
       });
+      // 从已持久化的 agent/chat 文件刷新显示（包含用户追加输入）
+      refreshPyChatDisplay(activePyAgentSession.id);
       setPyAgentRunning(true);
       startPyElapsedTimer();
       updatePyActionBar('🐍', '继续执行…');
@@ -3873,7 +4268,19 @@ async function submitErrorReport() {
       if (btn) btn.classList.remove('active');
     }
     if (isOpen) {
-      loadDialogues(); // refresh session list to show latest
+      loadDialogues().then(() => {
+        if (activePyAgentSession) {
+          const output = document.getElementById('pyagentOutput');
+          const hasContent = output && output.children.length > 0;
+          if (!hasContent) {
+            // 输出为空时才做完整加载（避免清空正在显示的内容）
+            applyPyAgentDialogue(activePyAgentSession);
+          } else if (!pyagentEventSource || pyagentEventSource.readyState === EventSource.CLOSED) {
+            // 有内容但 SSE 断开，仅重连 SSE
+            connectPyAgentStream(activePyAgentSession.id);
+          }
+        }
+      });
       loadAgentModels();
       loadHistoryDocs();
       loadTaskPrefixDocs();
@@ -3887,12 +4294,35 @@ async function submitErrorReport() {
     if (!name || !name.trim()) return;
     const trimName = name.trim();
 
+    // Default system docs and task prefix
+    const defaultSystemDocs   = ['agent/application.md', 'agent/工具文档.md'];
+    const defaultTaskPrefix   = 'agent/setting/thinking.md';
+    const defaultHistoryDoc   = `${trimName}.md`;
+
     try {
-      // POST creates the session file
+      // Create a history document for this session
+      await fetch('/open/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: `history/${trimName}`,
+          content: `# 会话历史: ${trimName}\n\n> 创建于 ${new Date().toISOString()}\n\n---\n\n`,
+          overwrite: false,
+        }),
+      });
+
+      // POST creates the session file with defaults
       const res = await fetch('/api/dialogue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: trimName, type: 'pyagent', model: '', historyDoc: '', systemDocs: [] }),
+        body: JSON.stringify({
+          name: trimName,
+          type: 'pyagent',
+          model: '',
+          historyDoc: defaultHistoryDoc,
+          taskPrefixDoc: defaultTaskPrefix,
+          systemDocs: defaultSystemDocs,
+        }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || '创建失败');
@@ -3965,78 +4395,154 @@ async function submitErrorReport() {
     selectedPySystemDocs = Array.isArray(cfg.systemDocs) ? cfg.systemDocs.slice() : [];
     renderPySysdocTags();
 
-    // Reset UI — 先用 cfg.isRunning 立即设置按钮（isRunning 是唯一状态源）
+    // Reset UI — 按钮默认启用，由即时状态查询和 tick 决定真实状态（避免 cfg.isRunning 残留导致闪烁）
     _pyOutputBuf = '';  // clear streaming line buffer
+    _pyLiveMdBuf = '';  // clear live markdown buffer
+    if (_pyMdRenderTimer) { clearTimeout(_pyMdRenderTimer); _pyMdRenderTimer = null; }
     document.getElementById('pyagentTask').value = '';
     document.getElementById('pyagentOutput').innerHTML = '';
     document.getElementById('pyagentStatusText').textContent = '空闲';
     document.getElementById('pyagentStatusDot').className = 'agent-status-dot';
-    const _pyFileIsRunning = !!(cfg.isRunning ?? cfg.isLaunched);
-    document.getElementById('pyagentStartBtn').disabled = _pyFileIsRunning;
-    document.getElementById('pyagentStopBtn').disabled  = !_pyFileIsRunning;
-    document.getElementById('pyagentInputBar').style.display = 'none';
+    document.getElementById('pyagentStartBtn').disabled = false;
+    document.getElementById('pyagentStopBtn').disabled  = true;
+    closePyAgentInputBar();
     document.getElementById('pyagentStatusInfo').textContent = '';
     document.getElementById('pyagentElapsed').textContent = '';
     stopPyElapsedTimer();
     updatePyActionBar('', '');
     hidePyConfirmBar();
-    pyagentRunning = _pyFileIsRunning;
+    pyagentRunning = false;
 
-    // 从服务端刷新最新 isRunning（文件唯一源），确保状态最新
+    // 恢复本会话的任务横幅状态（每个 PyAgent 会话独立维护横幅）
+    const _switchBanner = document.getElementById('py-current-task-banner');
+    if (_switchBanner) {
+      const _savedBanner = _pySessionBanners.get(cfg.id);
+      if (_savedBanner && _savedBanner.visible && _savedBanner.html) {
+        _switchBanner.style.display = 'block';
+        _switchBanner.innerHTML = _savedBanner.html;
+      } else {
+        _switchBanner.style.display = 'none';
+      }
+    }
+
+    // 立即查 session 文件的 isRunning 设置初始按钮状态，同时查进程真实状态
     fetch(`/agent/status?sessionId=${encodeURIComponent(cfg.id)}`)
       .then(r => r.json())
-      .then(data => {
-        const active = !!(data.isRunning ?? data.isLaunched);
-        document.getElementById('pyagentStartBtn').disabled = active;
-        document.getElementById('pyagentStopBtn').disabled  = !active;
-        pyagentRunning = active;
-        if (active) {
-          if (data.status === 'waiting') {
-            document.getElementById('pyagentStatusText').textContent = 'POLL 等待中';
-          } else if (data.status === 'running') {
-            document.getElementById('pyagentStatusText').textContent = '运行中';
+      .then(d => {
+        if (!activePyAgentSession || activePyAgentSession.id !== cfg.id) return;
+        if (d.isRunning !== pyagentRunning) setPyAgentRunning(!!d.isRunning);
+      }).catch(() => {});
+    fetch(`/pyagent/status?sessionId=${encodeURIComponent(cfg.id)}`)
+      .then(r => r.json())
+      .then(pd => {
+        const el = document.getElementById('pyagentProcStatus');
+        if (!el) return;
+        if (pd.status === 'running') { el.textContent = '进程: 运行中'; el.style.color = 'var(--success, #4caf50)'; }
+        else { el.textContent = '进程: 空闲'; el.style.color = 'var(--text-muted)'; }
+      }).catch(() => {
+        const el = document.getElementById('pyagentProcStatus');
+        if (el) { el.textContent = '进程: 服务离线'; el.style.color = 'var(--text-muted)'; }
+      });
+
+    // 500ms tick：读 session 文件 isRunning，保持按钮与 session 状态一致；同时查进程真实状态
+    if (_pyTickInterval) clearInterval(_pyTickInterval);
+    const _tickSessionId = cfg.id;
+    _pyTickInterval = setInterval(async () => {
+      if (!activePyAgentSession || activePyAgentSession.id !== _tickSessionId) {
+        clearInterval(_pyTickInterval); _pyTickInterval = null; return;
+      }
+      try {
+        // 1. 按钮状态：读 session 文件的 isRunning
+        const r = await fetch(`/agent/status?sessionId=${encodeURIComponent(_tickSessionId)}`);
+        const d = await r.json();
+        const running = !!d.isRunning;
+        if (running !== pyagentRunning) setPyAgentRunning(running);
+      } catch (_) {}
+      // 2. 进程真实状态：查 pyagent_server
+      try {
+        const pr = await fetch(`/pyagent/status?sessionId=${encodeURIComponent(_tickSessionId)}`);
+        const pd = await pr.json();
+        const el = document.getElementById('pyagentProcStatus');
+        if (el) {
+          if (pd.status === 'running') {
+            el.textContent = '进程: 运行中';
+            el.style.color = 'var(--success, #4caf50)';
+          } else if (pd.type === 'error' || !pr.ok) {
+            el.textContent = '进程: 服务离线';
+            el.style.color = 'var(--text-muted)';
           } else {
-            document.getElementById('pyagentStatusText').textContent = '活跃中';
+            el.textContent = '进程: 空闲';
+            el.style.color = 'var(--text-muted)';
           }
         }
-      })
-      .catch(() => {});
+      } catch (_) {
+        const el = document.getElementById('pyagentProcStatus');
+        if (el) { el.textContent = '进程: 服务离线'; el.style.color = 'var(--text-muted)'; }
+      }
+    }, 500);
 
     // Reconnect SSE stream for this session
     connectPyAgentStream(cfg.id);
 
-    // 加载历史文档内容到 pyagentOutput
+    // 加载 agent/chat 聊天记录到 pyagentOutput（优先），回退到历史文档
+    const _myGen = _pyDisplayGen; // 快照当前 generation；startPyAgent 会递增使此 IIFE 失效
     (async () => {
       const output = document.getElementById('pyagentOutput');
       if (!output) return;
+      const sessionId = cfg.id || '';
       const historyDoc = cfg.historyDoc || '';
-      if (historyDoc) {
+
+      // 尝试从 agent/chat/{sessionId} 加载聊天记录
+      let chatLoaded = false;
+      if (sessionId) {
         try {
-          const res = await fetch(`/api/file?path=${encodeURIComponent('history/' + historyDoc)}`);
+          const chatPath = 'agent/chat/' + sessionId;
+          const res = await fetch(`/api/file?path=${encodeURIComponent(chatPath)}`);
           const data = await res.json();
-          if (data.success && data.content) {
+          // 检查 generation：若 startPyAgent 已运行则放弃（避免覆盖新内容）
+          if (_myGen !== _pyDisplayGen) return;
+          if (data.success && data.content && data.content.trim()) {
             const block = document.createElement('div');
             block.className = 'agent-md-block agent-history-block';
             block.innerHTML = marked.parse(data.content);
             block.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
-            const divider = document.createElement('div');
-            divider.className = 'agent-history-divider';
-            divider.textContent = '── 以上为历史记录 ──';
-            output.insertBefore(divider, output.firstChild);
-            output.insertBefore(block, divider);
+            output.insertBefore(block, output.firstChild);
             output.scrollTop = output.scrollHeight;
-          } else {
-            const p = document.createElement('div');
-            p.className = 'agent-line system';
-            p.textContent = '（暂无历史记录）';
-            output.insertBefore(p, output.firstChild);
+            chatLoaded = true;
           }
         } catch (_) {}
-      } else {
-        const p = document.createElement('div');
-        p.className = 'agent-line system';
-        p.textContent = '（此会话未配置历史文档）';
-        output.insertBefore(p, output.firstChild);
+      }
+
+      // 若无聊天记录，回退到历史文档
+      if (!chatLoaded) {
+        if (historyDoc) {
+          try {
+            const res = await fetch(`/api/file?path=${encodeURIComponent('history/' + historyDoc)}`);
+            const data = await res.json();
+            if (data.success && data.content) {
+              const block = document.createElement('div');
+              block.className = 'agent-md-block agent-history-block';
+              block.innerHTML = marked.parse(data.content);
+              block.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+              const divider = document.createElement('div');
+              divider.className = 'agent-history-divider';
+              divider.textContent = '── 以上为历史记录 ──';
+              output.insertBefore(divider, output.firstChild);
+              output.insertBefore(block, divider);
+              output.scrollTop = output.scrollHeight;
+            } else {
+              const p = document.createElement('div');
+              p.className = 'agent-line system';
+              p.textContent = '（暂无历史记录）';
+              output.insertBefore(p, output.firstChild);
+            }
+          } catch (_) {}
+        } else {
+          const p = document.createElement('div');
+          p.className = 'agent-line system';
+          p.textContent = '（此会话暂无聊天记录）';
+          output.insertBefore(p, output.firstChild);
+        }
       }
     })();
 
@@ -4084,24 +4590,63 @@ async function submitErrorReport() {
             (s === 'running' ? ' running' : s === 'error' ? ' error' : s === 'done' ? ' done' : '');
         }
         if (info) info.textContent = msg.message || '';
-        if (s === 'done') {
-          setPyAgentRunning(false);
+        // 按钮状态由 500ms tick 负责，SSE 只更新 action bar + session 文件
+        if (s === 'done' || s === 'idle' || s === 'error') {
           updatePyActionBar('', '');
-          showPyConfirmBar();
-        } else if (s === 'error' || s === 'idle') {
-          setPyAgentRunning(false);
-          updatePyActionBar('', '');
+          if (s === 'done') showPyConfirmBar();
+          // 任务结束：隐藏当前任务横幅
+          const _b = document.getElementById('py-current-task-banner');
+          if (_b) _b.style.display = 'none';
+          if (activePyAgentSession) _pySessionBanners.set(activePyAgentSession.id, { visible: false, html: '' });
+          // idle/done：保持气泡可见，切换为"等待中"状态（pyagent 会自动重启等待下一任务）
+          // error：真正出错，隐藏气泡并解锁按钮
+          if (activePyAgentSession) {
+            const _isError = s === 'error';
+            const _updateFields = _isError
+              ? { isRunning: false, isLaunched: false, agentStatus: 'idle', agentTask: '' }
+              : { agentStatus: 'waiting', agentTask: '等待下一任务…' };
+            fetch(`/api/dialogue/${encodeURIComponent(activePyAgentSession.id)}`, {
+              method: 'PUT', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(_updateFields),
+            }).then(() => {
+              if (typeof window.refreshSessionBubbles === 'function') window.refreshSessionBubbles();
+            }).catch(() => {});
+          }
         } else if (s === 'running') {
-          setPyAgentRunning(true);
           updatePyActionBar('🐍', msg.message || '执行中…');
         }
+      } else if (msg.type === 'process_launched') {
+        showToast('⚡ 进程已拉起，等待 CopilotCli 初始化…', 'info');
+        updatePyActionBar('⚡', '进程已拉起…');
+      } else if (msg.type === 'agent_launched') {
+        showToast('✅ CopilotCli 启动成功', 'success');
+        updatePyActionBar('🐍', '启动成功，执行中…');
       } else if (msg.type === 'action') {
         updatePyActionBar(msg.icon || '⚙️', msg.label || msg.message || '');
       }
     };
 
     es.onerror = () => {
-      // SSE will auto-retry; no action needed
+      // SSE 断线后会自动重试；重连后从 agent/chat 文件补全遗漏的输出
+      setTimeout(() => {
+        if (!activePyAgentSession || activePyAgentSession.id !== sessionId) return;
+        fetch(`/api/file?path=${encodeURIComponent('agent/chat/' + sessionId)}`)
+          .then(r => r.json())
+          .then(data => {
+            if (!data.success || !data.content || !data.content.trim()) return;
+            const output = document.getElementById('pyagentOutput');
+            if (!output) return;
+            let histBlock = output.querySelector('.agent-history-block');
+            if (!histBlock) {
+              histBlock = document.createElement('div');
+              histBlock.className = 'agent-md-block agent-history-block';
+              output.insertBefore(histBlock, output.firstChild);
+            }
+            histBlock.innerHTML = marked.parse(data.content);
+            histBlock.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+            output.scrollTop = output.scrollHeight;
+          }).catch(() => {});
+      }, 3000);
     };
   }
 
@@ -4113,9 +4658,12 @@ async function submitErrorReport() {
     const statusTxt = document.getElementById('pyagentStatusText');
     if (startBtn)  startBtn.disabled  = running;
     if (stopBtn)   stopBtn.disabled   = !running;
+    // 运行时切换为输入模式，停止时恢复任务模式
     if (running) {
+      openPyAgentInputBar();
       startPyElapsedTimer();
     } else {
+      closePyAgentInputBar();
       stopPyElapsedTimer();
       if (dot && statusTxt && dot.classList.contains('running')) {
         dot.className = 'agent-status-dot done';
@@ -4132,21 +4680,79 @@ async function submitErrorReport() {
 
     hidePyConfirmBar();
     const output = document.getElementById('pyagentOutput');
+    // 递增 display generation，使 applyPyAgentDialogue 的任何未完成 IIFE 失效
+    _pyDisplayGen++;
+    // 清空实时 md 缓冲区，准备接收新任务输出
+    _pyLiveMdBuf = '';
+    if (_pyMdRenderTimer) { clearTimeout(_pyMdRenderTimer); _pyMdRenderTimer = null; }
+    const live = output.querySelector('.py-live-md');
+    if (live) live.remove();
+    // 分隔线
     const divider = document.createElement('div');
     divider.className = 'agent-output-line';
     divider.style.cssText = 'opacity:0.4;border-top:1px solid var(--border);margin:6px 0;font-size:11px;color:var(--text-muted)';
-    divider.textContent = `▶ 启动 [${new Date().toLocaleTimeString('zh-CN')}]: ${task.slice(0, 60)}`;
+    divider.textContent = `▶ 启动 [${new Date().toLocaleTimeString('zh-CN')}]`;
     output.appendChild(divider);
-    output.scrollTop = output.scrollHeight;
+    // 以 markdown 引用块实时展示用户任务输入
+    const userMsgDiv = document.createElement('div');
+    userMsgDiv.className = 'agent-md-block user-msg-block';
+    try {
+      userMsgDiv.innerHTML = marked.parse(`> 💬 **[用户输入]**\n>\n> ${task.replace(/\n/g, '\n> ')}\n`);
+    } catch (_e) {
+      userMsgDiv.textContent = `💬 ${task}`;
+    }
+    output.appendChild(userMsgDiv);
+    // scrollIntoView is more reliable than scrollTop=scrollHeight for large DOM
+    userMsgDiv.scrollIntoView({ block: 'end' });
+    setTimeout(() => { userMsgDiv.scrollIntoView({ block: 'end' }); }, 150);
+    // Also show in a sticky banner OUTSIDE pyagentOutput (survives innerHTML clears)
+    const _banner = document.getElementById('py-current-task-banner');
+    if (_banner) {
+      _banner.style.display = 'block';
+      _banner.innerHTML = `💬 <strong>当前任务：</strong>${task.replace(/&/g,'&amp;').replace(/</g,'&lt;')}`;
+    }
+    if (activePyAgentSession) _pySessionBanners.set(activePyAgentSession.id, { visible: true, html: _banner ? _banner.innerHTML : '' });
+    // DEBUG: detect if userMsgDiv gets removed after 1s
+    const _dbgDiv = userMsgDiv;
+    const _dbgGen = _pyDisplayGen;
+    setTimeout(() => {
+      if (!document.body.contains(_dbgDiv)) {
+        showToast('⚠️ 输入块被移除了（请截图反馈）', 'error');
+        console.error('[startPyAgent] userMsgDiv was removed from DOM after 1s! gen=', _dbgGen);
+      }
+    }, 1000);
 
     const statusText = document.getElementById('pyagentStatusText');
     const statusDot  = document.getElementById('pyagentStatusDot');
     if (statusText) statusText.textContent = '启动中…';
     if (statusDot)  statusDot.className = 'agent-status-dot running';
+    if (_statusFetchAbortCtrl) { _statusFetchAbortCtrl.abort(); _statusFetchAbortCtrl = null; }
+
+    // 立即写 isRunning:true 到 session 文件，tick 读到后保持按钮禁用
+    const _startSid = activePyAgentSession.id;
     setPyAgentRunning(true);
+    fetch(`/api/dialogue/${encodeURIComponent(_startSid)}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isRunning: true, isLaunched: true, agentStatus: 'running', agentTask: task.slice(0, 80) }),
+    }).then(() => {
+      // 立即刷新气泡，让 PyAgent 会话出现在状态气泡中
+      if (typeof window.refreshSessionBubbles === 'function') window.refreshSessionBubbles();
+    }).catch(() => {});
     updatePyActionBar('🐍', '启动中…');
 
     try {
+      // 如果进程仍在跑（即使 isRunning=false），先杀掉再重启
+      try {
+        const statusResp = await fetch('/pyagent/status');
+        const statusData = await statusResp.json();
+        if (statusData && statusData.status === 'running') {
+          if (statusText) statusText.textContent = '正在终止旧进程…';
+          await fetch('/pyagent/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: activePyAgentSession.id }) });
+          await new Promise(r => setTimeout(r, 800));
+        }
+      } catch (_) { /* pyagent 服务未运行，忽略 */ }
+
       if (statusText) statusText.textContent = '正在连接…';
 
       const remoteIp = activePyAgentSession.ip; // e.g. "localhost:9002"
@@ -4182,17 +4788,17 @@ async function submitErrorReport() {
       if (!res.ok || data.error) {
         throw new Error(data.error || '启动失败');
       }
-      // 写 isRunning: true 到 session 文件
-      const sid = activePyAgentSession.id;
-      await fetch(`/api/dialogue/${encodeURIComponent(sid)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isRunning: true, isLaunched: true }),
-      });
-      const idx = dialogueSessions.findIndex(s => s.id === sid);
+      const idx = dialogueSessions.findIndex(s => s.id === _startSid);
       if (idx >= 0) { dialogueSessions[idx].isRunning = true; dialogueSessions[idx].isLaunched = true; }
-      showToast('PyAgent 已启动', 'success');
+      // 确保 SSE 已连接，实时接收新任务输出
+      connectPyAgentStream(_startSid);
+      showToast('🚀 任务已发送，进程启动中…', 'info');
     } catch (e) {
+      // 启动失败：回写 isRunning:false 到 session 文件
+      fetch(`/api/dialogue/${encodeURIComponent(_startSid)}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isRunning: false, isLaunched: false }),
+      }).catch(() => {});
       const errLine = document.createElement('div');
       errLine.className = 'agent-output-line';
       errLine.style.color = 'var(--danger)';
@@ -4238,9 +4844,32 @@ async function submitErrorReport() {
 
   // ── Send input to waiting PyAgent ────────────────────────────
   window.sendPyAgentInput = async function () {
-    const text = (document.getElementById('pyagentInputText').value || '').trim();
+    const textarea = document.getElementById('pyagentTask');
+    const text = (textarea?.value || '').trim();
     if (!text) { showToast('请输入内容', 'error'); return; }
     if (!activePyAgentSession) { showToast('请先选择会话', 'error'); return; }
+
+    // 立即在输出区显示用户输入（不等 fetch 完成）
+    const output = document.getElementById('pyagentOutput');
+    if (output) {
+      const userMsgDiv = document.createElement('div');
+      userMsgDiv.className = 'agent-md-block user-msg-block';
+      try {
+        userMsgDiv.innerHTML = marked.parse(`> 💬 **[用户输入]**\n>\n> ${text.replace(/\n/g, '\n> ')}\n`);
+      } catch (_e) {
+        userMsgDiv.textContent = `💬 ${text}`;
+      }
+      output.appendChild(userMsgDiv);
+      userMsgDiv.scrollIntoView({ block: 'end' });
+    }
+    // 横幅也更新
+    const _banner = document.getElementById('py-current-task-banner');
+    if (_banner) {
+      _banner.style.display = 'block';
+      _banner.innerHTML = `💬 <strong>输入已发送：</strong>${text.replace(/&/g,'&amp;').replace(/</g,'&lt;')}`;
+    }
+    if (activePyAgentSession) _pySessionBanners.set(activePyAgentSession.id, { visible: true, html: _banner ? _banner.innerHTML : '' });
+
     try {
       const res = await fetch('/pyagent/continue', {
         method: 'POST',
@@ -4249,7 +4878,7 @@ async function submitErrorReport() {
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || '发送失败');
-      document.getElementById('pyagentInputText').value = '';
+      textarea.value = '';
       closePyAgentInputBar();
       updatePyActionBar('🐍', '等待响应…');
       showToast('输入已发送', 'success');
@@ -4258,18 +4887,51 @@ async function submitErrorReport() {
     }
   };
 
+  // Ctrl+Enter 统一处理：运行中发送输入，否则启动
+  window.pyagentUnifiedSend = function () {
+    if (_pyagentInputMode === 'input') {
+      sendPyAgentInput();
+    } else {
+      startPyAgent();
+    }
+  };
+
   // ── Input bar helpers ─────────────────────────────────────────
-  window.openPyAgentInputBar = function () {
-    document.getElementById('pyagentInputBar').style.display = '';
-    document.getElementById('pyagentInputText').focus();
+  let _pyagentInputMode = 'task'; // 'task' | 'input'
+
+  window.openPyAgentInputBar = function (prompt = '') {
+    const textarea = document.getElementById('pyagentTask');
+    const promptBar = document.getElementById('pyagentUnifiedPrompt');
+    const promptText = document.getElementById('pyagentUnifiedPromptText');
+    const sendBtn = document.getElementById('pyagentSendInputBtn');
+    const startBtn = document.getElementById('pyagentStartBtn');
+    _pyagentInputMode = 'input';
+    if (promptBar) {
+      promptText.textContent = prompt || '向 PyAgent 发送输入：';
+      promptBar.style.display = 'flex';
+    }
+    if (textarea) textarea.placeholder = '向 PyAgent 发送输入（多行，Ctrl+Enter 发送）…';
+    if (sendBtn) sendBtn.style.display = '';
+    if (startBtn) startBtn.style.display = 'none';
+    if (textarea) textarea.focus();
   };
   window.closePyAgentInputBar = function () {
-    document.getElementById('pyagentInputBar').style.display = 'none';
+    const textarea = document.getElementById('pyagentTask');
+    const promptBar = document.getElementById('pyagentUnifiedPrompt');
+    const sendBtn = document.getElementById('pyagentSendInputBtn');
+    const startBtn = document.getElementById('pyagentStartBtn');
+    _pyagentInputMode = 'task';
+    if (promptBar) promptBar.style.display = 'none';
+    if (textarea) textarea.placeholder = '输入任务描述...\n（Ctrl+Enter 启动）';
+    if (sendBtn) sendBtn.style.display = 'none';
+    if (startBtn) startBtn.style.display = '';
   };
 
   // ── Clear output ──────────────────────────────────────────────
   window.clearPyAgentOutput = function () {
     _pyOutputBuf = '';
+    _pyLiveMdBuf = '';
+    if (_pyMdRenderTimer) { clearTimeout(_pyMdRenderTimer); _pyMdRenderTimer = null; }
     const el = document.getElementById('pyagentOutput');
     if (el) el.innerHTML = '';
     const elapsed = document.getElementById('pyagentElapsed');

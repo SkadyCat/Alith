@@ -24,6 +24,7 @@ const express = require('express');
 const net     = require('net');
 const http    = require('http');
 const path    = require('path');
+const fs      = require('fs');
 const { spawn } = require('child_process');
 
 const router = express.Router();
@@ -31,6 +32,74 @@ const router = express.Router();
 const PYAGENT_HOST    = '127.0.0.1';
 const PYAGENT_PORT    = 7441;
 const CONNECT_TIMEOUT = 5000;  // ms
+
+// ─── 去重补丁：防止 pyagent_server.js 直写 + 旧模块广播重复写入 chat 文件 ─────────
+// pyagent_server.js 先 broadcast（异步），再 appendToChat（同步），
+// 所以文件写入完成后 TCP 数据才到达，此处拦截 appendFileSync 检查末尾是否已有相同内容。
+(function installChatDedup() {
+  const DEDUP_VERSION = 'v4-debug';
+  if (require('fs')._pyagentChatDedup === DEDUP_VERSION) return;
+  // Always use the true original (not a previous monkey-patch layer)
+  if (!require('fs')._pyagentOrigAppend) {
+    require('fs')._pyagentOrigAppend = require('fs').appendFileSync;
+  }
+  const _orig = require('fs')._pyagentOrigAppend;
+  const _debugLog = require('path').join(__dirname, '..', 'runtime', 'chat_dedup_debug.log');
+  require('fs').appendFileSync = function (filePath, data, encoding) {
+    if (
+      typeof filePath === 'string' &&
+      filePath.replace(/\//g, '\\').includes('agent\\chat') &&
+      typeof data === 'string' &&
+      data.length > 0 &&
+      data.length <= 8192
+    ) {
+      const stack = new Error().stack.split('\n').slice(1, 4).join(' | ');
+      try {
+        const dataBuf = Buffer.from(data, 'utf-8');
+        const stat = require('fs').statSync(filePath);
+        if (stat.size >= dataBuf.length) {
+          const fd = require('fs').openSync(filePath, 'r');
+          const buf = Buffer.alloc(dataBuf.length);
+          require('fs').readSync(fd, buf, 0, dataBuf.length, stat.size - dataBuf.length);
+          require('fs').closeSync(fd);
+          if (buf.equals(dataBuf)) {
+            try { _orig.call(this, _debugLog, `[SKIP] ${new Date().toISOString()} len=${dataBuf.length} | ${stack}\n`); } catch(_){}
+            return; // 内容相同，跳过重复写入
+          }
+        }
+        try { _orig.call(this, _debugLog, `[WRITE] ${new Date().toISOString()} len=${dataBuf.length} | ${stack}\n`); } catch(_){}
+      } catch (_) {}
+    }
+    return _orig.call(this, filePath, data, encoding);
+  };
+  require('fs')._pyagentChatDedup = DEDUP_VERSION;
+  // Write install marker to verify hot-reload occurred
+  try { _orig.call(null, _debugLog, `[INSTALLED] ${DEDUP_VERSION} at ${new Date().toISOString()}\n`, 'utf8'); } catch(_){}
+})();
+
+// ─── 聊天持久化 ────────────────────────────────────────────────────────────────
+const CHAT_DIR = path.join(__dirname, '..', 'docs', 'agent', 'chat');
+fs.mkdirSync(CHAT_DIR, { recursive: true });
+
+function getPyChatPath(sessionId) {
+  const base = sessionId && sessionId.endsWith('.md') ? sessionId : (sessionId || 'pyagent') + '.md';
+  return path.join(CHAT_DIR, base);
+}
+
+function persistPyChat(sessionId, role, text) {
+  if (!sessionId || !text) return;
+  try {
+    const chatPath = getPyChatPath(sessionId);
+    let line;
+    if (role === 'user') {
+      const clean = String(text).replace(/\n/g, '\n> ');
+      line = `\n> 💬 **[用户留言]**\n>\n> ${clean}\n\n`;
+    } else {
+      line = String(text);
+    }
+    fs.appendFileSync(chatPath, line, 'utf-8');
+  } catch (_) {}
+}
 
 // ─── 自动启动 PyAgent 服务 ────────────────────────────────────────────────────
 const PYAGENT_SERVER_SCRIPT = path.join(__dirname, '..', 'pyagent_server.js');
@@ -102,6 +171,12 @@ let _broadcastConn   = null;
 let _broadcastBuf    = '';
 let _reconnectTimer  = null;
 
+// 热重载时销毁上一个模块实例遗留的旧 socket（利用 process 全局存储跨模块引用）
+if (process._pyagentBroadcastConn) {
+  try { process._pyagentBroadcastConn.destroy(); } catch (_) {}
+  process._pyagentBroadcastConn = null;
+}
+
 function connectBroadcastSocket() {
   if (_broadcastConn) return;
 
@@ -111,8 +186,11 @@ function connectBroadcastSocket() {
   sock.connect(PYAGENT_PORT, PYAGENT_HOST, () => {
     console.log('[PyAgent] 广播 Socket 已连接');
     _broadcastConn = sock;
+    process._pyagentBroadcastConn = sock;  // 跨模块实例共享引用，供下次热重载销毁
     _broadcastBuf  = '';
     if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null; }
+    // 告知 pyagent_server 这是广播接收 socket，让其关闭旧的（热重载时清理僵尸连接）
+    try { sock.write(JSON.stringify({ action: 'register_broadcast' }) + '\n'); } catch (_) {}
   });
 
   sock.on('data', (chunk) => {
@@ -124,8 +202,9 @@ function connectBroadcastSocket() {
       if (!line) continue;
       try {
         const msg = JSON.parse(line);
-        // 将 PyAgent 推送的 agent_output 转发到所有 SSE 客户端
-        if (msg.type === 'agent_output' || msg.type === 'status') {
+        // 将 PyAgent 推送的消息转发到所有 SSE 客户端
+        if (msg.type === 'agent_output' || msg.type === 'status' ||
+            msg.type === 'process_launched' || msg.type === 'agent_launched') {
           broadcastToSSE(msg);
         }
       } catch (_) {}
@@ -138,6 +217,7 @@ function connectBroadcastSocket() {
 
   sock.on('close', () => {
     _broadcastConn = null;
+    if (process._pyagentBroadcastConn === sock) process._pyagentBroadcastConn = null;
     console.log('[PyAgent] 广播 Socket 已断开，10s 后重连...');
     _reconnectTimer = setTimeout(connectBroadcastSocket, 10000);
   });
@@ -303,6 +383,10 @@ router.post('/start', async (req, res) => {
   }
   try {
     const resp = await pyAgentRequest('start', params);
+    // 持久化用户任务到聊天文件
+    if (params.sessionId && params.task) {
+      persistPyChat(params.sessionId, 'user', params.task);
+    }
     res.json(resp);
   } catch (err) {
     // 若连接被拒绝，自动拉起 PyAgent 服务后重试一次
@@ -319,6 +403,10 @@ router.post('/start', async (req, res) => {
       await launchPyAgentService();
       connectBroadcastSocket();
       const resp2 = await pyAgentRequest('start', params);
+      // 持久化用户任务到聊天文件（重试成功路径）
+      if (params.sessionId && params.task) {
+        persistPyChat(params.sessionId, 'user', params.task);
+      }
       res.json(resp2);
     } catch (err2) {
       res.status(503).json({ type: 'error', error: `PyAgent 服务启动失败: ${err2.message}` });
@@ -360,6 +448,10 @@ router.post('/continue', async (req, res) => {
   const params = req.body || {};
   try {
     const resp = await pyAgentRequest('continue', params);
+    // 持久化用户输入到聊天文件
+    if (params.sessionId && params.input) {
+      persistPyChat(params.sessionId, 'user', params.input);
+    }
     res.json(resp);
   } catch (err) {
     res.status(503).json({ type: 'error', error: err.message });
@@ -416,5 +508,28 @@ router.get('/stream', (req, res) => {
   });
 });
 
+// 热重载清理：关闭持久广播 socket，防止旧模块实例的 handler 继续写 chat 文件
+router.cleanup = function () {
+  if (_broadcastConn) {
+    try { _broadcastConn.destroy(); } catch (_) {}
+    _broadcastConn = null;
+  }
+  if (_reconnectTimer) {
+    clearTimeout(_reconnectTimer);
+    _reconnectTimer = null;
+  }
+};
+
+// Debug endpoint: verify hot-reload and dedup patch version
+router.get('/debug-dedup', (req, res) => {
+  res.json({
+    dedupVersion: require('fs')._pyagentChatDedup || 'not-installed',
+    hasOrigAppend: !!require('fs')._pyagentOrigAppend,
+    moduleLoadTime: new Date().toISOString(),
+  });
+});
+
 module.exports = router;
 
+
+// touch 17:30:25

@@ -31,6 +31,9 @@ function loadRoute(key) {
   const mod = routeModules[key];
   try {
     const fullPath = require.resolve(mod.file);
+    if (mod.router && typeof mod.router.cleanup === 'function') {
+      try { mod.router.cleanup(); } catch (_) {}
+    }
     delete require.cache[fullPath];
     mod.router = require(mod.file);
     console.log(`🔄 [hot-reload] reloaded: ${mod.file}`);
@@ -44,8 +47,8 @@ Object.keys(routeModules).forEach(key => {
   try { loadRoute(key); } catch (e) { console.error(`❌ initial load failed: ${routeModules[key].file}: ${e.message}`); }
 });
 
-// Watch routes/ for changes
-chokidar.watch(path.join(__dirname, 'routes'), { ignoreInitial: true })
+// Watch routes/ for changes (usePolling for Windows compatibility)
+chokidar.watch(path.join(__dirname, 'routes'), { ignoreInitial: true, usePolling: true, interval: 1000 })
   .on('change', (filePath) => {
     const key = Object.keys(routeModules).find(k =>
       filePath.replace(/\\/g, '/').endsWith(path.basename(routeModules[k].file) + '.js')
@@ -179,7 +182,7 @@ console.log('Hello, World!');
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { etag: false, lastModified: false, setHeaders: (res, filePath) => { if (filePath.endsWith('.js') || filePath.endsWith('.html')) { res.setHeader('Cache-Control', 'no-store'); } } }));
 
 // ─── 对外开放接口 ───────────────────────────────────────────
 app.use('/open',  (req, res, next) => routeModules.external.router(req, res, next));
@@ -230,6 +233,21 @@ function getFileTree(dir, basePath = '') {
   }
   return items;
 }
+
+// API: Hot-reload a specific route module on demand (useful when chokidar misses changes)
+app.post('/api/reload-route', (req, res) => {
+  const { key } = req.body || {};
+  if (key && routeModules[key]) {
+    loadRoute(key);
+    res.json({ success: true, reloaded: key });
+  } else if (!key) {
+    // Reload all
+    Object.keys(routeModules).forEach(k => loadRoute(k));
+    res.json({ success: true, reloaded: Object.keys(routeModules) });
+  } else {
+    res.status(404).json({ success: false, error: `Unknown route key: ${key}` });
+  }
+});
 
 // API: Get file tree
 app.get('/api/tree', (req, res) => {

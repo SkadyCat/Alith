@@ -140,7 +140,7 @@
         <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
-        <input type="text" id="searchInput" placeholder="搜索文档..." oninput="filterTree(this.value)" />
+        <input type="text" id="treeSearchInput" placeholder="搜索文档..." oninput="filterTree(this.value)" />
       </div>
 
       <div class="file-tree" id="fileTree">
@@ -223,6 +223,37 @@
             oninput="onEditorInput()"
             onkeydown="onEditorKeydown(event)"
           ></textarea>
+
+          <!-- VSCode-style Search Panel -->
+          <div class="editor-search-panel" id="editorSearchPanel" style="display:none;">
+            <div class="search-row">
+              <div class="search-input-wrap">
+                <input type="text" id="searchInput" class="search-input" placeholder="查找" autocomplete="off" spellcheck="false" />
+                <button class="search-opt-btn" id="searchCaseSensitive" title="区分大小写 (Alt+C)" aria-pressed="false">Aa</button>
+                <button class="search-opt-btn" id="searchRegex" title="使用正则表达式 (Alt+R)" aria-pressed="false">.*</button>
+              </div>
+              <span class="search-count" id="searchCount"></span>
+              <button class="search-nav-btn" id="searchPrev" title="上一个 (Shift+Enter)" onclick="navigateSearch(-1)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+              </button>
+              <button class="search-nav-btn" id="searchNext" title="下一个 (Enter)" onclick="navigateSearch(1)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <button class="search-close-btn" title="关闭 (Esc)" onclick="closeEditorSearch()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div class="search-row replace-row" id="replaceRow" style="display:none;">
+              <div class="search-input-wrap">
+                <input type="text" id="replaceInput" class="search-input" placeholder="替换" autocomplete="off" spellcheck="false" />
+              </div>
+              <button class="search-action-btn" onclick="replaceCurrentMatch()" title="替换">替换</button>
+              <button class="search-action-btn" onclick="replaceAllMatches()" title="全部替换">全部</button>
+            </div>
+            <button class="search-toggle-replace" id="searchToggleReplace" title="展开替换" onclick="toggleReplaceRow()">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" id="replaceChevron"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
         </div>
 
         <!-- Divider -->
@@ -345,20 +376,15 @@
     </div>
 
     <div class="agent-input-section">
+      <div class="agent-unified-prompt" id="agentUnifiedPrompt" style="display:none">
+        <span class="agent-unified-prompt-icon">💬</span>
+        <span id="agentUnifiedPromptText"></span>
+        <button class="agent-unified-prompt-close" onclick="closeUserInputBar()" title="关闭">×</button>
+      </div>
       <textarea class="agent-task-input" id="agentTask"
         placeholder="输入任务描述...&#10;例如：分析 docs 目录结构，生成一份摘要报告&#10;（运行中时，Ctrl+Enter 发送留言给 Agent）"
         rows="3"
         onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){sendTaskInput();event.preventDefault();}"></textarea>
-
-      <div class="agent-userinput-bar" id="agentUserInputBar" style="display:none">
-        <div id="agentUserInputPrompt" class="agent-userinput-prompt" style="display:none"></div>
-        <textarea id="agentUserInputText" class="agent-userinput-textarea" placeholder="向 Agent 发送输入（多行，Ctrl+Enter 发送）…" rows="3" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){sendUserInput();event.preventDefault();}"></textarea>
-        <div class="agent-userinput-actions">
-          <span class="agent-userinput-hint">Ctrl+Enter 发送</span>
-          <button class="agent-btn" onclick="closeUserInputBar()">关闭</button>
-          <button class="agent-btn primary" onclick="sendUserInput()">发送</button>
-        </div>
-      </div>
 
       <div class="agent-setting-row">
         <label class="agent-setting-label">
@@ -383,6 +409,7 @@
         </select>
         <button class="agent-btn" onclick="createHistoryDoc()" title="新建一个历史文档">新建</button>
         <button class="agent-btn" onclick="loadHistoryDocs()" title="刷新">↻</button>
+        <button class="agent-btn" onclick="(function(){var v=document.getElementById('agentHistoryDoc').value;if(v)openFile('history/'+v);})()" title="打开当前历史文档">↗</button>
       </div>
       <div class="agent-setting-row">
         <label class="agent-setting-label">
@@ -395,6 +422,7 @@
           <option value="">— 无前缀 —</option>
         </select>
         <button class="agent-btn" onclick="loadTaskPrefixDocs()" title="刷新文档列表">↻</button>
+        <button class="agent-btn" onclick="(function(){var v=document.getElementById('agentTaskPrefix').value;if(v)openFile(v);})()" title="打开当前任务前缀文档">↗</button>
       </div>
       <div class="agent-setting-row" style="align-items:flex-start">
         <label class="agent-setting-label" style="margin-top:5px">
@@ -435,6 +463,14 @@
         <button class="agent-btn primary" id="agentStartBtn" onclick="startAgent()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           启动 Agent
+        </button>
+        <button class="agent-btn primary" id="agentSendInputBtn" onclick="sendTaskInput()" style="display:none">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+          发送
+        </button>
+        <button class="agent-btn hint-btn" id="agentHintBtn" onclick="sendAgentHint()" style="display:none" title="发送提示给正在运行的 Agent（不打断当前任务，下一步生效）">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          💡 提示
         </button>
         <button class="agent-btn danger" id="agentStopBtn" onclick="stopAgent()" disabled>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"/></svg>
@@ -490,22 +526,15 @@
     </div>
 
     <div class="agent-input-section">
+      <div class="agent-unified-prompt" id="pyagentUnifiedPrompt" style="display:none">
+        <span class="agent-unified-prompt-icon">💬</span>
+        <span id="pyagentUnifiedPromptText">向 PyAgent 发送输入：</span>
+        <button class="agent-unified-prompt-close" onclick="closePyAgentInputBar()" title="关闭">×</button>
+      </div>
       <textarea class="agent-task-input" id="pyagentTask"
         placeholder="输入任务描述...&#10;（Ctrl+Enter 启动）"
         rows="3"
-        onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){startPyAgent();event.preventDefault();}"></textarea>
-
-      <div class="agent-userinput-bar" id="pyagentInputBar" style="display:none">
-        <div id="pyagentUserInputPrompt" class="agent-userinput-prompt" style="display:none"></div>
-        <textarea id="pyagentInputText" class="agent-userinput-textarea"
-          placeholder="向 PyAgent 发送输入（多行，Ctrl+Enter 发送）…" rows="3"
-          onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){sendPyAgentInput();event.preventDefault();}"></textarea>
-        <div class="agent-userinput-actions">
-          <span class="agent-userinput-hint">Ctrl+Enter 发送</span>
-          <button class="agent-btn" onclick="closePyAgentInputBar()">关闭</button>
-          <button class="agent-btn primary" onclick="sendPyAgentInput()">发送</button>
-        </div>
-      </div>
+        onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){pyagentUnifiedSend();event.preventDefault();}"></textarea>
 
       <div class="agent-setting-row">
         <label class="agent-setting-label">
@@ -529,6 +558,7 @@
         </select>
         <button class="agent-btn" onclick="createPyHistoryDoc()" title="新建一个历史文档">新建</button>
         <button class="agent-btn" onclick="loadHistoryDocs()" title="刷新">↻</button>
+        <button class="agent-btn" onclick="(function(){var v=document.getElementById('pyagentHistoryDoc').value;if(v)openFile('history/'+v);})()" title="打开当前历史文档">↗</button>
       </div>
       <div class="agent-setting-row">
         <label class="agent-setting-label">
@@ -541,6 +571,7 @@
           <option value="">— 无前缀 —</option>
         </select>
         <button class="agent-btn" onclick="loadTaskPrefixDocs()" title="刷新">↻</button>
+        <button class="agent-btn" onclick="(function(){var v=document.getElementById('pyagentTaskPrefix').value;if(v)openFile(v);})()" title="打开当前任务前缀文档">↗</button>
       </div>
       <div class="agent-setting-row" style="align-items:flex-start">
         <label class="agent-setting-label" style="margin-top:5px">
@@ -573,12 +604,15 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           启动 PyAgent
         </button>
+        <button class="agent-btn primary" id="pyagentSendInputBtn" onclick="sendPyAgentInput()" style="display:none">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+          发送
+        </button>
         <button class="agent-btn danger" id="pyagentStopBtn" onclick="stopPyAgent()" disabled>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"/></svg>
           停止
         </button>
         <button class="agent-btn" onclick="clearPyAgentOutput()">清空</button>
-        <button class="agent-btn" id="pyagentSendInputBtn" onclick="openPyAgentInputBar()">发送输入</button>
       </div>
     </div>
 
@@ -594,11 +628,13 @@
       <button class="agent-btn primary" onclick="continuePyAgentTask()">继续</button>
     </div>
 
+    <div id="py-current-task-banner" style="display:none;padding:8px 14px 8px;background:rgba(96,165,250,0.12);border-top:1px solid rgba(96,165,250,0.2);border-bottom:1px solid rgba(96,165,250,0.18);font-size:12.5px;color:#93c5fd;flex-shrink:0;"></div>
     <div class="agent-output-area pyagent-output-area" id="pyagentOutput"></div>
 
     <div class="agent-panel-footer">
       <span id="pyagentElapsed" style="color:var(--text-muted);font-size:12px"></span>
       <span id="pyagentStatusInfo" style="color:var(--text-muted);font-size:12px"></span>
+      <span id="pyagentProcStatus" style="font-size:11px;padding:1px 6px;border-radius:10px;background:var(--surface-2);color:var(--text-muted)">进程: 未知</span>
       <button class="agent-link-btn" onclick="clearPyAgentOutput()">清空输出</button>
     </div>
   </div>

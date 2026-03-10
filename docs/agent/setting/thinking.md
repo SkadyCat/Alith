@@ -62,6 +62,9 @@ $sessionId  = "{{SESSION_ID}}"
 $baseUrl    = "{{BASE_URL}}"
 $inputFile  = "{{RUNTIME_DIR}}\user_input_$sessionId.md"
 
+# 禁用系统代理（如 Clash），确保 localhost 请求直连，不经过代理
+[System.Net.WebRequest]::DefaultWebProxy = $null
+
 # 创建 FileSystemWatcher 实现即时检测（<1秒响应）
 $watcher = $null
 try {
@@ -71,16 +74,34 @@ try {
   $watcher.EnableRaisingEvents = $true
 } catch { $watcher = $null }
 
+function Notify-Running($task) {
+  $rb = "{`"sessionId`":`"$sessionId`",`"status`":`"running`",`"task`":`"🤔 思考中…`"}"
+  Invoke-RestMethod -Uri "$baseUrl/agent/set-status" -Method POST -ContentType "application/json" -Body $rb `
+    -OperationTimeoutSeconds 5 -ConnectionTimeoutSeconds 3 -ErrorAction SilentlyContinue | Out-Null
+  Write-Host "NEW_TASK: $task"
+}
+
 function Check-Input {
+  # 方法1: HTTP API（优先）
   $resp = Invoke-RestMethod -Uri "$baseUrl/agent/input?sessionId=$sessionId" -Method GET `
     -OperationTimeoutSeconds 10 -ConnectionTimeoutSeconds 5 -ErrorAction SilentlyContinue
   if ($resp -and $resp.hasContent) {
-    # 立即切换为 running（思考中），气泡变蓝
-    $rb = "{`"sessionId`":`"$sessionId`",`"status`":`"running`",`"task`":`"🤔 思考中…`"}"
-    Invoke-RestMethod -Uri "$baseUrl/agent/set-status" -Method POST -ContentType "application/json" -Body $rb `
-      -OperationTimeoutSeconds 5 -ConnectionTimeoutSeconds 3 -ErrorAction SilentlyContinue | Out-Null
-    Write-Host "NEW_TASK: $($resp.content)"
+    Notify-Running $resp.content
     return $true
+  }
+  # 方法2: 直接读文件（HTTP 失败时的后备，避免消息丢失）
+  if (Test-Path $inputFile) {
+    $raw = Get-Content $inputFile -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
+    if ($raw -and $raw.Trim()) {
+      $msgs = ($raw -split '---MSG---') | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+      if ($msgs.Count -gt 0) {
+        $first = $msgs[0]
+        $rest  = if ($msgs.Count -gt 1) { ($msgs[1..($msgs.Count-1)]) -join "`n---MSG---`n" } else { '' }
+        Set-Content $inputFile $rest -Encoding UTF8 -ErrorAction SilentlyContinue
+        Notify-Running $first
+        return $true
+      }
+    }
   }
   return $false
 }

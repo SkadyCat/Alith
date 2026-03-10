@@ -27,6 +27,7 @@ const HIST_FILE = path.join(DATA_DIR, 'agent-history.md');
 const HISTORY_DIR = path.join(DOCS_DIR, 'history');  // 会话历史文档目录
 const RUNTIME_DIR = path.join(__dirname, '..', 'runtime'); // 运行时氚临文件目录
 const DIALOGUE_DIR = path.join(DOCS_DIR, 'dialogue'); // 会话配置文件目录
+const CHAT_DIR = path.join(DOCS_DIR, 'agent', 'chat'); // 聊天持久化目录
 const BASE_URL = 'http://localhost:7439';
 
 // ── 更新会话配置文件中的 isLaunched / isRunning 状态 ────────────
@@ -128,6 +129,8 @@ function createSessionState() {
     isLaunched:        false,   // 会话是否已启动（含 POLL 等待中）；仅 stop/stopped 时清除
     launchedAt:        null,    // 启动时间戳（毫秒）
     _lastPid:          null,    // 最后一次子进程 PID（进程退出后仍保留，供持久化检查）
+    chatWriteBuf:      '',      // 聊天持久化写缓冲区
+    chatFlushTimer:    null,    // 聊天缓冲刷新定时器
   };
 }
 
@@ -211,12 +214,78 @@ function checkCliAvailable() {
   });
 }
 
+// ── 聊天内容持久化 ────────────────────────────────────────────
+fs.mkdirSync(CHAT_DIR, { recursive: true });
+
+function getChatFilePath(sessionId) {
+  const baseName = sessionId.endsWith('.md') ? sessionId : sessionId + '.md';
+  return path.join(CHAT_DIR, baseName);
+}
+
+function persistChatEvent(sessionId, event, data) {
+  const sess = getSession(sessionId);
+  const chatPath = getChatFilePath(sessionId);
+  try {
+    if (event === 'start') {
+      const exists = fs.existsSync(chatPath);
+      const header = (exists ? '\n\n---\n\n' : '') +
+        `## 任务 — ${new Date(data.time).toLocaleString('zh-CN')}\n**任务**: ${data.task}\n\n`;
+      fs.appendFileSync(chatPath, header, 'utf-8');
+      if (sess.chatFlushTimer) { clearInterval(sess.chatFlushTimer); sess.chatFlushTimer = null; }
+      // Flush any buffered content before clearing (prevents losing Alice's replies)
+      if (sess.chatWriteBuf) {
+        try { fs.appendFileSync(chatPath, sess.chatWriteBuf, 'utf-8'); } catch (_) {}
+        sess.chatWriteBuf = '';
+      }
+      sess.chatFlushTimer = setInterval(() => {
+        if (!sess.chatWriteBuf) return;
+        try { fs.appendFileSync(chatPath, sess.chatWriteBuf, 'utf-8'); } catch (_) {}
+        sess.chatWriteBuf = '';
+      }, 2000);
+    } else if (event === 'output') {
+      if (data.stream === 'user-msg' && data.text) {
+        if (sess.chatWriteBuf) {
+          try { fs.appendFileSync(chatPath, sess.chatWriteBuf, 'utf-8'); } catch (_) {}
+          sess.chatWriteBuf = '';
+        }
+        const clean = data.text.replace(/^💬\s*/, '');
+        const userLine = `\n> 💬 **[用户留言]**\n>\n> ${clean.replace(/\n/g, '\n> ')}\n\n`;
+        if (fs.existsSync(chatPath)) fs.appendFileSync(chatPath, userLine, 'utf-8');
+        else { fs.writeFileSync(chatPath, userLine, 'utf-8'); }
+      } else if (data.stream === 'stdout' && data.text) {
+        sess.chatWriteBuf += data.text;
+        // Start a lazy flush timer if none is running (e.g., during POLL mode)
+        if (!sess.chatFlushTimer) {
+          sess.chatFlushTimer = setInterval(() => {
+            if (!sess.chatWriteBuf) return;
+            try { fs.appendFileSync(chatPath, sess.chatWriteBuf, 'utf-8'); } catch (_) {}
+            sess.chatWriteBuf = '';
+          }, 2000);
+        }
+      }
+    } else if (event === 'done') {
+      if (sess.chatFlushTimer) { clearInterval(sess.chatFlushTimer); sess.chatFlushTimer = null; }
+      if (sess.chatWriteBuf) {
+        try { fs.appendFileSync(chatPath, sess.chatWriteBuf, 'utf-8'); } catch (_) {}
+        sess.chatWriteBuf = '';
+      }
+      if (fs.existsSync(chatPath)) {
+        fs.appendFileSync(chatPath, `\n\n---\n*完成 · 耗时 ${data.elapsed}s · 退出码 ${data.code}*\n`, 'utf-8');
+      }
+    }
+  } catch (_) { /* 静默失败，不影响主流程 */ }
+}
+
 // ── SSE 广播 ──────────────────────────────────────────────
 function broadcast(sessionId, event, data) {
   const sess = getSession(sessionId);
   // Persist current action so /agent/status can return it
   if (event === 'agent-action') {
     sess.currentAction = (data && data.type && data.type !== 'idle') ? data : null;
+  }
+  // 持久化聊天内容
+  if (event === 'start' || event === 'output' || event === 'done') {
+    persistChatEvent(sessionId, event, data);
   }
   const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   sess.agentBuffer.push({ event, data });
@@ -546,7 +615,7 @@ router.post('/start', async (req, res) => {
   // ── 预算常量（字符数，非 Token）────────────────────────
   const HIST_BUDGET    = 8000;  // 历史上下文最大注入量
   const SYSDOC_BUDGET  = 5000;  // 系统设定文档最大注入量（每个）
-  const PREFIX_BUDGET  = 10000; // 任务前缀文档最大注入量
+  const PREFIX_BUDGET  = 12000; // 任务前缀文档最大注入量
 
   // ── 注入会话历史文档（智能：优先压缩摘要，否则取末尾）──
   // 先合并任务前缀 + 用户输入，得到"当前指令块"，再套历史/系统设定
@@ -877,6 +946,20 @@ router.post('/start', async (req, res) => {
       }
     }
 
+    // ── 全自动：达到 continues 限制时自动重新启动（无需人工干预）──
+    if (code === 0 && !sess.pendingRelaunch && sess.lastLaunchParams) {
+      const _outL = sess.outputAccum.toLowerCase();
+      if (_outL.includes('max-autopilot-continues') ||
+          _outL.includes('maximum number of continues') ||
+          _outL.includes('reached the limit')) {
+        broadcast(sessionId, 'output', {
+          text: `\n🔄 已达到 continues 限制 (${maxContinues})，全自动重新启动 Agent…\n`,
+          stream: 'stdout'
+        });
+        sess.pendingRelaunch = { ...sess.lastLaunchParams };
+      }
+    }
+
     // ── 检查是否有待执行的 relaunch 请求 ──────────────────
     if (sess.pendingRelaunch) {
       const relaunchParams = sess.pendingRelaunch;
@@ -908,11 +991,6 @@ router.post('/start', async (req, res) => {
     }
 
     // 等待用户确认结束或追加任务，而不是立即广播 done
-    // 若输出包含 max-autopilot-continues 耗尽迹象，广播提示
-    const outLower = sess.outputAccum.toLowerCase();
-    if (code === 0 && (outLower.includes('max-autopilot-continues') || outLower.includes('maximum number of continues') || outLower.includes('reached the limit'))) {
-      broadcast(sessionId, 'output', { text: `\n⚠️ Agent 已达到最大 continues 限制 (${maxContinues})，进程正常退出。\n   如需继续，请增大「最大继续次数」后重新启动。\n`, stream: 'stderr' });
-    }
     sess.pendingDone = { code, elapsed, task };
     sess.agentStatus = 'waiting';
     saveSessionState(sessionId, sess);  // 持久化 waiting 状态，重启后 UI 仍显示"停止"按钮
@@ -1157,6 +1235,48 @@ router.get('/input', (req, res) => {
 });
 
 /* ─────────────────────────────────────────────────────────
+   POST /agent/hint  —— 向运行中的 Agent 发送实时提示（不影响任务队列）
+   Body: { sessionId, text }
+   提示存储在独立文件 runtime/hint_<sessionId>.md，与任务队列互不干扰
+
+   GET /agent/hint?sessionId=X[&clear=true]  —— 读取当前提示
+   - clear=true: 读取后清空（Agent 消费后调用）
+   - clear=false(默认): 只读不清空（前端预览等）
+──────────────────────────────────────────────────────── */
+router.post('/hint', (req, res) => {
+  const sessionId = String(req.body.sessionId || 'default');
+  const text = String(req.body.text || '').trim();
+  if (!text) return res.json({ success: false, error: 'empty hint' });
+
+  const hintPath = path.join(RUNTIME_DIR, `hint_${sessionId}.md`);
+  try {
+    const ts = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const existing = fs.existsSync(hintPath) ? fs.readFileSync(hintPath, 'utf-8').trim() : '';
+    const entry = `[${ts}] ${text}`;
+    fs.writeFileSync(hintPath, existing ? `${existing}\n${entry}` : entry, 'utf-8');
+    broadcast(sessionId, 'hint-sent', { text, ts });
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+router.get('/hint', (req, res) => {
+  const sessionId = String(req.query.sessionId || 'default');
+  const clear = req.query.clear === 'true';
+  const hintPath = path.join(RUNTIME_DIR, `hint_${sessionId}.md`);
+  try {
+    if (!fs.existsSync(hintPath)) return res.json({ success: true, hasHint: false, content: '' });
+    const content = fs.readFileSync(hintPath, 'utf-8').trim();
+    if (!content) return res.json({ success: true, hasHint: false, content: '' });
+    if (clear) fs.writeFileSync(hintPath, '', 'utf-8');
+    res.json({ success: true, hasHint: true, content });
+  } catch (err) {
+    res.json({ success: false, hasHint: false, content: '', error: err.message });
+  }
+});
+
+/* ─────────────────────────────────────────────────────────
    POST /agent/request-input  —— 主动要求用户在前端打开输入框
    可由外部脚本、工具或 AI 调用，通过 SSE 广播触发前端弹出"注入输入"面板
 
@@ -1190,10 +1310,12 @@ router.post('/set-status', (req, res) => {
   //    但可以从 running/done/error 切换（POLL 气泡正常显示）
   //  - 'idle' 在进程无活跃进程时触发 session 清理
   //  - 真正的双启动保护在 /agent/start 的 processAlive 检查中完成
+  let _statusActuallySet = false;
   if (body.status) {
     const blocked = body.status === 'waiting' && sess.agentStatus === 'idle';
     if (!blocked) {
       sess.agentStatus = body.status;
+      _statusActuallySet = true;
       if (body.status === 'idle' && !sess.agentProcess) {
         sessions.delete(sid);
       }
@@ -1204,6 +1326,13 @@ router.post('/set-status', (req, res) => {
     const p = Number(body.contextProgress);
     if (!isNaN(p)) sess.contextProgress = Math.max(0, Math.min(100, p));
   }
+  // 持久化到 dialogue 文件，供 PyAgent 气泡直接读取（无需额外查 pyagent_server）
+  // 注意：仅在状态实际变更时写 agentStatus，防止 blocked 情况把 'idle' 误写回文件
+  const dialogueFields = {};
+  if (_statusActuallySet) dialogueFields.agentStatus = sess.agentStatus;
+  if (body.task !== undefined) dialogueFields.agentTask = body.task;
+  if (body.contextProgress !== undefined) dialogueFields.contextProgress = sess.contextProgress;
+  if (Object.keys(dialogueFields).length > 0) updateDialogueState(sid, dialogueFields);
   // 同时广播标签事件（向前兼容旧用法）
   if (body.label !== undefined || body.type !== undefined) {
     broadcast(sid, 'agent-action', { type: body.type || 'poll', label: body.label || '' });
