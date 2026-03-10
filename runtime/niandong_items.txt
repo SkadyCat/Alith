@@ -1,0 +1,147 @@
+
+=== 头盔 ===
+Name: Damnation Glance
+  护甲: 1116
+  物品等级: 73
+  品质: 20
+  +12 力量
+  +135 护甲
+  +100 最大生命
+  +41% 火焰抗性
+  +37% 闪电抗性
+  护甲提升 66%
+
+=== 胸甲 ===
+Name: Brood Veil
+  护甲: 1795
+  能量护盾: 400
+  物品等级: 84
+  品质: 20
+  5% Chance to Block Spell Damage
+  9% increased effect of Non-Curse Auras from your Skills
+  +159 护甲
+  +51 最大能量护盾
+  +148 最大生命
+  每秒回复 56.1 点生命
+  +41% 火焰抗性
+  +23% 闪电抗性
+  护甲和能量护盾提升 70%
+
+=== 手套 ===
+Name: Doedre's Tenure
+  能量护盾: 16
+  物品等级: 14
+  品质: 20
+  +27 智慧
+  法术伤害提升 100%
+  20% reduced Cast Speed
+
+=== 鞋子 ===
+Name: Gloom Hoof
+  护甲: 186
+  能量护盾: 38
+  物品等级: 72
+  品质: 20
+  +40 力量
+  +69 最大生命
+  +37% 火焰抗性
+  +33% 闪电抗性
+  移动速度提升 25%
+  护甲和能量护盾提升 49%
+
+=== 项链 ===
+Name: Warped Timepiece
+  物品等级: 70
+  Allocates Surveillance
+  +23 敏捷和智慧
+  攻击速度提升 16%
+  施法速度提升 20%
+  移动速度提升 14%
+  20% reduced Skill Effect Duration
+  Debuffs on you expire 100% faster
+
+=== 戒指 1 ===
+Name: Rage Knuckle
+  物品等级: 80
+  +21% 混沌抗性
+  +33 敏捷
+  攻击增加 7 至 12 点火焰伤害
+  +399 to Accuracy Rating
+  +42 最大能量护盾
+  找到物品稀有度提升 23%
+  +48 最大生命
+
+=== 戒指 2 ===
+Name: Pandemonium Grip
+  物品等级: 79
+  +22% 混沌抗性
+  攻击增加 6 至 60 点闪电伤害
+  施法速度提升 13%
+  +16% 冰冷抗性
+  +26% 混沌抗性
+  +54 最大生命
+
+=== 腰带 ===
+Name: Brimstone Leash
+  物品等级: 83
+  +25 力量
+  13% reduced Enemy Stun Threshold
+  +49 最大能量护盾
+  +123 最大生命
+  +41% 冰冷抗性
+  +27% 闪电抗性
+  +159 to Armour and Evasion Rating
+
+=== 武器 1 ===
+Name: Apocalypse Bane
+  物品等级: 84
+  品质: 20
+  Cannot roll Caster Modifiers
+  Adds 18 to 29 Physical Damage
+  Adds 69 to 117 Cold Damage
+  Adds 8 to 169 Lightning Damage
+  暴击率提升 34%
+  魔力回复速度提升 41%
+  攻击速度提升 11%
+
+=== 武器 2 ===
+Name: Miracle Bulwark
+  护甲: 488
+  物品等级: 82
+  品质: 20
+  +10 最大生命
+  61% increased Chance to Block
+  15% Chance to Block Spell Damage
+  每秒回复 107.6 点生命
+  +44% 冰冷抗性
+  +24% 混沌抗性
+  +60 最大生命
+
+=== 药剂 1 ===
+Name: Medic's Divine Life Flask of Sealing
+  品质: 0
+  12% chance to gain a Flask Charge when you deal a Critical Strike
+  Grants Immunity to Bleeding for 7 seconds if used while Bleeding
+  Grants Immunity to Corrupted Blood for 7 seconds if used while affected by Corrupted Blood
+
+=== 药剂 2 ===
+Name: Constant Silver Flask of the Lynx
+  品质: 0
+  充能恢复速度提升 19%
+  10% increased Movement Speed during Effect
+
+=== 药剂 3 ===
+Name: Quicksilver Flask of the Abalone
+  品质: 0
+  44% increased Armour during Effect
+
+=== 药剂 4 ===
+Name: Granite Flask of the Mockingbird
+  品质: 0
+  43% reduced Effect of Curses on you during Effect
+
+=== 药剂 5 ===
+Name: Investigator's Diamond Flask of Stinging
+  品质: 0
+  20% increased Duration
+  28% increased Critical Strike Chance during Effect

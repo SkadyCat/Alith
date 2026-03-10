@@ -1,0 +1,34 @@
+{
+  "session-1773059101620.md": {
+    "isLaunched": false,
+    "pid": 6884,
+    "port": 7439,
+    "status": "error",
+    "launchedAt": 1773151490441,
+    "updatedAt": 1773153689820
+  },
+  "default": {
+    "isLaunched": true,
+    "pid": 31512,
+    "port": 7439,
+    "status": "waiting",
+    "launchedAt": 1773081319576,
+    "updatedAt": 1773081337635
+  },
+  "session-1773151413120.md": {
+    "isLaunched": false,
+    "pid": null,
+    "port": 7439,
+    "status": "idle",
+    "launchedAt": null,
+    "updatedAt": 1773151643092
+  },
+  "session-1773060372155.md": {
+    "isLaunched": false,
+    "pid": null,
+    "port": 7439,
+    "status": "idle",
+    "launchedAt": null,
+    "updatedAt": 1773151685301
+  }
+}

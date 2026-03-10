@@ -1,0 +1,151 @@
+
+=== 头盔 ===
+Name: Horror Glance
+Base: Zealot Helmet
+  '护甲: 173'
+  '能量护盾: 37'
+  '物品等级: 53'
+  '品质: 0'
+  '+20 to Intelligence'
+  '26% increased Armour and Energy Shield'
+  '+36 to maximum Mana'
+  '16% increased Rarity of Items found'
+  '11% increased Stun and Block Recovery'
+
+=== 胸甲 ===
+Name: Beast Carapace
+Base: Elegant Ringmail
+  '护甲: 738'
+  '能量护盾: 183'
+  '物品等级: 67'
+  '品质: 0'
+  '+208 to Armour'
+  '16% increased Armour and Energy Shield'
+  '+54 to maximum Energy Shield'
+  '+105 to maximum Life'
+  '+33% to Fire Resistance'
+  '8% increased Stun and Block Recovery'
+
+=== 手套 ===
+Name: Vengeance Vise
+Base: Embroidered Gloves
+  '能量护盾: 73'
+  '物品等级: 44'
+  '品质: 0'
+  '+12 to Intelligence'
+  '+47 to maximum Energy Shield'
+  'Regenerate 31.4 Life per second'
+  '11% increased Rarity of Items found'
+
+=== 鞋子 ===
+Name: Behemoth Span
+Base: Hydrascale Boots
+  '护甲: 108'
+  '闪避: 135'
+  '物品等级: 66'
+  '品质: 0'
+  '+27 to Evasion Rating'
+  '+26 to maximum Life'
+  '+39% to Fire Resistance'
+  '+40% to Cold Resistance'
+  '25% increased Movement Speed'
+
+=== 项链 ===
+Name: The Primordial Chain
+Base: Coral Amulet
+  '物品等级: 50'
+  'Regenerate 2 Life per second'
+  '+3 to maximum number of Summoned Golems'
+  'You cannot have non-Golem Minions'
+  '25% reduced Golem Size'
+  'Golems Deal 30% less Damage'
+  'Golems have 25% less Life'
+  'Golems have 95% increased Movement Speed'
+  'Primordial'
+
+=== 戒指 1 ===
+Name: Vortex Gyre
+Base: Two-Stone Ring
+  '物品等级: 55'
+  '+14% to Fire and Lightning Resistances'
+  'Adds 2 to 5 Physical Damage to Attacks'
+  '10% increased Lightning Damage'
+  '+3 to maximum Energy Shield'
+  '+32 to maximum Life'
+  '+8% to all Elemental Resistances'
+  '+22% to Lightning Resistance'
+
+=== 戒指 2 ===
+Name: Victory Spiral
+Base: Topaz Ring
+  '物品等级: 71'
+  '+20% to Lightning Resistance'
+  'Adds 3 to 7 Cold Damage to Attacks'
+  'Regenerate 16.5 Life per second'
+  '+39% to Fire Resistance'
+  '+21% to Cold Resistance'
+
+=== 腰带 ===
+Name: Rage Shackle
+Base: Studded Belt
+  '物品等级: 69'
+  '28% increased Stun Duration on Enemies'
+  '+14 to Armour'
+  '+37 to maximum Mana'
+  '+31% to Lightning Resistance'
+  '29% increased Flask Life Recovery rate'
+
+=== 武器 1 ===
+Name: Dire Spire
+Base: Demon's Horn
+  '物品等级: 71'
+  '品质: 0'
+  'Adds 32 to 53 Fire Damage to Spells and Attacks'
+  'Adds 24 to 39 Fire Damage to Spells'
+  '6% increased Cast Speed'
+  '46% increased Mana Regeneration Rate'
+  '22% chance to Ignite'
+
+=== 武器 2 ===
+Name: Carrion Star
+Base: Bone Spirit Shield
+  '能量护盾: 33'
+  '物品等级: 25'
+  '品质: 0'
+  'Minions deal 8% increased Damage'
+  '+10 to Intelligence'
+  '+14 to maximum Energy Shield'
+  '11% increased Energy Shield'
+  '7% increased Stun and Block Recovery'
+  'Minions deal 37% increased Damage'
+
+=== 药剂 1 ===
+Name: Eternal Life Flask
+Base: Item Level: 69
+  '品质: 0'
+
+=== 药剂 2 ===
+Name: Bismuth Flask of the Deer
+Base: Item Level: 9
+  '品质: 0'
+  '45% less Duration'
+  'Immunity to Freeze and Chill during Effect'
+
+=== 药剂 3 ===
+Name: Quicksilver Flask
+Base: Item Level: 4
+  '品质: 0'
+
+=== 药剂 4 ===
+Name: Constant Granite Flask
+Base: Item Level: 39
+  '品质: 0'
+  '18% increased Charge Recovery'
+
+=== 药剂 5 ===
+Name: Constant Quicksilver Flask of the Rabbit
+Base: Item Level: 15
+  '品质: 0'
+  '17% increased Charge Recovery'
+  '38% reduced Effect of Chill on you during Effect'
+  '37% reduced Freeze Duration on you during Effect'
