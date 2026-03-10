@@ -1363,7 +1363,7 @@ function showContextMenu(e, target) {
   contextMenuTarget = typeof target === 'string' ? { type: 'file', path: target } : target;
   const isRoot = contextMenuTarget.type === 'root';
   const isFile = contextMenuTarget.type === 'file';
-  document.getElementById('ctxCopyPath').style.display = isFile ? 'flex' : 'none';
+  document.getElementById('ctxCopyPath').style.display = isRoot ? 'none' : 'flex';
   document.getElementById('ctxRename').style.display = isRoot ? 'none' : 'flex';
   document.getElementById('ctxOpenFolder').style.display = isRoot ? 'none' : 'flex';
   document.getElementById('ctxDelete').style.display = isRoot ? 'none' : 'flex';
@@ -1864,6 +1864,11 @@ function connectAgentStream(sessionId, noReplay) {
       if (text) appendAgentLine(text, 'stderr');
       return;
     }
+    if (stream === 'system-ack') {
+      // 系统 ACK：立即显示为独立行，不进入 markdown 缓冲
+      if (text) appendAgentLine(text, 'system-ack');
+      return;
+    }
     if (stream === 'user-msg') {
       // 用户留言：先强制渲染已积累的 markdown，避免重放时内容丢失
       if (agentMdBuffer && agentMdBlock) {
@@ -2026,8 +2031,6 @@ function connectAgentStream(sessionId, noReplay) {
 
   es.addEventListener('history-saved', (e) => {
     if (!isActive()) return;
-    const { path: p } = JSON.parse(e.data);
-    appendAgentLine(`📜 已记录到历史文档: ${p}`, 'system');
     loadFileTree();
   });
 
@@ -4296,7 +4299,7 @@ async function submitErrorReport() {
 
     // Default system docs and task prefix
     const defaultSystemDocs   = ['agent/application.md', 'agent/工具文档.md'];
-    const defaultTaskPrefix   = 'agent/setting/thinking.md';
+    const defaultTaskPrefix   = 'agent/setting/pyagent-thinking.md';
     const defaultHistoryDoc   = `${trimName}.md`;
 
     try {
@@ -4576,6 +4579,13 @@ async function submitErrorReport() {
         if (!text) return;
         if (msg.stream === 'done') {
           flushPyOutput(output);
+        } else if (msg.stream === 'system-ack') {
+          // 系统 ACK：直接渲染为独立块，不混入流式 Markdown buffer
+          const ackDiv = document.createElement('div');
+          ackDiv.className = 'agent-md-block system-ack-block';
+          ackDiv.textContent = text;
+          output.appendChild(ackDiv);
+          output.scrollTop = output.scrollHeight;
         } else {
           appendPyOutput(text, output);
         }

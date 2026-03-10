@@ -285,7 +285,7 @@ function buildFileTree(dir, basePath = '') {
     const relativePath = basePath ? `${basePath}/${entry.name}` : entry.name;
     if (entry.isDirectory()) {
       items.push({ type: 'folder', name: entry.name, path: relativePath, children: buildFileTree(path.join(dir, entry.name), relativePath) });
-    } else if (/\.(md|json|txt|yaml|yml|toml|csv|xml|html|js|ts|py|sh)$/.test(entry.name)) {
+    } else if (/\.(md|json|txt|yaml|yml|toml|csv|xml|html|js|ts|py|sh|conf|ini)$/.test(entry.name)) {
       let size = 0;
       try { size = fs.statSync(path.join(dir, entry.name)).size; } catch {}
       items.push({ type: 'file', name: entry.name, path: relativePath, size });

@@ -1664,6 +1664,7 @@ textarea.doc-drag-over {
 .agent-line { display: block; white-space: pre-wrap; word-break: break-word; }
 .agent-line.stderr { color: var(--warning); }
 .agent-line.system { color: var(--text-accent); font-style: italic; font-family: var(--font-sans); white-space: normal; }
+.agent-line.system-ack { color: var(--text-muted, #888); font-style: italic; font-family: var(--font-sans); white-space: normal; font-size: 0.88em; }
 .agent-line.error  { color: var(--danger); white-space: pre-wrap; }
 .agent-line.success { color: var(--success); white-space: normal; }
 .agent-line.user-msg { color: #60a5fa; background: rgba(96,165,250,0.08); border-left: 3px solid #60a5fa; padding: 4px 8px; border-radius: 4px; font-family: var(--font-sans); white-space: pre-wrap; margin: 4px 0; }
@@ -1711,6 +1712,7 @@ textarea.doc-drag-over {
 .agent-md-block th { background: var(--bg-elevated); color: var(--text-accent); }
 .agent-md-block.user-msg-block { background: rgba(96,165,250,0.06); border-left: 3px solid #60a5fa; border-radius: 4px; padding: 2px 8px; margin: 6px 0; }
 .agent-md-block.user-msg-block blockquote { border-left: none; padding-left: 0; color: #93c5fd; }
+.agent-md-block.system-ack-block { color: var(--text-muted, #888); font-style: italic; font-size: 0.85em; padding: 2px 8px; margin: 2px 0; opacity: 0.8; }
 
 /* 历史记录分隔线 */
 .agent-history-divider {

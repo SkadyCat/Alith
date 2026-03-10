@@ -169,6 +169,7 @@ function buildPrompt(params) {
       let prefContent = fs.readFileSync(path.join(DOCS_DIR, taskPrefixDoc), 'utf8');
       prefContent = prefContent
         .replace(/\{\{RUNTIME_DIR\}\}/g, RUNTIME_DIR)
+        .replace(/\{\{CHAT_DIR\}\}/g, CHAT_DIR)
         .replace(/\{\{BASE_URL\}\}/g, BASE_URL)
         .replace(/\{\{SESSION_ID\}\}/g, sessionId || '')
         .replace(/\{\{HISTORY_FILE\}\}/g, historyDoc ? path.join(HISTORY_DIR, historyDoc) : '');
@@ -256,6 +257,7 @@ function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, pa
       sess.process   = null;
 
       // 正常退出（code=0）且未被用户手动停止 → 自动 relaunch（最多 50 次）
+      // pyagent 自身运行 POLL 脚本，relaunch 保持其持续监听 waitprocess/
       if (code === 0 && sess.status !== 'stopped' && sess.relaunchCount < 50) {
         sess.relaunchCount++;
         sess.status = 'running';
@@ -285,7 +287,63 @@ function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, pa
   }
 }
 
-// ── 动作处理 ──────────────────────────────────────────────────────────────────
+// ── 文件队列：waitprocess / hasprocess ────────────────────────────────────────
+function getQueueDirs(sessionId) {
+  const dirName = (sessionId || 'default').replace(/\.md$/i, '');
+  const base    = path.join(CHAT_DIR, dirName);
+  const waitDir = path.join(base, 'waitprocess');
+  const doneDir = path.join(base, 'hasprocess');
+  fs.mkdirSync(waitDir, { recursive: true });
+  fs.mkdirSync(doneDir, { recursive: true });
+  return { waitDir, doneDir };
+}
+
+/* 取出 waitprocess/ 中最旧的任务文件，移动到 hasprocess/，返回文件内容；无任务则返回 null */
+function readNextTask(sessionId) {
+  try {
+    const { waitDir, doneDir } = getQueueDirs(sessionId);
+    const files = fs.readdirSync(waitDir).filter(f => f.endsWith('.md')).sort();
+    if (files.length === 0) return null;
+    const oldest  = files[0];
+    const srcPath = path.join(waitDir, oldest);
+    const dstPath = path.join(doneDir, oldest);
+    const content = fs.readFileSync(srcPath, 'utf-8');
+    fs.renameSync(srcPath, dstPath);
+    console.log(`[PyAgent Queue] 取任务: ${oldest} (剩余 ${files.length - 1})`);
+    return content;
+  } catch (e) {
+    console.error('[PyAgent Queue] readNextTask 失败:', e.message);
+    return null;
+  }
+}
+
+/* 活跃的 fs.Watcher，按 sessionId 索引，避免重复监听 */
+const _queueWatchers = new Map();
+
+/* 启动对 waitprocess/ 目录的监听；agent 空闲时自动派发下一条任务 */
+function startQueueWatcher(sessionId, lastStartFn) {
+  if (_queueWatchers.has(sessionId)) return;   // 已在监听
+  const { waitDir } = getQueueDirs(sessionId);
+  let watcher;
+  try {
+    watcher = fs.watch(waitDir, { persistent: false }, (event, filename) => {
+      if (!filename || !filename.endsWith('.md')) return;
+      const sess = sessions.get(String(sessionId));
+      if (!sess || sess.status === 'running') return;  // 正在忙，等 close 后自动取
+      const task = readNextTask(sessionId);
+      if (task) {
+        console.log(`[PyAgent Queue] 发现新任务，自动启动 agent`);
+        lastStartFn(task);
+      }
+    });
+    _queueWatchers.set(sessionId, watcher);
+    console.log(`[PyAgent Queue] 开始监听 ${waitDir}`);
+  } catch (e) {
+    console.warn('[PyAgent Queue] fs.watch 失败（降级为轮询）:', e.message);
+  }
+}
+
+
 function handleAction(action, params, respond, socket) {
   const sessionId = String((params && params.sessionId) || 'default');
 
@@ -329,15 +387,32 @@ function handleAction(action, params, respond, socket) {
       sess.status = 'idle';
     }
 
-    const prompt = buildPrompt({ ...params, sessionId });
-    const { cmd, args, shell } = detectCopilotCmd();
-    const maxCont = parseInt(params.maxContinues) || 100;
     const histDoc = params.historyDoc || '';
-    // 每次启动生成唯一 runId，用于前端区分本轮与历史轮的 SSE 事件
     const runId = Date.now().toString(36) + Math.random().toString(36).slice(2);
 
+    // ── 首次任务写入 waitprocess/ 队列 ──────────────────────────────────────
+    // pyagent 启动后以 POLL 模式自行读取任务，不直接注入 prompt
+    if (params.task && params.task.trim()) {
+      try {
+        const { waitDir } = getQueueDirs(sessionId);
+        const fname   = Date.now().toString() + '-' + Math.floor(Math.random() * 1000).toString().padStart(3, '0') + '.md';
+        const now     = new Date().toLocaleString('zh-CN', { hour12: false });
+        const docContent = `# 用户任务\n\n**时间**: ${now}  \n**会话**: ${sessionId}\n\n---\n\n${params.task.trim()}`;
+        fs.writeFileSync(path.join(waitDir, fname), docContent, 'utf-8');
+        console.log(`[PyAgent Queue] 首次任务已写入 waitprocess/${fname}`);
+      } catch (e) {
+        console.error('[PyAgent Queue] 写入 waitprocess 失败:', e.message);
+      }
+    }
+
+    // 以 POLL 模式启动（task 置空，pyagent 自行从 waitprocess/ 读取任务）
+    const pollParams = { ...params, task: 'POLL' };
+    const prompt = buildPrompt({ ...pollParams, sessionId });
+    const { cmd, args, shell } = detectCopilotCmd();
+    const maxCont = parseInt(params.maxContinues) || 100;
+
     // 立即将用户任务写入历史文档
-    if (histDoc) {
+    if (histDoc && params.task) {
       try {
         const histPath = path.join(HISTORY_DIR, histDoc);
         const now = new Date().toLocaleString('zh-CN', { hour12: false });
@@ -371,14 +446,12 @@ function handleAction(action, params, respond, socket) {
         }
       }
       // 将 tools/ 和 tools/pwsh7/ 加入 PATH
-      // - tools/pwsh7/: 让 Copilot CLI 检测 pwsh.exe 时能直接找到 PowerShell 7
-      // - tools/: 保留 pwsh.cmd 等其他垫片
       const toolsDir  = path.join(ROOT_DIR, 'tools');
       const pwsh7Dir  = path.join(ROOT_DIR, 'tools', 'pwsh7');
       const pathSep = process.platform === 'win32' ? ';' : ':';
       env.PATH = pwsh7Dir + pathSep + toolsDir + pathSep + (env.PATH || '');
 
-      doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, params);
+      doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, pollParams);
     });
 
     respond({ type: 'started', sessionId, runId });
@@ -403,14 +476,15 @@ function handleAction(action, params, respond, socket) {
     const sess = getSession(sessionId);
     const inputText = params.input || 'y';
 
-    // 写入 POLL 脚本可读取的 user_input 文件（/agent/input GET 端点读取此文件）
-    // Copilot CLI 以 --autopilot --no-ask-user 运行，不读 stdin；
-    // 用户留言必须通过文件队列传递给 POLL 脚本
-    const inputFile = path.join(RUNTIME_DIR, `user_input_${sessionId}.md`);
+    // 写入 waitprocess/ 队列（与 startQueueWatcher 机制保持一致）
+    // CopilotCLI 以 --autopilot --no-ask-user 运行，不读 stdin；
+    // 用户留言通过 waitprocess/ 文件队列传递给 POLL 脚本（GET /agent/input 也读此目录）
     try {
-      const existing = fs.existsSync(inputFile) ? fs.readFileSync(inputFile, 'utf-8').trim() : '';
-      const newContent = existing ? `${existing}\n---MSG---\n${inputText}` : inputText;
-      fs.writeFileSync(inputFile, newContent, 'utf-8');
+      const { waitDir } = getQueueDirs(sessionId);
+      const fname     = Date.now().toString() + '-' + Math.floor(Math.random() * 1000).toString().padStart(3, '0') + '.md';
+      const now       = new Date().toLocaleString('zh-CN', { hour12: false });
+      const docContent = `# 用户留言\n\n**时间**: ${now}  \n**会话**: ${sessionId}\n\n---\n\n${inputText}`;
+      fs.writeFileSync(path.join(waitDir, fname), docContent, 'utf-8');
     } catch (_) {}
 
     // 将用户输入立即追加到历史文档
@@ -422,11 +496,7 @@ function handleAction(action, params, respond, socket) {
         fs.appendFileSync(histPath, entry, 'utf8');
       } catch (_) {}
     }
-    // 将用户输入追加到聊天文件
-    {
-      const clean = String(inputText).replace(/\n/g, '\n> ');
-      appendToChat(sessionId, `\n> 💬 **[用户留言]**\n>\n> ${clean}\n\n`);
-    }
+    // 用户消息已由 routes/pyagent.js 的 persistPyChat 写入聊天文件，此处不重复写
     respond({ type: 'continued', sessionId });
     return;
   }

@@ -165,6 +165,8 @@ function broadcastToSSE(obj) {
     try { res.write(payload); } catch (_) { sseClients.delete(res); }
   }
 }
+// 挂载到 process 全局，供 routes/agent.js 等其他模块调用（热重载安全）
+process._pyagentBroadcastToSSE = broadcastToSSE;
 
 // ─── PyAgent 持久 Socket 连接（用于接收广播） ─────────────────────────────────
 let _broadcastConn   = null;
@@ -439,6 +441,82 @@ router.post('/stop', async (req, res) => {
   }
 });
 
+// ─── PyAgent 留言队列（waitprocess / hasprocess） ─────────────────────────────
+function getPyQueueDirs(sessionId) {
+  const dirName = (sessionId || 'default').replace(/\.md$/i, '');
+  const base    = path.join(CHAT_DIR, dirName);
+  const waitDir = path.join(base, 'waitprocess');
+  const doneDir = path.join(base, 'hasprocess');
+  fs.mkdirSync(waitDir, { recursive: true });
+  fs.mkdirSync(doneDir, { recursive: true });
+  return { waitDir, doneDir };
+}
+
+function makePyQueueFilename() {
+  const ts  = new Date().toISOString().replace(/[:.]/g, '-');
+  const rnd = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return `${ts}-${rnd}.md`;
+}
+
+/**
+ * POST /pyagent/input
+ * 向 PyAgent 发送留言（写入 waitprocess/ 队列）
+ * Body: { sessionId, text }
+ */
+router.post('/input', async (req, res) => {
+  const sessionId = String(req.body.sessionId || 'default');
+  const text      = String(req.body.text || '').trim();
+  if (!text) return res.json({ success: false, error: 'empty text' });
+
+  let savedTo = '';
+  try {
+    const { waitDir } = getPyQueueDirs(sessionId);
+    const fname   = makePyQueueFilename();
+    const dateStr = new Date().toLocaleString('zh-CN', { hour12: false });
+    const doc     = `# 用户留言\n\n**时间**: ${dateStr}  \n**会话**: ${sessionId}\n\n---\n\n${text}`;
+    fs.writeFileSync(path.join(waitDir, fname), doc, 'utf-8');
+    const dirName = sessionId.replace(/\.md$/i, '');
+    savedTo = `agent/chat/${dirName}/waitprocess/${fname}`;
+  } catch (e) {
+    return res.json({ success: false, error: e.message });
+  }
+
+  // 同步写入聊天持久化文件
+  persistPyChat(sessionId, 'user', text);
+
+  // 立即发一条回执：消息已进入队列
+  const now = new Date().toLocaleString('zh-CN', { hour12: false });
+  const chatPath = getPyChatPath(sessionId);
+  try { fs.appendFileSync(chatPath, `\n📨 **[${now}] 消息已入队 → CopilotCLI 正在读取...**\n\n`, 'utf-8'); } catch (_) {}
+
+  res.json({ success: true, savedTo });
+});
+
+/**
+ * GET /pyagent/input
+ * 读取并出队最旧的留言（供 PyAgent POLL 脚本轮询）
+ * Query: sessionId
+ * 响应: { success, hasContent, content, remaining, source }
+ */
+router.get('/input', (req, res) => {
+  const sessionId = String(req.query.sessionId || 'default');
+  try {
+    const { waitDir, doneDir } = getPyQueueDirs(sessionId);
+    const files = fs.readdirSync(waitDir).filter(f => f.endsWith('.md')).sort();
+    if (files.length === 0) {
+      return res.json({ success: true, hasContent: false, content: '', remaining: 0 });
+    }
+    const oldest  = files[0];
+    const srcPath = path.join(waitDir, oldest);
+    const dstPath = path.join(doneDir, oldest);
+    const content = fs.readFileSync(srcPath, 'utf-8');
+    fs.renameSync(srcPath, dstPath);
+    return res.json({ success: true, hasContent: true, content, remaining: files.length - 1, source: oldest });
+  } catch (err) {
+    return res.json({ success: false, hasContent: false, content: '', error: err.message });
+  }
+});
+
 /**
  * POST /pyagent/continue
  * 继续等待中的 agent
@@ -451,6 +529,10 @@ router.post('/continue', async (req, res) => {
     // 持久化用户输入到聊天文件
     if (params.sessionId && params.input) {
       persistPyChat(params.sessionId, 'user', params.input);
+      // 立即发一条回执：消息已进入 CopilotCLI 队列
+      const now = new Date().toLocaleString('zh-CN', { hour12: false });
+      const chatPath = getPyChatPath(params.sessionId);
+      try { fs.appendFileSync(chatPath, `\n📨 **[${now}] 消息已入队 → CopilotCLI 正在读取...**\n\n`, 'utf-8'); } catch (_) {}
     }
     res.json(resp);
   } catch (err) {

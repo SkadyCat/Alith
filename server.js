@@ -223,7 +223,7 @@ function getFileTree(dir, basePath = '') {
         path: relativePath,
         children: getFileTree(path.join(dir, entry.name), relativePath)
       });
-    } else if (/\.(md|json|txt|yaml|yml|toml|csv|xml|html|js|ts|py|sh|wav|mp3|ogg|m4a)$/.test(entry.name)) {
+    } else if (/\.(md|json|txt|yaml|yml|toml|csv|xml|html|js|ts|py|sh|conf|ini|wav|mp3|ogg|m4a)$/.test(entry.name)) {
       items.push({
         type: 'file',
         name: entry.name,

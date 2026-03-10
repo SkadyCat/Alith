@@ -57,87 +57,83 @@
 $pollCount = 0
 $maxPoll = 100
 $ctxProgress = 0       # 在进入POLL前，将此变量设为上下文进度百分比（0-100整数）
-$statusFile = "{{RUNTIME_DIR}}\poll_status.md"
 $sessionId  = "{{SESSION_ID}}"
 $baseUrl    = "{{BASE_URL}}"
-$inputFile  = "{{RUNTIME_DIR}}\user_input_$sessionId.md"
+$dirName    = $sessionId -replace '\.md$', ''
+$waitDir    = "{{CHAT_DIR}}\$dirName\waitprocess"
+$doneDir    = "{{CHAT_DIR}}\$dirName\hasprocess"
+$logFile    = "{{RUNTIME_DIR}}\poll_notify.log"
 
-# 禁用系统代理（如 Clash），确保 localhost 请求直连，不经过代理
-[System.Net.WebRequest]::DefaultWebProxy = $null
+# HttpClient 绕过系统代理（Clash 等），确保 localhost 直连
+Add-Type -AssemblyName System.Net.Http
+$handler = New-Object System.Net.Http.HttpClientHandler
+$handler.UseProxy = $false
+$http = New-Object System.Net.Http.HttpClient($handler)
+$http.Timeout = [TimeSpan]::FromSeconds(8)
 
-# 创建 FileSystemWatcher 实现即时检测（<1秒响应）
+# 确保队列目录存在
+New-Item -ItemType Directory -Force -Path $waitDir | Out-Null
+New-Item -ItemType Directory -Force -Path $doneDir | Out-Null
+
+function Post-Status($task) {
+  try {
+    $body    = "{`"sessionId`":`"$sessionId`",`"status`":`"waiting`",`"task`":`"$task`",`"contextProgress`":$ctxProgress}"
+    $content = New-Object System.Net.Http.StringContent($body, [System.Text.Encoding]::UTF8, "application/json")
+    $http.PostAsync("$baseUrl/agent/set-status", $content).Result | Out-Null
+  } catch {}
+}
+
+function Invoke-GetInput {
+  # 调用 GET /agent/input，服务端自动取文件、移到 hasprocess、广播 ACK
+  try {
+    $resp = $http.GetStringAsync("$baseUrl/agent/input?sessionId=$sessionId").Result
+    $obj  = $resp | ConvertFrom-Json
+    if ($obj.hasContent) {
+      $logTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
+      $logLine = "[$logTime] [POLL->CLI] 任务已通过 HTTP 取走，服务端 ACK 已广播"
+      Write-Host $logLine
+      Add-Content -Path $logFile -Value $logLine -Encoding UTF8 -ErrorAction SilentlyContinue
+      return $obj.content
+    }
+  } catch {}
+  return $null
+}
+
+# FileSystemWatcher：文件到达时 <1 秒响应
 $watcher = $null
 try {
-  $watcher = New-Object System.IO.FileSystemWatcher("{{RUNTIME_DIR}}")
-  $watcher.Filter = "user_input_$sessionId.md"
-  $watcher.NotifyFilter = [System.IO.NotifyFilters]::LastWrite -bor [System.IO.NotifyFilters]::FileName
+  $watcher = New-Object System.IO.FileSystemWatcher($waitDir)
+  $watcher.Filter = "*.md"
+  $watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName
   $watcher.EnableRaisingEvents = $true
 } catch { $watcher = $null }
 
-function Notify-Running($task) {
-  $rb = "{`"sessionId`":`"$sessionId`",`"status`":`"running`",`"task`":`"🤔 思考中…`"}"
-  Invoke-RestMethod -Uri "$baseUrl/agent/set-status" -Method POST -ContentType "application/json" -Body $rb `
-    -OperationTimeoutSeconds 5 -ConnectionTimeoutSeconds 3 -ErrorAction SilentlyContinue | Out-Null
-  Write-Host "NEW_TASK: $task"
-}
-
-function Check-Input {
-  # 方法1: HTTP API（优先）
-  $resp = Invoke-RestMethod -Uri "$baseUrl/agent/input?sessionId=$sessionId" -Method GET `
-    -OperationTimeoutSeconds 10 -ConnectionTimeoutSeconds 5 -ErrorAction SilentlyContinue
-  if ($resp -and $resp.hasContent) {
-    Notify-Running $resp.content
-    return $true
-  }
-  # 方法2: 直接读文件（HTTP 失败时的后备，避免消息丢失）
-  if (Test-Path $inputFile) {
-    $raw = Get-Content $inputFile -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
-    if ($raw -and $raw.Trim()) {
-      $msgs = ($raw -split '---MSG---') | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
-      if ($msgs.Count -gt 0) {
-        $first = $msgs[0]
-        $rest  = if ($msgs.Count -gt 1) { ($msgs[1..($msgs.Count-1)]) -join "`n---MSG---`n" } else { '' }
-        Set-Content $inputFile $rest -Encoding UTF8 -ErrorAction SilentlyContinue
-        Notify-Running $first
-        return $true
-      }
-    }
-  }
-  return $false
-}
-
+$newTask = $null
 while ($pollCount -lt $maxPoll) {
   $pollCount++
-  Set-Content $statusFile "Waiting for task... ($pollCount/$maxPoll) - $(Get-Date -Format 'HH:mm:ss')"
-  $body = "{`"sessionId`":`"$sessionId`",`"status`":`"waiting`",`"task`":`"POLL 等待中 ($pollCount/$maxPoll)`",`"contextProgress`":$ctxProgress}"
-  Invoke-RestMethod -Uri "$baseUrl/agent/set-status" -Method POST -ContentType "application/json" -Body $body `
-    -OperationTimeoutSeconds 5 -ConnectionTimeoutSeconds 3 -ErrorAction SilentlyContinue | Out-Null
+  Post-Status "POLL 等待中 ($pollCount/$maxPoll)"
 
-  # 先立即检查一次（防止在进入等待前消息已到达）
-  if (Check-Input) { break }
+  $newTask = Invoke-GetInput
+  if ($newTask) { break }
 
   if ($watcher) {
-    # FileSystemWatcher 模式：最快 <1 秒响应
     $result = $watcher.WaitForChanged([System.IO.WatcherChangeTypes]::All, 30000)
     if (-not $result.TimedOut) {
-      Start-Sleep -Milliseconds 100  # 等待写入完成
-      if (Check-Input) { break }
+      Start-Sleep -Milliseconds 100
+      $newTask = Invoke-GetInput
+      if ($newTask) { break }
     }
   } else {
-    # 降级：每 5 秒轮询一次（共 6 次 = 30 秒）
-    for ($i = 0; $i -lt 6; $i++) {
-      Start-Sleep -Seconds 5
-      if (Check-Input) { $pollCount = $maxPoll + 1; break }
-    }
-    if ($pollCount -gt $maxPoll) { $pollCount = $maxPoll; break }
+    Start-Sleep -Seconds 10
+    $newTask = Invoke-GetInput
+    if ($newTask) { break }
   }
 }
 
+$http.Dispose()
 if ($watcher) { $watcher.Dispose() }
-if ($pollCount -ge $maxPoll) {
-  Set-Content $statusFile ""
-  Write-Host "POLL TIMEOUT"
-}
+if ($newTask) { Write-Host "NEW_TASK_CONTENT:`n$newTask" }
+else { Write-Host "POLL_TIMEOUT" }
 ```
 
 ---

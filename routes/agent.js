@@ -25,7 +25,8 @@ const DOCS_DIR = path.join(__dirname, '..', 'docs');
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const HIST_FILE = path.join(DATA_DIR, 'agent-history.md');
 const HISTORY_DIR = path.join(DOCS_DIR, 'history');  // 会话历史文档目录
-const RUNTIME_DIR = path.join(__dirname, '..', 'runtime'); // 运行时氚临文件目录
+const RUNTIME_DIR = path.join(__dirname, '..', 'runtime'); // 运行时临时文件目录
+const QUEUE_BASE  = path.join(RUNTIME_DIR, 'queue');       // 会话消息队列根目录
 const DIALOGUE_DIR = path.join(DOCS_DIR, 'dialogue'); // 会话配置文件目录
 const CHAT_DIR = path.join(DOCS_DIR, 'agent', 'chat'); // 聊天持久化目录
 const BASE_URL = 'http://localhost:7439';
@@ -628,6 +629,7 @@ router.post('/start', async (req, res) => {
       const histFullPath = historyDoc ? path.join(HISTORY_DIR, historyDoc) : '';
       prefContent = prefContent
         .replace(/\{\{RUNTIME_DIR\}\}/g, RUNTIME_DIR)
+        .replace(/\{\{CHAT_DIR\}\}/g, CHAT_DIR)
         .replace(/\{\{BASE_URL\}\}/g, BASE_URL)
         .replace(/\{\{SESSION_ID\}\}/g, sessionId || '')
         .replace(/\{\{HISTORY_FILE\}\}/g, histFullPath);
@@ -1150,19 +1152,43 @@ router.post('/confirm', (req, res) => {
    用于回应权限确认等交互提示（y/n 或自定义内容）
    文本始终保存到 runtime/user_input 供 AI 读取
 ───────────────────────────────────────────────────────── */
+/* 返回会话的 waitprocess / hasprocess 目录路径，按需创建
+   路径：docs/agent/chat/<sessionId>/waitprocess|hasprocess
+   （sessionId 若有 .md 后缀则去掉，避免与同名聊天文件冲突） */
+function getQueueDirs(sessionId) {
+  const dirName = sessionId.replace(/\.md$/i, '');
+  const base    = path.join(CHAT_DIR, dirName);
+  const waitDir = path.join(base, 'waitprocess');
+  const doneDir = path.join(base, 'hasprocess');
+  fs.mkdirSync(waitDir, { recursive: true });
+  fs.mkdirSync(doneDir, { recursive: true });
+  return { waitDir, doneDir };
+}
+
+/* 生成队列文档文件名：时序可排序（毫秒级时间戳 + 随机后缀） */
+function makeQueueFilename() {
+  const now = new Date();
+  const ts  = now.toISOString().replace(/[:.]/g, '-');
+  const rnd = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return `${ts}-${rnd}.md`;
+}
+
 router.post('/input', (req, res) => {
   const sessionId = String(req.body.sessionId || 'default');
   const sess = getSession(sessionId);
-  const { text = '', saveTo, historyDoc: reqHistoryDoc } = req.body;
+  const { text = '', historyDoc: reqHistoryDoc } = req.body;
 
-  // 统一使用 .md 扩展名；队列追加模式（用 ---MSG--- 分隔符），避免多条消息覆盖丢失
-  const relPath = saveTo || (sessionId === 'default' ? 'user_input.md' : `user_input_${sessionId}.md`);
-  const savePath = path.join(RUNTIME_DIR, relPath);
+  // ── 新机制：每条消息写入 waitprocess/ 下的独立文档 ──
+  let savedTo = '';
   try {
-    fs.mkdirSync(path.dirname(savePath), { recursive: true });
-    const existing = fs.existsSync(savePath) ? fs.readFileSync(savePath, 'utf-8').trim() : '';
-    const newContent = existing ? `${existing}\n---MSG---\n${text}` : text;
-    fs.writeFileSync(savePath, newContent, 'utf-8');
+    const { waitDir } = getQueueDirs(sessionId);
+    const fname = makeQueueFilename();
+    const now   = new Date();
+    const dateStr = now.toLocaleString('zh-CN', { hour12: false });
+    const docContent = `# 用户留言\n\n**时间**: ${dateStr}  \n**会话**: ${sessionId}\n\n---\n\n${text}`;
+    fs.writeFileSync(path.join(waitDir, fname), docContent, 'utf-8');
+    const dirName = sessionId.replace(/\.md$/i, '');
+    savedTo = `agent/chat/${dirName}/waitprocess/${fname}`;
   } catch (_) {}
 
   // 若 agent 正在运行，同时写入 stdin
@@ -1190,7 +1216,17 @@ router.post('/input', (req, res) => {
   }
 
   broadcast(sessionId, 'output', { text: `💬 ${text}`, stream: 'user-msg' });
-  res.json({ success: true, savedTo: path.relative(path.join(__dirname, '..'), savePath) });
+  // 系统 ack 在 user-msg 之后广播，确保用户消息显示在上方
+  if (savedTo) {
+    const queueTime = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+    const ackText = `📨 [${queueTime}] 消息已排队，等待 Agent 处理…`;
+    broadcast(sessionId, 'output', { text: ackText, stream: 'system-ack' });
+    // 同时通过 PyAgent SSE 广播（/pyagent/stream）
+    if (typeof process._pyagentBroadcastToSSE === 'function') {
+      process._pyagentBroadcastToSSE({ type: 'agent_output', sessionId, stream: 'system-ack', text: ackText });
+    }
+  }
+  res.json({ success: true, savedTo });
 });
 
 /* ─────────────────────────────────────────────────────────
@@ -1202,36 +1238,58 @@ router.post('/input', (req, res) => {
 ──────────────────────────────────────────────────────── */
 router.get('/input', (req, res) => {
   const sessionId = String(req.query.sessionId || 'default');
-  const relPath = sessionId === 'default' ? 'user_input.md' : `user_input_${sessionId}.md`;
-  const filePath = path.join(RUNTIME_DIR, relPath);
-
-  // 兼容旧版无扩展名文件：如果 .md 不存在但旧文件存在，迁移过来
-  const legacyPath = filePath.replace(/\.md$/, '');
-  if (!fs.existsSync(filePath) && fs.existsSync(legacyPath)) {
-    try {
-      const legacyContent = fs.readFileSync(legacyPath, 'utf-8').trim();
-      if (legacyContent) fs.writeFileSync(filePath, legacyContent, 'utf-8');
-      fs.writeFileSync(legacyPath, '', 'utf-8');
-    } catch (_) {}
-  }
-
   try {
-    if (!fs.existsSync(filePath)) {
-      return res.json({ success: true, hasContent: false, content: '' });
+    const { waitDir, doneDir } = getQueueDirs(sessionId);
+    // 按文件名排序取最旧的一条（文件名以时间戳开头，字典序 = 时序）
+    const files = fs.readdirSync(waitDir)
+      .filter(f => f.endsWith('.md'))
+      .sort();
+    if (files.length === 0) {
+      // 兼容旧队列文件：检查 runtime/user_input_<sessionId>.md
+      const legacyPath = path.join(RUNTIME_DIR,
+        sessionId === 'default' ? 'user_input.md' : `user_input_${sessionId}.md`);
+      if (fs.existsSync(legacyPath)) {
+        const raw = fs.readFileSync(legacyPath, 'utf-8');
+        if (raw.trim()) {
+          const msgs = raw.split('---MSG---').map(m => m.trim()).filter(Boolean);
+          const first = msgs[0];
+          const remaining = msgs.slice(1).join('\n---MSG---\n');
+          fs.writeFileSync(legacyPath, remaining, 'utf-8');
+          return res.json({ success: true, hasContent: true, content: first, remaining: msgs.length - 1, source: 'legacy' });
+        }
+      }
+      return res.json({ success: true, hasContent: false, content: '', remaining: 0 });
     }
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    if (raw.trim() === '') {
-      return res.json({ success: true, hasContent: false, content: '' });
+    const oldest  = files[0];
+    const srcPath = path.join(waitDir, oldest);
+    const dstPath = path.join(doneDir, oldest);
+    const content = fs.readFileSync(srcPath, 'utf-8');
+    fs.renameSync(srcPath, dstPath);   // 原子移动到 hasprocess/
+    // 服务端主动广播：消息已被 Agent 取走，正在处理中
+    const ackTime = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+    const deliveredText = `⚡ [${ackTime}] 消息已送达 Agent，正在处理中…`;
+    broadcast(sessionId, 'output', { text: deliveredText, stream: 'system-ack' });
+    // 同时通过 PyAgent SSE 广播（/pyagent/stream）
+    if (typeof process._pyagentBroadcastToSSE === 'function') {
+      process._pyagentBroadcastToSSE({ type: 'agent_output', sessionId, stream: 'system-ack', text: deliveredText });
     }
-    // 队列模式：取出第一条消息，其余保留
-    const msgs = raw.split('---MSG---').map(m => m.trim()).filter(Boolean);
-    const first = msgs[0];
-    const remaining = msgs.slice(1).join('\n---MSG---\n');
-    fs.writeFileSync(filePath, remaining, 'utf-8');
-    return res.json({ success: true, hasContent: true, content: first, remaining: msgs.length - 1 });
+    return res.json({ success: true, hasContent: true, content, remaining: files.length - 1, source: oldest });
   } catch (err) {
     return res.json({ success: false, hasContent: false, content: '', error: err.message });
   }
+});
+
+/* ─────────────────────────────────────────────────────────
+   POST /agent/ack  —— POLL 取到消息后立刻发一条可见回复到 Alice chat
+   Body: { sessionId, text? }
+   立即在聊天区广播一条 agent 输出消息，让用户看到即时反馈
+──────────────────────────────────────────────────────── */
+router.post('/ack', (req, res) => {
+  const sessionId = String(req.body.sessionId || 'default');
+  const text = req.body.text || '✅ 已收到您的消息，Claude 正在处理中，请稍候…';
+  const ackTime = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  broadcast(sessionId, 'output', { text: text, stream: 'stderr' });
+  res.json({ success: true, ackTime });
 });
 
 /* ─────────────────────────────────────────────────────────
