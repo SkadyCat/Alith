@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POE AI 画面分析器</title>
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --panel: #16181c;
+    --border: #2a2d35;
+    --accent: #c89b3c;
+    --red: #c0392b;
+    --blue: #2980b9;
+    --green: #27ae60;
+    --text: #ccc;
+    --muted: #666;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: #0a0a0c;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  header h1 { font-size: 18px; color: var(--accent); }
+  .badge {
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  .badge-on  { background: #1a3a1a; color: #4ade80; border: 1px solid #27ae60; }
+  .badge-off { background: #3a1a1a; color: #f87171; border: 1px solid #c0392b; }
+  .badge-ai  { background: #1a2a3a; color: #60a5fa; border: 1px solid #2980b9; }
+  .spacer { flex: 1; }
+  #fps-badge { color: var(--accent); font-size: 13px; }
+
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 12px;
+    padding: 12px;
+    flex: 1;
+  }
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; }
+  }
+
+  /* Left: Screenshot */
+  .panel-screen {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel-title {
+    padding: 8px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  #screenshot {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #000;
+    min-height: 200px;
+  }
+  .screen-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    color: var(--muted);
+    font-size: 14px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .screen-placeholder .icon { font-size: 48px; opacity: 0.3; }
+
+  /* Right: Info panels */
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .panel-body { padding: 12px; }
+
+  /* Orb bars */
+  .orb-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .orb-row:last-child { margin-bottom: 0; }
+  .orb-label {
+    width: 40px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .bar-wrap {
+    flex: 1;
+    height: 22px;
+    background: #1a1a1a;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.15s ease;
+  }
+  .bar-hp   { background: linear-gradient(90deg, #7b1a1a, #e53e3e); }
+  .bar-mana { background: linear-gradient(90deg, #1a3a7b, #3b82f6); }
+  .bar-val {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 11px;
+    font-weight: bold;
+    color: rgba(255,255,255,0.85);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  }
+
+  /* Flasks */
+  .flasks {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .flask {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    border: 2px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: default;
+    transition: all 0.2s;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .flask-icon { font-size: 20px; }
+  .flask-num  { font-size: 10px; color: #888; }
+  .flask.ready {
+    border-color: var(--accent);
+    background: #1e1800;
+    color: var(--accent);
+    box-shadow: 0 0 8px rgba(200,155,60,0.4);
+  }
+  .flask.spent {
+    border-color: #333;
+    background: #111;
+    color: #444;
+    opacity: 0.6;
+  }
+
+  /* Debuffs */
+  .debuff-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .debuff-item {
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: #3a1a1a;
+    border-left: 3px solid var(--red);
+    font-size: 13px;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.6; }
+  }
+  .no-debuff { color: var(--muted); font-size: 13px; padding: 6px 0; }
+
+  /* AI Analysis */
+  .ai-panel-body {
+    padding: 12px;
+    min-height: 100px;
+  }
+  #ai-text {
+    font-size: 14px;
+    line-height: 1.7;
+    color: #ddd;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .ai-meta {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ai-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--muted);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    flex-wrap: wrap;
+  }
+  button {
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: 1px solid #333;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .btn-start  { background: #1a3a1a; color: #4ade80; border-color: #27ae60; }
+  .btn-stop   { background: #3a1a1a; color: #f87171; border-color: #c0392b; }
+  .btn-ai     { background: #1a2a3a; color: #60a5fa; border-color: #2980b9; }
+  .btn-calib  { background: #2a2a1a; color: var(--accent); border-color: #555; }
+  button:hover { filter: brightness(1.3); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+
+  /* Status bar */
+  #statusbar {
+    padding: 5px 14px;
+    font-size: 11px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    background: #0a0a0c;
+    display: flex;
+    gap: 20px;
+  }
+  .status-ok  { color: #4ade80; }
+  .status-err { color: #f87171; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎮 POE AI 画面分析器</h1>
+  <span id="run-badge" class="badge badge-off">● 已停止</span>
+  <span id="ai-badge"  class="badge badge-ai">AI: 检测中…</span>
+  <span class="spacer"></span>
+  <span id="fps-badge">-- fps</span>
+</header>
+
+<div class="main">
+  <!-- Left: Live Screenshot -->
+  <div class="panel-screen">
+    <div class="panel-title">📷 实时画面 (10fps)</div>
+    <div id="screen-wrap">
+      <div class="screen-placeholder" id="placeholder">
+        <div class="icon">🖥️</div>
+        <div>点击「开始捕获」以启动实时画面</div>
+        <div style="font-size:12px;color:#444">截图每 100ms 刷新一次</div>
+      </div>
+      <img id="screenshot" style="display:none" alt="Live screenshot">
+    </div>
+  </div>
+
+  <!-- Right: Info -->
+  <div class="side">
+    <!-- HP/Mana -->
+    <div class="panel">
+      <div class="panel-title">💎 生命 / 法力</div>
+      <div class="panel-body">
+        <div class="orb-row">
+          <div class="orb-label">HP</div>
+          <div class="bar-wrap">
+            <div class="bar-fill bar-hp" id="hp-bar" style="width:0%"></div>
+            <div class="bar-val" id="hp-val">--</div>
+          </div>
+        </div>
+        <div class="orb-row">
+          <div class="orb-label">MP</div>
+          <div class="bar-wrap">
+            <div class="bar-fill bar-mana" id="mana-bar" style="width:0%"></div>
+            <div class="bar-val" id="mana-val">--</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flasks -->
+    <div class="panel">
+      <div class="panel-title">🧪 药水状态</div>
+      <div class="panel-body">
+        <div class="flasks" id="flasks">
+          <div class="flask spent"><div class="flask-icon">🧪</div><div class="flask-num">1</div></div>
+          <div class="flask spent"><div class="flask-icon">🧪</div><div class="flask-num">2</div></div>
+          <div class="flask spent"><div class="flask-icon">🧪</div><div class="flask-num">3</div></div>
+          <div class="flask spent"><div class="flask-icon">🧪</div><div class="flask-num">4</div></div>
+          <div class="flask spent"><div class="flask-icon">🧪</div><div class="flask-num">5</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Debuffs / Alerts -->
+    <div class="panel">
+      <div class="panel-title">⚠️ 警报</div>
+      <div class="panel-body">
+        <div class="debuff-list" id="debuff-list">
+          <div class="no-debuff">暂无警报</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Analysis -->
+    <div class="panel" style="flex:1">
+      <div class="panel-title">🤖 AI 分析</div>
+      <div class="ai-panel-body">
+        <div id="ai-text">AI 等待画面捕获…</div>
+        <div class="ai-meta" id="ai-meta"></div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="panel">
+      <div class="controls">
+        <button class="btn-start" id="btn-start" onclick="ctrlStart()">▶ 开始捕获</button>
+        <button class="btn-stop"  id="btn-stop"  onclick="ctrlStop()" disabled>⏹ 停止</button>
+        <button class="btn-ai"    id="btn-ai"    onclick="ctrlAnalyze()" disabled>🧠 立即分析</button>
+        <button class="btn-calib"               onclick="ctrlCalibrate()">🔧 校准检测</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="statusbar">
+  <span id="st-conn" class="status-err">● 未连接</span>
+  <span id="st-frames">帧数: 0</span>
+  <span id="st-model"></span>
+  <span id="st-err"></span>
+</div>
+
+<script>
+const API = 'http://localhost:7788';
+let running = false;
+let screenshotTimer = null;
+let sseConn = null;
+
+// ─── SSE Connection ───────────────────────────────────────────────────────────
+function connectSSE() {
+  if (sseConn) sseConn.close();
+  sseConn = new EventSource(`${API}/api/stream`);
+  sseConn.onopen = () => {
+    document.getElementById('st-conn').textContent = '● 已连接';
+    document.getElementById('st-conn').className = 'status-ok';
+  };
+  sseConn.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    updateUI(d);
+  };
+  sseConn.onerror = () => {
+    document.getElementById('st-conn').textContent = '● 连接断开';
+    document.getElementById('st-conn').className = 'status-err';
+    setTimeout(connectSSE, 3000);
+  };
+}
+
+// ─── Screenshot polling (every 200ms when running) ───────────────────────────
+function startScreenshot() {
+  if (screenshotTimer) clearInterval(screenshotTimer);
+  screenshotTimer = setInterval(async () => {
+    if (!running) return;
+    try {
+      const r = await fetch(`${API}/api/screenshot`);
+      const d = await r.json();
+      if (d.img) {
+        const img = document.getElementById('screenshot');
+        const ph  = document.getElementById('placeholder');
+        img.src = 'data:image/jpeg;base64,' + d.img;
+        img.style.display = 'block';
+        ph.style.display  = 'none';
+        document.getElementById('fps-badge').textContent = (d.fps || '--') + ' fps';
+      }
+    } catch {}
+  }, 200);
+}
+
+function stopScreenshot() {
+  if (screenshotTimer) { clearInterval(screenshotTimer); screenshotTimer = null; }
+}
+
+// ─── UI Update ─────────────────────────────────────────────────────────────────
+function updateUI(d) {
+  running = d.running;
+
+  // Run badge
+  const rb = document.getElementById('run-badge');
+  rb.textContent = d.running ? '● 运行中' : '● 已停止';
+  rb.className = 'badge ' + (d.running ? 'badge-on' : 'badge-off');
+
+  // Buttons
+  document.getElementById('btn-start').disabled = d.running;
+  document.getElementById('btn-stop').disabled  = !d.running;
+  document.getElementById('btn-ai').disabled    = !d.running;
+
+  // FPS
+  if (d.fps > 0) document.getElementById('fps-badge').textContent = d.fps + ' fps';
+
+  // HP
+  const hp = d.hp_pct;
+  if (hp >= 0) {
+    document.getElementById('hp-bar').style.width  = Math.min(100, hp) + '%';
+    document.getElementById('hp-val').textContent  = hp + '%';
+    const hpBar = document.getElementById('hp-bar');
+    hpBar.style.opacity = hp < 25 ? '0.7' : '1';
+  }
+
+  // Mana
+  const mp = d.mana_pct;
+  if (mp >= 0) {
+    document.getElementById('mana-bar').style.width = Math.min(100, mp) + '%';
+    document.getElementById('mana-val').textContent = mp + '%';
+  }
+
+  // Flasks
+  const flasks = document.getElementById('flasks').children;
+  if (d.flask_ready && d.flask_ready.length === 5) {
+    for (let i = 0; i < 5; i++) {
+      flasks[i].className = 'flask ' + (d.flask_ready[i] ? 'ready' : 'spent');
+    }
+  }
+
+  // Debuffs
+  const dl = document.getElementById('debuff-list');
+  if (!d.debuffs || d.debuffs.length === 0) {
+    dl.innerHTML = '<div class="no-debuff">暂无警报 ✓</div>';
+  } else {
+    dl.innerHTML = d.debuffs.map(x => `<div class="debuff-item">${x}</div>`).join('');
+  }
+
+  // AI
+  if (d.ai_analysis) {
+    document.getElementById('ai-text').textContent = d.ai_analysis;
+  }
+  const aiMeta = document.getElementById('ai-meta');
+  if (d.ai_busy) {
+    aiMeta.innerHTML = '<div class="ai-spinner"></div> AI 正在分析…';
+  } else {
+    aiMeta.innerHTML = '';
+  }
+  const aiBadge = document.getElementById('ai-badge');
+  aiBadge.textContent = d.ai_busy ? 'AI: 分析中…' : (d.running ? 'AI: 就绪' : 'AI: 待机');
+}
+
+// ─── Controls ─────────────────────────────────────────────────────────────────
+async function ctrlStart() {
+  await fetch(`${API}/api/start`, { method: 'POST' });
+  startScreenshot();
+}
+async function ctrlStop() {
+  await fetch(`${API}/api/stop`, { method: 'POST' });
+  stopScreenshot();
+  document.getElementById('screenshot').style.display = 'none';
+  document.getElementById('placeholder').style.display = 'flex';
+}
+async function ctrlAnalyze() {
+  document.getElementById('btn-ai').disabled = true;
+  document.getElementById('ai-text').textContent = '正在发送画面给 AI 分析…';
+  try {
+    const r = await fetch(`${API}/api/analyze_now`, { method: 'POST' });
+    const d = await r.json();
+    if (!d.ok) document.getElementById('ai-text').textContent = d.msg;
+  } catch { document.getElementById('ai-text').textContent = '连接后端失败'; }
+  setTimeout(() => { document.getElementById('btn-ai').disabled = !running; }, 2000);
+}
+async function ctrlCalibrate() {
+  document.getElementById('ai-text').textContent = '正在截图并校准检测区域…';
+  try {
+    const r = await fetch(`${API}/api/calibrate`, { method: 'POST' });
+    const d = await r.json();
+    document.getElementById('ai-text').textContent =
+      `校准结果:\n分辨率: ${d.resolution}\nHP: ${d.hp_pct}%  MP: ${d.mana_pct}%\n药水: ${d.flask_ready.map((v,i)=>(i+1)+(v?'✓':'✗')).join(' ')}`;
+    if (d.screenshot) {
+      const img = document.getElementById('screenshot');
+      img.src = 'data:image/jpeg;base64,' + d.screenshot;
+      img.style.display = 'block';
+      document.getElementById('placeholder').style.display = 'none';
+    }
+  } catch(e) { document.getElementById('ai-text').textContent = '校准失败: ' + e.message; }
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  connectSSE();
+
+  // Check model availability
+  try {
+    const r = await fetch(`${API}/api/models`);
+    const d = await r.json();
+    const st = document.getElementById('st-model');
+    st.textContent = d.vision_ok ? '🤖 moondream ✓' : '⚠️ 视觉模型未加载';
+    st.className = d.vision_ok ? 'status-ok' : '';
+  } catch {
+    document.getElementById('st-conn').textContent = '● 后端未启动';
+    document.getElementById('st-conn').className = 'status-err';
+  }
+});
+</script>
+</body>
+</html>

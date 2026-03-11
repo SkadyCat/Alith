@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Canvas Editor</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- 顶部菜单 -->
+  <header id="top-menu">
+    <div class="logo">🎨 Canvas Editor</div>
+    <div class="toolbar">
+      <button id="btn-select" class="tool-btn active" title="选择/移动 (V)">
+        <span class="icon">↖</span> 选择
+      </button>
+      <button id="btn-draw" class="tool-btn" title="绘制边框 (B)">
+        <span class="icon">⬜</span> 绘制
+      </button>
+      <div class="separator"></div>
+      <button id="btn-delete" class="tool-btn danger" title="删除选中 (Del)">
+        <span class="icon">🗑</span> 删除
+      </button>
+      <button id="btn-clear" class="tool-btn danger" title="清空画布">
+        <span class="icon">✕</span> 清空
+      </button>
+      <div class="separator"></div>
+      <button id="btn-undo" class="tool-btn" title="撤销 (Ctrl+Z)">↩ 撤销</button>
+      <button id="btn-redo" class="tool-btn" title="重做 (Ctrl+Y)">↪ 重做</button>
+      <div class="separator"></div>
+      <button id="zoneHighlightBtn" class="tool-btn" onclick="toggleZoneHighlight()" title="区域高亮 — 悬停识别界面区域 (Esc退出)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+        </svg>
+        识别
+      </button>
+    </div>
+    <div class="toolbar-right">
+      <label>网格 <input type="checkbox" id="toggle-grid" checked /></label>
+      <label>对齐 <input type="checkbox" id="toggle-snap" checked /></label>
+      <span id="zoom-label">100%</span>
+      <button class="tool-btn" id="btn-zoom-in">+</button>
+      <button class="tool-btn" id="btn-zoom-out">−</button>
+      <button class="tool-btn" id="btn-zoom-reset">重置</button>
+    </div>
+  </header>
+
+  <div id="main-layout">
+    <!-- 左侧菜单 -->
+    <aside id="left-menu">
+      <div class="panel-title">图层</div>
+      <ul id="layer-list"></ul>
+      <div class="panel-title" style="margin-top:12px">预设形状</div>
+      <div class="preset-list">
+        <div class="preset-item" data-w="120" data-h="80" data-label="矩形">⬜ 矩形</div>
+        <div class="preset-item" data-w="200" data-h="120" data-label="大框">🔳 大框</div>
+        <div class="preset-item" data-w="80" data-h="80" data-label="正方形">◻ 正方形</div>
+        <div class="preset-item" data-w="160" data-h="40" data-label="横条">▬ 横条</div>
+        <div class="preset-item" data-w="40" data-h="160" data-label="竖条">▮ 竖条</div>
+      </div>
+    </aside>
+
+    <!-- 中心画布区域 -->
+    <main id="center-area">
+      <div id="canvas-viewport">
+        <!-- grid-canvas sits outside canvas-root so it is NOT affected by zoom transforms -->
+        <canvas id="grid-canvas"></canvas>
+        <div id="canvas-root">
+          <div id="box-layer"></div>
+          <div id="selection-overlay"></div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 右侧信息面板 -->
+    <aside id="right-info">
+      <div class="panel-title">属性</div>
+      <div id="prop-panel">
+        <div class="empty-hint">未选中任何元素</div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 底部控制台 -->
+  <footer id="console-panel">
+    <div class="console-header">
+      <span>控制台</span>
+      <button id="btn-clear-console" style="margin-left:auto;background:none;border:none;color:#aaa;cursor:pointer;font-size:11px">清空</button>
+    </div>
+    <div id="console-output"></div>
+  </footer>
+
+  <script src="app.js"></script>
+
+  <!-- Zone highlight: floating cursor tooltip -->
+  <div id="zoneLabel"></div>
+  <!-- Zone highlight: element outline overlay -->
+  <div id="zoneOverlay"></div>
+  <!-- Zone highlight: result info panel -->
+  <div id="zonePickResult" style="display:none">
+    <div id="zonePickTitle">🔍 元素拾取器</div>
+    <div id="zonePickInfo"></div>
+    <button id="zonePickCopyBtn" title="复制到剪贴板">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+      </svg>
+      复制
+    </button>
+    <button id="zonePickClose" title="关闭 (ESC)">✕</button>
+  </div>
+</html>

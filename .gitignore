@@ -2,7 +2,7 @@
 node_modules/
 
 # Excluded directories
-application/
+# application/ — now tracked in repo
 
 # Sensitive keys / credentials
 docs/key/
