@@ -522,6 +522,7 @@
         <span class="agent-status-dot" id="pyagentStatusDot"></span>
         <span class="agent-status-text" id="pyagentStatusText">空闲</span>
       </div>
+      <button class="agent-chat-toggle-btn" id="pyagentChatToggleBtn" onclick="togglePyAgentChat()" title="开启/关闭对话模式">💬</button>
       <button class="agent-close-btn" onclick="togglePyAgentPanel()">×</button>
     </div>
 
@@ -629,7 +630,30 @@
     </div>
 
     <div id="py-current-task-banner" style="display:none;padding:8px 14px 8px;background:rgba(96,165,250,0.12);border-top:1px solid rgba(96,165,250,0.2);border-bottom:1px solid rgba(96,165,250,0.18);font-size:12.5px;color:#93c5fd;flex-shrink:0;"></div>
-    <div class="agent-output-area pyagent-output-area" id="pyagentOutput"></div>
+
+    <div class="pyagent-content-row" id="pyagentContentRow">
+      <div class="agent-output-area pyagent-output-area" id="pyagentOutput"></div>
+
+      <div class="pyagent-chat-panel" id="pyagentChatPanel" style="display:none">
+        <div class="pyagent-chat-header">
+          <span>💬 直接对话</span>
+          <div style="display:flex;align-items:center;gap:4px;min-width:0">
+            <select id="pyagentChatSessionSelect" class="pyagent-chat-session-sel"
+              title="切换 PyAgent 会话" onchange="onPyChatSessionChange(this.value)">
+              <option value="">— 选择会话 —</option>
+            </select>
+            <button class="agent-btn" onclick="loadPyAgentChatSessions()" title="刷新会话列表"
+              style="padding:2px 6px;font-size:10px;flex-shrink:0">↻</button>
+          </div>
+        </div>
+        <div class="pyagent-chat-messages" id="pyagentChatMessages"></div>
+        <div class="pyagent-chat-input-area">
+          <textarea id="pyagentChatInput" class="pyagent-chat-input" placeholder="和爱丽丝聊天…&#10;Ctrl+Enter 发送" rows="2"
+            onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){sendPyAgentChat();event.preventDefault();}"></textarea>
+          <button class="agent-btn primary pyagent-chat-send-btn" onclick="sendPyAgentChat()">发送</button>
+        </div>
+      </div>
+    </div>
 
     <div class="agent-panel-footer">
       <span id="pyagentElapsed" style="color:var(--text-muted);font-size:12px"></span>

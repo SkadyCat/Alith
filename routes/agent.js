@@ -1173,6 +1173,152 @@ function makeQueueFilename() {
   return `${ts}-${rnd}.md`;
 }
 
+/* GET /agent/queue-status?sessionId=xxx
+   返回指定会话 waitprocess/ 目录中的待处理文档数量和简要信息 */
+router.get('/queue-status', (req, res) => {
+  const sessionId = String(req.query.sessionId || '');
+  if (!sessionId) return res.json({ success: false, error: 'sessionId required' });
+  try {
+    const { waitDir } = getQueueDirs(sessionId);
+    const files = fs.readdirSync(waitDir).filter(f => f.endsWith('.md')).sort();
+    // 每个文件读取正文摘要（--- 分隔后的第一行非空文本，最多 10 字）
+    const previews = files.map(f => {
+      try {
+        const content = fs.readFileSync(path.join(waitDir, f), 'utf-8');
+        const afterSep = content.split('---').slice(1).join('---');
+        const firstLine = (afterSep || content).split('\n').map(l => l.trim()).find(l => l) || '';
+        return firstLine.slice(0, 10);
+      } catch { return '…'; }
+    });
+    res.json({ success: true, sessionId, waitCount: files.length, previews });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+/* POST /agent/task
+   向指定会话的 Agent 进程发送任务。
+   将任务内容写入 waitprocess/ 队列，Agent POLL 循环会自动拾取并执行。
+
+   请求体:
+     sessionId  string  会话 ID（如 session-xxx.md）
+     task       string  任务内容（纯文本或 Markdown）
+
+   响应:
+     { success: true, sessionId, queued: "agent/chat/.../waitprocess/xxx.md" }
+*/
+router.post('/task', (req, res) => {
+  const sessionId = String(req.body.sessionId || '');
+  const task      = String(req.body.task || '').trim();
+  if (!sessionId) return res.json({ success: false, error: 'sessionId required' });
+  if (!task)      return res.json({ success: false, error: 'task required' });
+  try {
+    const { waitDir } = getQueueDirs(sessionId);
+    const fname   = makeQueueFilename();
+    const dateStr = new Date().toLocaleString('zh-CN', { hour12: false });
+    const content = `# 用户任务\n\n**时间**: ${dateStr}  \n**会话**: ${sessionId}\n\n---\n\n${task}`;
+    fs.writeFileSync(path.join(waitDir, fname), content, 'utf-8');
+    const dirName = sessionId.replace(/\.md$/i, '');
+    const queued  = `agent/chat/${dirName}/waitprocess/${fname}`;
+    res.json({ success: true, sessionId, queued });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+/* GET /agent/sessions-list
+   返回所有可用的 Agent 会话列表（来自 docs/agent/chat/*.md），按最近更新排序。
+   响应: { success: true, sessions: [{ sessionId, label, updatedAt }] }
+*/
+router.get('/sessions-list', (req, res) => {
+  try {
+    const files = fs.existsSync(CHAT_DIR)
+      ? fs.readdirSync(CHAT_DIR).filter(f => f.endsWith('.md'))
+      : [];
+    const sessions = files.map(fname => {
+      const sessionId = fname;
+      const filePath  = path.join(CHAT_DIR, fname);
+      const stat      = fs.statSync(filePath);
+      // Try to read a label from the dialogue file
+      let label = fname.replace(/\.md$/, '');
+      const dialoguePath = path.join(DIALOGUE_DIR, sessionId);
+      if (fs.existsSync(dialoguePath)) {
+        try {
+          const d = JSON.parse(fs.readFileSync(dialoguePath, 'utf-8'));
+          if (d.label || d.name) label = d.label || d.name;
+        } catch (_) {}
+      }
+      return { sessionId, label, updatedAt: stat.mtimeMs };
+    }).sort((a, b) => b.updatedAt - a.updatedAt);
+    res.json({ success: true, sessions });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+/* GET /agent/chat-history?sessionId=xxx
+   返回指定会话的已处理用户消息列表（hasprocess/ 目录），按时间排序。
+   响应: { success: true, messages: [{ filename, time, content }] }
+*/
+router.get('/chat-history', (req, res) => {
+  const sessionId = String(req.query.sessionId || '');
+  if (!sessionId) return res.json({ success: false, error: 'sessionId required' });
+  try {
+    const { doneDir } = getQueueDirs(sessionId);
+    const files = fs.existsSync(doneDir)
+      ? fs.readdirSync(doneDir).filter(f => f.endsWith('.md')).sort()
+      : [];
+    const messages = files.map(fname => {
+      try {
+        const raw = fs.readFileSync(path.join(doneDir, fname), 'utf-8');
+        const parts = raw.split(/---+/);
+        const content = parts.length > 1 ? parts.slice(1).join('---').trim() : raw.trim();
+        const timeMatch = raw.match(/\*\*时间\*\*[：:]\s*(.+)/);
+        return { filename: fname, time: timeMatch ? timeMatch[1].trim() : '', content };
+      } catch { return null; }
+    }).filter(Boolean);
+    res.json({ success: true, messages });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+/* GET /agent/task-status?sessionId=xxx
+   检查当前会话的任务执行状态，用于轮询检测任务是否完成。
+
+   响应:
+     sessionId    string   会话 ID
+     agentStatus  string   Agent 状态: idle | running | waiting | done | error
+     waitCount    number   队列中待处理的任务数量
+     isProcessing boolean  Agent 当前是否正在执行任务
+     isDone       boolean  true = 队列为空且 Agent 不在执行中（任务已完成）
+*/
+router.get('/task-status', (req, res) => {
+  const sessionId = String(req.query.sessionId || '');
+  if (!sessionId) return res.json({ success: false, error: 'sessionId required' });
+  try {
+    const { waitDir } = getQueueDirs(sessionId);
+    const waitFiles = fs.readdirSync(waitDir).filter(f => f.endsWith('.md'));
+    const waitCount = waitFiles.length;
+
+    // 读取 dialogue 文件获取 Agent 状态
+    let agentStatus = 'idle';
+    const dialoguePath = path.join(DIALOGUE_DIR, sessionId);
+    if (fs.existsSync(dialoguePath)) {
+      try {
+        const d = JSON.parse(fs.readFileSync(dialoguePath, 'utf-8'));
+        agentStatus = d.agentStatus || 'idle';
+      } catch (_) {}
+    }
+
+    const isProcessing = agentStatus === 'running';
+    const isDone = waitCount === 0 && !isProcessing;
+    res.json({ success: true, sessionId, agentStatus, waitCount, isProcessing, isDone });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
 router.post('/input', (req, res) => {
   const sessionId = String(req.body.sessionId || 'default');
   const sess = getSession(sessionId);

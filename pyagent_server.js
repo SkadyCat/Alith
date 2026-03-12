@@ -45,6 +45,28 @@ function stripAnsi(text) {
     .replace(/\r/g, '\n');
 }
 
+// 过滤 Claude CLI 工具块（● ToolName + 缩进内容）不写入聊天文件
+// _filterBlockState 保持每会话的跨 chunk 状态，避免多 chunk 块泄漏
+const _filterBlockState = new Map(); // sessionId → boolean
+
+function filterChatNoise(text, sessionId) {
+  // 规范化：若 ● 出现在行中间（前面有其他内容），插入换行使其成为行首
+  const normalized = text.replace(/([^\n])([●•]\s+\S)/g, '$1\n$2');
+  const lines = normalized.split('\n');
+  const result = [];
+  let inBlock = _filterBlockState.get(sessionId) || false;
+  for (const line of lines) {
+    if (/^[●•]\s+\S/.test(line)) { inBlock = true; continue; }
+    if (inBlock) {
+      if (/^[ \t]/.test(line) || /^└/.test(line) || line === '') continue;
+      inBlock = false;
+    }
+    result.push(line);
+  }
+  if (sessionId) _filterBlockState.set(sessionId, inBlock);
+  return result.join('\n');
+}
+
 function appendToChat(sessionId, text) {
   if (!sessionId || !text) return;
   try { fs.appendFileSync(getChatPath(sessionId), text, 'utf-8'); } catch (_) {}
@@ -232,8 +254,15 @@ function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, pa
       }
       broadcast({ type: 'agent_output', sessionId, stream: 'stdout', text });
       // 直接写入聊天文件（不依赖广播连接是否建立）
-      const cleaned = stripAnsi(text);
-      if (cleaned) appendToChat(sessionId, cleaned);
+      // 规范化：确保 ● 始终在行首（以便 filter 和 action 检测正确匹配）
+      const cleaned = stripAnsi(text).replace(/([^\n])([●•]\s+\S)/g, '$1\n$2');
+      const chatText = filterChatNoise(cleaned, sessionId);
+      if (chatText.trim()) appendToChat(sessionId, chatText);
+      // 检测 "● Tool action" 行，广播为 action 事件（前端气泡实时显示）
+      const actionMatch = cleaned.match(/^[●•]\s+(.{1,120})/m);
+      if (actionMatch) {
+        broadcast({ type: 'action', sessionId, icon: '⚙️', label: actionMatch[1].trim() });
+      }
     });
     child.stderr.on('data', (chunk) => {
       broadcast({ type: 'agent_output', sessionId, stream: 'stderr', text: chunk.toString('utf8') });
@@ -252,6 +281,8 @@ function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, pa
       }
       // 写入退出标记到聊天文件
       appendToChat(sessionId, `\n\n> 退出码: ${code}\n`);
+      // 重置 per-session 过滤状态（下次启动重新开始）
+      _filterBlockState.delete(sessionId);
 
       sess.outputBuf = '';
       sess.process   = null;

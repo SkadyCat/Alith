@@ -1,11 +1,11 @@
 {
   "session-1773059101620.md": {
-    "isLaunched": true,
+    "isLaunched": false,
     "pid": 16924,
     "port": 7439,
-    "status": "running",
+    "status": "idle",
     "launchedAt": 1773158925594,
-    "updatedAt": 1773158925618
+    "updatedAt": 1773302071979
   },
   "default": {
     "isLaunched": true,
@@ -46,5 +46,93 @@
     "status": "idle",
     "launchedAt": null,
     "updatedAt": 1773155593013
+  },
+  "session-1772881732269.md": {
+    "isLaunched": false,
+    "pid": null,
+    "port": 7439,
+    "status": "idle",
+    "launchedAt": null,
+    "updatedAt": 1773302074372
+  },
+  "session-1772819407425.md": {
+    "isLaunched": false,
+    "pid": null,
+    "port": 7439,
+    "status": "idle",
+    "launchedAt": null,
+    "updatedAt": 1773302076637
+  },
+  "session-1772806943030.md": {
+    "isLaunched": false,
+    "pid": null,
+    "port": 7439,
+    "status": "idle",
+    "launchedAt": null,
+    "updatedAt": 1773302078859
+  },
+  "session-1772802960306.md": {
+    "isLaunched": false,
+    "pid": null,
+    "port": 7439,
+    "status": "idle",
+    "launchedAt": null,
+    "updatedAt": 1773302080905
+  },
+  "session-1772785311526.md": {
+    "isLaunched": false,
+    "pid": null,
+    "port": 7439,
+    "status": "idle",
+    "launchedAt": null,
+    "updatedAt": 1773302082726
+  },
+  "session-1772692174381.md": {
+    "isLaunched": false,
+    "pid": null,
+    "port": 7439,
+    "status": "idle",
+    "launchedAt": null,
+    "updatedAt": 1773323198189
+  },
+  "session-1772678076517.md": {
+    "isLaunched": false,
+    "pid": null,
+    "port": 7439,
+    "status": "idle",
+    "launchedAt": null,
+    "updatedAt": 1773323200491
+  },
+  "session-1772511882084.md": {
+    "isLaunched": false,
+    "pid": null,
+    "port": 7439,
+    "status": "idle",
+    "launchedAt": null,
+    "updatedAt": 1773323203406
+  },
+  "session-1772510613407.md": {
+    "isLaunched": false,
+    "pid": null,
+    "port": 7439,
+    "status": "idle",
+    "launchedAt": null,
+    "updatedAt": 1773323204843
+  },
+  "session-1772417819052.md": {
+    "isLaunched": false,
+    "pid": null,
+    "port": 7439,
+    "status": "idle",
+    "launchedAt": null,
+    "updatedAt": 1773323206216
+  },
+  "session-1772386385155.md": {
+    "isLaunched": false,
+    "pid": null,
+    "port": 7439,
+    "status": "idle",
+    "launchedAt": null,
+    "updatedAt": 1773323208589
   }
 }

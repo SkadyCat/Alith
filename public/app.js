@@ -2903,6 +2903,8 @@ function renderSessionList() {
         if (!agentPanel.classList.contains('open')) toggleAgentPanel();
         applyDialogue(s);
       }
+      // 切换会话时，同步在编辑器中打开对应的会话文件
+      openFile('dialogue/' + s.id);
     };
 
     const open = document.createElement('button');
@@ -3630,19 +3632,37 @@ function clearConsoleHistory() {
       const ctxPct = s.contextProgress || 0;
       const ctxColor = ctxPct >= 80 ? 'var(--danger)' : ctxPct >= 60 ? 'var(--warning)' : 'var(--success)';
       const ctxStyle = ctxPct > 0 ? `--ctx-pct:${ctxPct};--ctx-ring-color:${ctxColor};--ctx-ring-opacity:1;` : '';
+      // Waitprocess queue badge (for pyagent sessions)
+      const waitCount = s.waitCount || 0;
+      const waitTip = waitCount > 0 ? (s.waitPreviews || []).map((p, i) => `[${i+1}] ${p}`).join('\n') : '';
+      const queueBadge = waitCount > 0
+        ? `<span class="queue-count-badge" title="${escapeHtml(waitTip)}">📬${waitCount}</span>`
+        : '';
       return `<div class="alith-bubble sess-bubble ${colorClass}" data-sid="${escapeHtml(s.id)}" onclick="window.switchToSession('${sidEsc}')" style="cursor:pointer;${ctxStyle}" title="点击切换到此会话">
         ${iconHtml}
         <div class="alith-bubble-body">
-          <div class="alith-bubble-label">${escapeHtml(name)} · ${label}${ctxPct > 0 ? ` · 📊${ctxPct}%` : ''}</div>
+          <div class="alith-bubble-label">${escapeHtml(name)} · ${label}${ctxPct > 0 ? ` · 📊${ctxPct}%` : ''}${queueBadge}</div>
           <div class="alith-bubble-main">${escapeHtml(task)}</div>
           ${actionLabel ? `<div class="alith-bubble-sub bubble-action-sub">⚙️ ${escapeHtml(actionLabel)}</div>` : '<div class="alith-bubble-sub bubble-action-sub" style="display:none"></div>'}
           ${elapsed ? `<div class="alith-bubble-sub bubble-elapsed-sub">⏱ ${elapsed}</div>` : ''}
         </div>
         <button class="alith-bubble-open" title="在编辑器中打开会话文件" onclick="event.stopPropagation();openFile('dialogue/${escapeHtml(s.id)}')">📂</button>
+        <button class="alith-bubble-open" title="在文件树中定位会话文件夹" onclick="event.stopPropagation();window.revealSessionFolder('${sidEsc}')">📁</button>
         <button class="alith-bubble-close" title="关闭此气泡" onclick="event.stopPropagation();window.dismissSessionBubble('${sidEsc}')">✕</button>
       </div>`;
     }).join('');
   }
+
+  window.revealSessionFolder = function(sid) {
+    const folderName = sid.endsWith('.md') ? sid.slice(0, -3) : sid;
+    const searchInput = document.getElementById('treeSearchInput');
+    if (searchInput) {
+      searchInput.value = folderName;
+      filterTree(folderName);
+      const fileTree = document.getElementById('fileTree');
+      if (fileTree) fileTree.scrollTop = 0;
+    }
+  };
 
   window.dismissSessionBubble = async function(sid) {
     try {
@@ -3703,10 +3723,22 @@ function clearConsoleHistory() {
       // Also include running PyAgent sessions (type=pyagent, isRunning=true in dialogue file)
       // Status is read directly from dialogue file (written by agent via POST /agent/set-status)
       const pyagentRunning = sessions.filter(d => d.type === 'pyagent' && d.isRunning);
+
+      // Fetch queue-status for all running pyagent sessions in parallel
+      const queueMap = {};
+      await Promise.all(pyagentRunning.map(async d => {
+        try {
+          const r = await fetch(`/agent/queue-status?sessionId=${encodeURIComponent(d.id)}`);
+          const q = await r.json();
+          if (q.success) queueMap[d.id] = { count: q.waitCount, previews: q.previews || [] };
+        } catch (_) {}
+      }));
+
       const pyEnriched = pyagentRunning.map(d => {
         // agentStatus/agentTask are persisted to dialogue file by /agent/set-status handler
         const status = d.agentStatus || 'running';
         const task   = d.agentTask  || '执行中…';
+        const q = queueMap[d.id] || { count: 0, previews: [] };
         return {
           id: d.id,
           name: '🐍 ' + (d.name || d.id),
@@ -3714,6 +3746,8 @@ function clearConsoleHistory() {
           task,
           contextProgress: d.contextProgress || 0,
           _isPyAgent: true,
+          waitCount: q.count,
+          waitPreviews: q.previews,
         };
       });
 
@@ -4094,6 +4128,8 @@ async function submitErrorReport() {
   let _pyOutputBuf          = '';   // partial-line buffer (kept for backward compat)
   let _pyLiveMdBuf          = '';   // accumulated live output text for markdown rendering
   let _pyMdRenderTimer      = null; // debounce timer for live markdown render
+  let _pyFilterInBlock      = false; // stateful: true while inside a ● tool block (filter from display)
+  let _pyChatOutputBuf      = '';   // accumulated agent output for chat panel flush
   let _statusFetchAbortCtrl = null; // AbortController for in-flight applyPyAgentDialogue status fetch
   let _currentPyRunId = null;       // runId of the currently expected run; ignore status events from other runs
   let _pyTickInterval = null;       // 500ms tick: keeps button state in sync with server
@@ -4119,7 +4155,7 @@ async function submitErrorReport() {
         const out = document.getElementById('pyagentOutput');
         if (!out) return;
         // 重置 live buffer
-        _pyLiveMdBuf = '';
+        _pyLiveMdBuf = ''; _pyFilterInBlock = false;
         if (_pyMdRenderTimer) { clearTimeout(_pyMdRenderTimer); _pyMdRenderTimer = null; }
         // 清空并重建为一个 history block（包含最新的用户输入+已有记录）
         out.innerHTML = '';
@@ -4157,7 +4193,22 @@ async function submitErrorReport() {
   // Render pending buffer + new text into the output div (with markdown rendering)
   function appendPyOutput(rawText, output) {
     const text = stripAnsi(rawText).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    _pyLiveMdBuf += text;
+    // Filter Claude CLI tool blocks (● ToolName ... indented content ... └ N lines)
+    // Normalize: if ● appears mid-line, insert newline before it so it becomes line-start
+    const normalized = text.replace(/([^\n])([●•]\s+\S)/g, '$1\n$2');
+    const lines = normalized.split('\n');
+    const kept = [];
+    for (const line of lines) {
+      if (/^[●•]\s+\S/.test(line)) { _pyFilterInBlock = true; continue; }  // ● header → skip, shown in bubble
+      if (_pyFilterInBlock) {
+        if (/^[ \t]/.test(line) || /^└/.test(line) || line === '') continue; // inside block → skip
+        _pyFilterInBlock = false; // non-indented line ends block
+      }
+      kept.push(line);
+    }
+    const filtered = kept.join('\n');
+    if (!filtered.trim()) return;
+    _pyLiveMdBuf += filtered;
     // Debounced markdown render every 300ms to avoid excessive DOM ops during streaming
     if (_pyMdRenderTimer) clearTimeout(_pyMdRenderTimer);
     _pyMdRenderTimer = setTimeout(() => {
@@ -4272,14 +4323,33 @@ async function submitErrorReport() {
     }
     if (isOpen) {
       loadDialogues().then(() => {
+        // Restore persisted session from localStorage if no active session
+        if (!activePyAgentSession) {
+          try {
+            const saved = localStorage.getItem('pyagent_active_session');
+            if (saved) {
+              const found = dialogueSessions.find(s => s.id === saved);
+              if (found) { applyPyAgentDialogue(found); return; }
+              // Not in dialogue list — load from sessions-list as a virtual config
+              fetch('/agent/sessions-list', { signal: AbortSignal.timeout(4000) })
+                .then(r => r.json())
+                .then(d => {
+                  const s = (d.sessions || []).find(x => x.sessionId === saved);
+                  if (s) {
+                    const cfg = { id: s.sessionId, name: s.label || s.sessionId.replace(/\.md$/i,''), type: 'pyagent', historyDoc: '', systemDocs: [], model: '' };
+                    applyPyAgentDialogue(cfg);
+                  }
+                }).catch(() => {});
+              return;
+            }
+          } catch (_) {}
+        }
         if (activePyAgentSession) {
           const output = document.getElementById('pyagentOutput');
           const hasContent = output && output.children.length > 0;
           if (!hasContent) {
-            // 输出为空时才做完整加载（避免清空正在显示的内容）
             applyPyAgentDialogue(activePyAgentSession);
           } else if (!pyagentEventSource || pyagentEventSource.readyState === EventSource.CLOSED) {
-            // 有内容但 SSE 断开，仅重连 SSE
             connectPyAgentStream(activePyAgentSession.id);
           }
         }
@@ -4289,6 +4359,124 @@ async function submitErrorReport() {
       loadTaskPrefixDocs();
       populateAgentDocSelector();
     }
+  };
+
+  // ── PyAgent Chat Panel ────────────────────────────────────────
+  let _pyagentChatOpen = false;
+
+  window.togglePyAgentChat = function () {
+    const chatPanel = document.getElementById('pyagentChatPanel');
+    const toggleBtn = document.getElementById('pyagentChatToggleBtn');
+    const panel     = document.getElementById('pyagentPanel');
+    if (!chatPanel) return;
+    _pyagentChatOpen = !_pyagentChatOpen;
+    chatPanel.style.display = _pyagentChatOpen ? 'flex' : 'none';
+    if (toggleBtn) toggleBtn.classList.toggle('active', _pyagentChatOpen);
+    // Widen panel to show split layout
+    panel.style.width = _pyagentChatOpen ? '820px' : '';
+    // Load sessions and update dropdown when opening
+    if (_pyagentChatOpen) {
+      loadPyAgentChatSessions();
+      document.getElementById('pyagentChatInput')?.focus();
+    }
+    _updateChatSessionLabel();
+  };
+
+  function _updateChatSessionLabel() {
+    // Sync the session select dropdown to the current active session
+    const sel = document.getElementById('pyagentChatSessionSelect');
+    if (!sel) return;
+    const sid = activePyAgentSession ? (activePyAgentSession.id || '') : '';
+    // If option exists, select it; otherwise add a temporary option
+    let found = false;
+    for (const opt of sel.options) {
+      if (opt.value === sid) { sel.value = sid; found = true; break; }
+    }
+    if (!found && sid) {
+      const opt = document.createElement('option');
+      opt.value = sid;
+      opt.textContent = sid.replace(/^session-/, '').replace(/\.md$/i, '');
+      sel.appendChild(opt);
+      sel.value = sid;
+    }
+  }
+
+  // Load all chat sessions from server into the select dropdown
+  window.loadPyAgentChatSessions = async function () {
+    const sel = document.getElementById('pyagentChatSessionSelect');
+    if (!sel) return;
+    try {
+      const res = await fetch('/agent/sessions-list', { signal: AbortSignal.timeout(5000) });
+      const data = await res.json();
+      if (!data.success) return;
+      const current = sel.value;
+      // Keep the placeholder
+      sel.innerHTML = '<option value="">— 选择会话 —</option>';
+      (data.sessions || []).forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.sessionId;
+        const ts = s.updatedAt ? new Date(s.updatedAt).toLocaleDateString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+        opt.textContent = (s.label || s.sessionId.replace(/\.md$/i, '')) + (ts ? '  ' + ts : '');
+        sel.appendChild(opt);
+      });
+      // Restore selection
+      if (current) sel.value = current;
+      // Also ensure active session is selected
+      if (activePyAgentSession) sel.value = activePyAgentSession.id || '';
+    } catch (e) { /* silent */ }
+  };
+
+  // Called when user picks a session from the dropdown
+  window.onPyChatSessionChange = function (sessionId) {
+    if (!sessionId) return;
+    // Persist the selection
+    try { localStorage.setItem('pyagent_active_session', sessionId); } catch (_) {}
+    // Build a minimal config object and apply it
+    // Check if we have a full dialogue config for this session
+    const existing = typeof dialogueSessions !== 'undefined'
+      ? dialogueSessions.find(s => s.id === sessionId || s.id === 'dialogue/' + sessionId)
+      : null;
+    if (existing) {
+      applyPyAgentDialogue(existing);
+    } else {
+      const cfg = { id: sessionId, name: sessionId.replace(/^session-/, '').replace(/\.md$/i, ''), type: 'pyagent', historyDoc: '', systemDocs: [], model: '' };
+      applyPyAgentDialogue(cfg);
+    }
+  };
+
+  function _addChatBubble(role, text) {
+    const msgs = document.getElementById('pyagentChatMessages');
+    if (!msgs) return;
+    const div = document.createElement('div');
+    div.className = `pyagent-chat-msg ${role}`;
+    div.textContent = text;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  window.sendPyAgentChat = function () {
+    const input = document.getElementById('pyagentChatInput');
+    if (!input) return;
+    const msg = input.value.trim();
+    if (!msg) return;
+    if (!activePyAgentSession) {
+      _addChatBubble('sys', '⚠️ 没有活跃的 PyAgent 会话，请先选择一个会话。');
+      return;
+    }
+    const sessionId = activePyAgentSession.id;
+    _addChatBubble('user', msg);
+    input.value = '';
+    fetch('/agent/task', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, task: msg }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (!d.success) _addChatBubble('sys', '❌ 发送失败: ' + (d.error || '未知错误'));
+        else _addChatBubble('sys', '✓ 已发送，等待处理…');
+      })
+      .catch(e => _addChatBubble('sys', '❌ 请求错误: ' + e.message));
   };
 
   // ── Create a new PyAgent session ─────────────────────────────
@@ -4354,7 +4542,10 @@ async function submitErrorReport() {
     activePyAgentSession = cfg;
     window.activePyAgentSession = cfg;   // expose for outer-scope access
     activeDialogueId     = cfg.id;
+    // Persist the selected session so it survives page reload
+    try { localStorage.setItem('pyagent_active_session', cfg.id || ''); } catch (_) {}
     renderSessionList();
+    _updateChatSessionLabel();
 
     // 应用模型
     const modelSel = document.getElementById('pyagentModel');
@@ -4401,8 +4592,8 @@ async function submitErrorReport() {
     // Reset UI — 按钮默认启用，由即时状态查询和 tick 决定真实状态（避免 cfg.isRunning 残留导致闪烁）
     _pyOutputBuf = '';  // clear streaming line buffer
     _pyLiveMdBuf = '';  // clear live markdown buffer
+    _pyFilterInBlock = false;
     if (_pyMdRenderTimer) { clearTimeout(_pyMdRenderTimer); _pyMdRenderTimer = null; }
-    document.getElementById('pyagentTask').value = '';
     document.getElementById('pyagentOutput').innerHTML = '';
     document.getElementById('pyagentStatusText').textContent = '空闲';
     document.getElementById('pyagentStatusDot').className = 'agent-status-dot';
@@ -4579,6 +4770,11 @@ async function submitErrorReport() {
         if (!text) return;
         if (msg.stream === 'done') {
           flushPyOutput(output);
+          // If chat panel is open, flush accumulated chat text
+          if (_pyagentChatOpen && _pyChatOutputBuf.trim()) {
+            _addChatBubble('agent', _pyChatOutputBuf.trim());
+            _pyChatOutputBuf = '';
+          }
         } else if (msg.stream === 'system-ack') {
           // 系统 ACK：直接渲染为独立块，不混入流式 Markdown buffer
           const ackDiv = document.createElement('div');
@@ -4588,6 +4784,8 @@ async function submitErrorReport() {
           output.scrollTop = output.scrollHeight;
         } else {
           appendPyOutput(text, output);
+          // Accumulate for chat panel (raw, will be flushed on done)
+          if (_pyagentChatOpen) _pyChatOutputBuf += text;
         }
       } else if (msg.type === 'status') {
         const statusText = document.getElementById('pyagentStatusText');
@@ -4633,6 +4831,11 @@ async function submitErrorReport() {
         updatePyActionBar('🐍', '启动成功，执行中…');
       } else if (msg.type === 'action') {
         updatePyActionBar(msg.icon || '⚙️', msg.label || msg.message || '');
+        // 同时实时更新气泡中的 action sub 行
+        const _actionSid = msg.sessionId || (activePyAgentSession && activePyAgentSession.id);
+        if (_actionSid && typeof window.updateBubbleAction === 'function') {
+          window.updateBubbleAction(_actionSid, { type: 'tool', label: msg.label || msg.message || '' });
+        }
       }
     };
 
@@ -4693,7 +4896,7 @@ async function submitErrorReport() {
     // 递增 display generation，使 applyPyAgentDialogue 的任何未完成 IIFE 失效
     _pyDisplayGen++;
     // 清空实时 md 缓冲区，准备接收新任务输出
-    _pyLiveMdBuf = '';
+    _pyLiveMdBuf = ''; _pyFilterInBlock = false;
     if (_pyMdRenderTimer) { clearTimeout(_pyMdRenderTimer); _pyMdRenderTimer = null; }
     const live = output.querySelector('.py-live-md');
     if (live) live.remove();
@@ -4940,7 +5143,7 @@ async function submitErrorReport() {
   // ── Clear output ──────────────────────────────────────────────
   window.clearPyAgentOutput = function () {
     _pyOutputBuf = '';
-    _pyLiveMdBuf = '';
+    _pyLiveMdBuf = ''; _pyFilterInBlock = false;
     if (_pyMdRenderTimer) { clearTimeout(_pyMdRenderTimer); _pyMdRenderTimer = null; }
     const el = document.getElementById('pyagentOutput');
     if (el) el.innerHTML = '';
