@@ -12,6 +12,10 @@ docs/global_config.json
 
 # Application-specific docs (separate repo concern)
 docs/application_doc/
+# Exception: MagicWorld design data must be tracked
+!docs/application_doc/
+!docs/application_doc/magicworld/
+!docs/application_doc/magicworld/**
 
 # Runtime data
 data/

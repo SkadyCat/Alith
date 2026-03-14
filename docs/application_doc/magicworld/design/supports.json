@@ -1,0 +1,182 @@
+[
+  {
+    "id": "sup_01",
+    "name": "多重投射",
+    "require_any": ["投射物"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "技能额外发射 2 枚投射物，每枚伤害降低 20%",
+    "desc": "让投射物类技能同时射出更多弹体"
+  },
+  {
+    "id": "sup_02",
+    "name": "穿透增幅",
+    "require_any": ["投射物"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "投射物穿透所有命中目标",
+    "desc": "使投射物不会被第一个目标阻挡"
+  },
+  {
+    "id": "sup_03",
+    "name": "范围扩展",
+    "require_any": ["范围"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "+50% 技能范围",
+    "desc": "大幅扩大范围技能的影响区域"
+  },
+  {
+    "id": "sup_04",
+    "name": "集中轰击",
+    "require_any": ["范围"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "+70% 范围伤害，-40% 范围",
+    "desc": "缩小范围但大幅提升伤害密度"
+  },
+  {
+    "id": "sup_05",
+    "name": "召唤强化",
+    "require_any": ["召唤"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "+60% 召唤物伤害与生命",
+    "desc": "全面强化召唤的仆从"
+  },
+  {
+    "id": "sup_06",
+    "name": "仆从速度",
+    "require_any": ["召唤"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "+40% 召唤物移动与攻击速度",
+    "desc": "让召唤物行动更敏捷"
+  },
+  {
+    "id": "sup_07",
+    "name": "持续强化",
+    "require_any": ["持续"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "+65% 持续伤害",
+    "desc": "大幅提升持续效果的伤害输出"
+  },
+  {
+    "id": "sup_08",
+    "name": "时间延长",
+    "require_any": ["持续"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "+80% 持续时间",
+    "desc": "显著延长持续类效果的时间"
+  },
+  {
+    "id": "sup_09",
+    "name": "近战冲击",
+    "require_any": ["近战"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "+80% 近战伤害",
+    "desc": "大幅提升近战攻击的伤害"
+  },
+  {
+    "id": "sup_10",
+    "name": "近战溅射",
+    "require_all": ["近战", "单体"],
+    "require_any": [],
+    "exclude": [],
+    "effect": "近战命中时向周围溅射，溅射伤害 -50%",
+    "desc": "让单体近战技能产生范围溅射效果"
+  },
+  {
+    "id": "sup_11",
+    "name": "光环强化",
+    "require_any": ["光环"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "+50% 光环效果，+20% 光环范围",
+    "desc": "强化光环技能的覆盖范围与效果"
+  },
+  {
+    "id": "sup_12",
+    "name": "诅咒延长",
+    "require_any": ["诅咒"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "+100% 诅咒持续时间，+30% 诅咒效果",
+    "desc": "让诅咒效果持续更长时间并更强力"
+  },
+  {
+    "id": "sup_13",
+    "name": "爆炸连锁",
+    "require_any": ["爆炸"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "爆炸触发额外连锁爆炸 1 次",
+    "desc": "爆炸类技能在命中后产生额外爆炸"
+  },
+  {
+    "id": "sup_14",
+    "name": "移动强化",
+    "require_any": ["移动"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "+50% 移动速度，冷却缩短 30%",
+    "desc": "大幅提升移动技能的效率"
+  },
+  {
+    "id": "sup_15",
+    "name": "单体暴击",
+    "require_any": ["单体"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "+50% 暴击率，+100% 暴击伤害",
+    "desc": "专为单体技能强化暴击输出"
+  },
+  {
+    "id": "sup_16",
+    "name": "元素穿透",
+    "require_any": ["投射物", "范围", "爆炸"],
+    "require_all": [],
+    "exclude": ["近战"],
+    "effect": "-30% 目标元素抗性",
+    "desc": "使技能穿透敌人的元素防御"
+  },
+  {
+    "id": "sup_17",
+    "name": "连锁弹射",
+    "require_any": ["投射物", "链接"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "投射物在敌人间弹射最多 3 次",
+    "desc": "让投射物在命中后继续弹射到其他目标"
+  },
+  {
+    "id": "sup_18",
+    "name": "毒素注入",
+    "require_any": ["近战", "投射物"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "命中时附加毒素持续伤害",
+    "desc": "为攻击附加毒素效果"
+  },
+  {
+    "id": "sup_19",
+    "name": "寒冰凝结",
+    "require_any": ["范围", "投射物"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "命中有 30% 概率冻结目标 2 秒",
+    "desc": "为范围或投射技能附加冻结效果"
+  },
+  {
+    "id": "sup_20",
+    "name": "即发施放",
+    "require_any": ["瞬发"],
+    "require_all": [],
+    "exclude": [],
+    "effect": "冷却缩短 40%，取消前摇动作",
+    "desc": "大幅提升瞬发技能的使用频率"
+  }
+]

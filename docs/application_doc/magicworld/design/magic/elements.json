@@ -1,0 +1,11 @@
+[
+  { "id": "fire",      "name": "火焰",   "color": "#f97316", "icon": "🔥", "weakness": ["ice"],      "resistance": ["fire"],     "dot_type": "burn",    "desc": "持续燃烧，破坏护甲" },
+  { "id": "ice",       "name": "寒冰",   "color": "#38bdf8", "icon": "❄️", "weakness": ["fire"],     "resistance": ["ice"],      "dot_type": "freeze",  "desc": "减速并冻结目标" },
+  { "id": "lightning", "name": "闪电",   "color": "#facc15", "icon": "⚡", "weakness": ["earth"],    "resistance": ["lightning"], "dot_type": "shocked", "desc": "增加受击伤害，可连锁" },
+  { "id": "shadow",    "name": "暗影",   "color": "#a855f7", "icon": "🌑", "weakness": ["holy"],     "resistance": ["shadow"],   "dot_type": "curse",   "desc": "降低抗性，附加诅咒" },
+  { "id": "holy",      "name": "神圣",   "color": "#fbbf24", "icon": "✨", "weakness": ["shadow"],   "resistance": ["holy"],     "dot_type": "radiant", "desc": "净化与治愈，克制暗影" },
+  { "id": "poison",    "name": "毒素",   "color": "#4ade80", "icon": "☠️", "weakness": ["fire"],     "resistance": ["poison"],   "dot_type": "poison",  "desc": "叠加毒层，持续掉血" },
+  { "id": "earth",     "name": "大地",   "color": "#a16207", "icon": "🪨", "weakness": ["lightning"],"resistance": ["earth"],    "dot_type": "bleed",   "desc": "破防与流血，近战增益" },
+  { "id": "arcane",    "name": "奥术",   "color": "#818cf8", "icon": "🔮", "weakness": [],           "resistance": [],           "dot_type": "mana_burn","desc": "消耗法力，无视抗性" },
+  { "id": "void",      "name": "虚空",   "color": "#6b21a8", "icon": "🌀", "weakness": [],           "resistance": ["void"],     "dot_type": "void_rot","desc": "无视所有减免，虚空腐蚀" }
+]

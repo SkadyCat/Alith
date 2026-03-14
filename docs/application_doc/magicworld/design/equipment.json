@@ -1,0 +1,1835 @@
+[
+  {
+    "id": "equip_001",
+    "name": "堕落战斧",
+    "slot": "主手",
+    "type": "战斧",
+    "rarity": "普通",
+    "level": 48,
+    "stats": {
+      "defense": 100,
+      "火焰伤害": "+25%"
+    },
+    "effects": [
+      "提升暴击率+44%"
+    ],
+    "lore": "传说中曾属于一位堕落英雄",
+    "description": "从深渊中带来的神秘器物的主手装备。",
+    "icon": "/icons/equipicon_01_20260302_151410_b1efae44.png"
+  },
+  {
+    "id": "equip_002",
+    "name": "炼狱长剑",
+    "slot": "主手",
+    "type": "长剑",
+    "rarity": "普通",
+    "level": 6,
+    "stats": {
+      "critRate": "24%",
+      "物理伤害": "+24%"
+    },
+    "effects": [
+      "提升法术冷却+22%"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "充满死亡气息的可怕装备的主手装备。",
+    "icon": "/icons/equipicon_02_20260302_151411_a7c45e39.png"
+  },
+  {
+    "id": "equip_003",
+    "name": "地狱长枪",
+    "slot": "主手",
+    "type": "长枪",
+    "rarity": "魔法",
+    "level": 1,
+    "stats": {
+      "speed": 70,
+      "冰霜伤害": "+54%"
+    },
+    "effects": [
+      "释放死灵力量+23%"
+    ],
+    "lore": "沾染过无数冒险者的鲜血",
+    "description": "散发着腐败气息的古老武器的主手装备。",
+    "icon": "/icons/equipicon_03_20260302_151412_6e6bf1b8.png"
+  },
+  {
+    "id": "equip_004",
+    "name": "死灵巨剑",
+    "slot": "主手",
+    "type": "巨剑",
+    "rarity": "普通",
+    "level": 23,
+    "stats": {
+      "magic": 118,
+      "暗影伤害": "+48%"
+    },
+    "effects": [
+      "触发法术冷却+17%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "散发着腐败气息的古老武器的主手装备。",
+    "icon": "/icons/equipicon_04_20260302_151413_4e088dac.png"
+  },
+  {
+    "id": "equip_005",
+    "name": "血腥短剑",
+    "slot": "主手",
+    "type": "短剑",
+    "rarity": "稀有",
+    "level": 37,
+    "stats": {
+      "attack": 79,
+      "暗影伤害": "+55%"
+    },
+    "effects": [
+      "增强生命偷取+15%"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "散发着腐败气息的古老武器的主手装备。",
+    "icon": "/icons/equipicon_05_20260302_151414_c8a3831c.png"
+  },
+  {
+    "id": "equip_006",
+    "name": "炼狱短剑",
+    "slot": "主手",
+    "type": "短剑",
+    "rarity": "史诗",
+    "level": 41,
+    "stats": {
+      "magic": 123,
+      "冰霜伤害": "+20%"
+    },
+    "effects": [
+      "增强暴击率+27%",
+      "特效: 每10秒触发虚空爆炸"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "镶嵌了恶魔宝石的强大护具的主手装备。",
+    "icon": "/icons/equipicon_06_20260302_151415_fab798f9.png"
+  },
+  {
+    "id": "equip_007",
+    "name": "血腥法杖",
+    "slot": "主手",
+    "type": "法杖",
+    "rarity": "普通",
+    "level": 30,
+    "stats": {
+      "lifeSteal": 127,
+      "全属性": "+27%"
+    },
+    "effects": [
+      "激活死灵力量+30%"
+    ],
+    "lore": "传说中曾属于一位堕落英雄",
+    "description": "镶嵌了恶魔宝石的强大护具的主手装备。",
+    "icon": "/icons/equipicon_07_20260302_151416_157daae9.png"
+  },
+  {
+    "id": "equip_008",
+    "name": "禁忌长剑",
+    "slot": "主手",
+    "type": "长剑",
+    "rarity": "稀有",
+    "level": 26,
+    "stats": {
+      "defense": 98,
+      "物理伤害": "+14%"
+    },
+    "effects": [
+      "释放死灵力量+41%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "充满死亡气息的可怕装备的主手装备。",
+    "icon": "/icons/equipicon_08_20260302_151417_1d716535.png"
+  },
+  {
+    "id": "equip_009",
+    "name": "暗影短剑",
+    "slot": "主手",
+    "type": "短剑",
+    "rarity": "普通",
+    "level": 16,
+    "stats": {
+      "magic": 173,
+      "全属性": "+44%"
+    },
+    "effects": [
+      "激活攻击速度+47%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "被黑暗力量彻底浸透的主手装备。",
+    "icon": "/icons/equipicon_09_20260302_151419_1daf9c1a.png"
+  },
+  {
+    "id": "equip_010",
+    "name": "地狱战锤",
+    "slot": "主手",
+    "type": "战锤",
+    "rarity": "传奇",
+    "level": 32,
+    "stats": {
+      "attack": 53,
+      "暗影伤害": "+58%"
+    },
+    "effects": [
+      "增强暴击率+20%",
+      "特效: 免疫减速效果"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "散发着腐败气息的古老武器的主手装备。",
+    "icon": "/icons/equipicon_10_20260302_151420_ecb5e383.png"
+  },
+  {
+    "id": "equip_011",
+    "name": "炼狱巨剑",
+    "slot": "主手",
+    "type": "巨剑",
+    "rarity": "史诗",
+    "level": 34,
+    "stats": {
+      "mpRegen": "45%",
+      "暗影伤害": "+45%"
+    },
+    "effects": [
+      "提升暴击率+44%",
+      "特效: 攻击附带诅咒"
+    ],
+    "lore": "沾染过无数冒险者的鲜血",
+    "description": "散发着腐败气息的古老武器的主手装备。",
+    "icon": "/icons/equipicon_11_20260302_151421_f3cc9fbf.png"
+  },
+  {
+    "id": "equip_012",
+    "name": "幽冥巨剑",
+    "slot": "主手",
+    "type": "巨剑",
+    "rarity": "普通",
+    "level": 30,
+    "stats": {
+      "lifeSteal": 30,
+      "冰霜伤害": "+56%"
+    },
+    "effects": [
+      "激活死灵力量+42%"
+    ],
+    "lore": "传说中曾属于一位堕落英雄",
+    "description": "被黑暗力量彻底浸透的主手装备。",
+    "icon": "/icons/equipicon_12_20260302_151422_996fd275.png"
+  },
+  {
+    "id": "equip_013",
+    "name": "禁忌圣典",
+    "slot": "副手",
+    "type": "圣典",
+    "rarity": "传奇",
+    "level": 39,
+    "stats": {
+      "magic": 80,
+      "火焰伤害": "+19%"
+    },
+    "effects": [
+      "激活法术冷却+10%",
+      "特效: 攻击附带诅咒"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "散发着腐败气息的古老武器的副手装备。",
+    "icon": "/icons/equipicon_13_20260302_151423_194c4993.png"
+  },
+  {
+    "id": "equip_014",
+    "name": "死灵骨盾",
+    "slot": "副手",
+    "type": "骨盾",
+    "rarity": "魔法",
+    "level": 16,
+    "stats": {
+      "critRate": "25%",
+      "暗影伤害": "+25%"
+    },
+    "effects": [
+      "提升暴击率+41%"
+    ],
+    "lore": "传说中曾属于一位堕落英雄",
+    "description": "从深渊中带来的神秘器物的副手装备。",
+    "icon": "/icons/equipicon_14_20260302_151424_cc34d2cf.png"
+  },
+  {
+    "id": "equip_015",
+    "name": "深渊魔法书",
+    "slot": "副手",
+    "type": "魔法书",
+    "rarity": "普通",
+    "level": 43,
+    "stats": {
+      "defense": 151,
+      "冰霜伤害": "+45%"
+    },
+    "effects": [
+      "激活法术冷却+37%"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "从深渊中带来的神秘器物的副手装备。",
+    "icon": "/icons/equipicon_15_20260302_151425_0c2b849b.png"
+  },
+  {
+    "id": "equip_016",
+    "name": "深渊圣典",
+    "slot": "副手",
+    "type": "圣典",
+    "rarity": "魔法",
+    "level": 46,
+    "stats": {
+      "lifeSteal": 109,
+      "全属性": "+35%"
+    },
+    "effects": [
+      "释放攻击速度+43%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "散发着腐败气息的古老武器的副手装备。",
+    "icon": "/icons/equipicon_16_20260302_151426_cb32ea96.png"
+  },
+  {
+    "id": "equip_017",
+    "name": "地狱魔法书",
+    "slot": "副手",
+    "type": "魔法书",
+    "rarity": "普通",
+    "level": 22,
+    "stats": {
+      "critRate": "47%",
+      "火焰伤害": "+47%"
+    },
+    "effects": [
+      "激活死灵力量+10%"
+    ],
+    "lore": "传说中曾属于一位堕落英雄",
+    "description": "散发着腐败气息的古老武器的副手装备。",
+    "icon": "/icons/equipicon_17_20260302_151427_81585a96.png"
+  },
+  {
+    "id": "equip_018",
+    "name": "地狱盾牌",
+    "slot": "副手",
+    "type": "盾牌",
+    "rarity": "普通",
+    "level": 22,
+    "stats": {
+      "defense": 48,
+      "冰霜伤害": "+42%"
+    },
+    "effects": [
+      "触发死灵力量+44%"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "从深渊中带来的神秘器物的副手装备。",
+    "icon": "/icons/equipicon_18_20260302_151428_3dbe7da9.png"
+  },
+  {
+    "id": "equip_019",
+    "name": "冰霜箭袋",
+    "slot": "副手",
+    "type": "箭袋",
+    "rarity": "魔法",
+    "level": 31,
+    "stats": {
+      "attack": 134,
+      "暗影伤害": "+22%"
+    },
+    "effects": [
+      "触发生命偷取+37%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "充满死亡气息的可怕装备的副手装备。",
+    "icon": "/icons/equipicon_19_20260302_151429_e6cab77f.png"
+  },
+  {
+    "id": "equip_020",
+    "name": "禁忌圣典",
+    "slot": "副手",
+    "type": "圣典",
+    "rarity": "普通",
+    "level": 44,
+    "stats": {
+      "attack": 197,
+      "暗影伤害": "+51%"
+    },
+    "effects": [
+      "触发暴击率+31%"
+    ],
+    "lore": "传说中曾属于一位堕落英雄",
+    "description": "镶嵌了恶魔宝石的强大护具的副手装备。",
+    "icon": "/icons/equipicon_20_20260302_151430_5092b3b3.png"
+  },
+  {
+    "id": "equip_021",
+    "name": "地狱暗影兜帽",
+    "slot": "头盔",
+    "type": "暗影兜帽",
+    "rarity": "传奇",
+    "level": 29,
+    "stats": {
+      "defense": 65,
+      "冰霜伤害": "+37%"
+    },
+    "effects": [
+      "触发死灵力量+14%",
+      "特效: 免疫减速效果"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "散发着腐败气息的古老武器的头盔装备。",
+    "icon": "/icons/equipicon_21_20260302_151431_6b7cdc7a.png"
+  },
+  {
+    "id": "equip_022",
+    "name": "腐化法师帽",
+    "slot": "头盔",
+    "type": "法师帽",
+    "rarity": "传奇",
+    "level": 1,
+    "stats": {
+      "mpRegen": "58%",
+      "火焰伤害": "+58%"
+    },
+    "effects": [
+      "增强攻击速度+41%",
+      "特效: 免疫减速效果"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "充满死亡气息的可怕装备的头盔装备。",
+    "icon": "/icons/equipicon_22_20260302_151432_a14d54db.png"
+  },
+  {
+    "id": "equip_023",
+    "name": "炎魔铁盔",
+    "slot": "头盔",
+    "type": "铁盔",
+    "rarity": "普通",
+    "level": 25,
+    "stats": {
+      "magic": 30,
+      "毒素伤害": "+34%"
+    },
+    "effects": [
+      "释放攻击速度+45%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "镶嵌了恶魔宝石的强大护具的头盔装备。",
+    "icon": "/icons/equipicon_23_20260302_151434_d7864ea5.png"
+  },
+  {
+    "id": "equip_024",
+    "name": "地狱死灵骨冠",
+    "slot": "头盔",
+    "type": "死灵骨冠",
+    "rarity": "魔法",
+    "level": 4,
+    "stats": {
+      "critRate": "57%",
+      "暗影伤害": "+57%"
+    },
+    "effects": [
+      "释放暗影技能强度+13%"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "充满死亡气息的可怕装备的头盔装备。",
+    "icon": "/icons/equipicon_24_20260302_151435_87cbf4c8.png"
+  },
+  {
+    "id": "equip_025",
+    "name": "血腥荆棘盔",
+    "slot": "头盔",
+    "type": "荆棘盔",
+    "rarity": "传奇",
+    "level": 11,
+    "stats": {
+      "attack": 44,
+      "火焰伤害": "+42%"
+    },
+    "effects": [
+      "提升法术冷却+14%",
+      "特效: 击杀回复生命"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "散发着腐败气息的古老武器的头盔装备。",
+    "icon": "/icons/equipicon_25_20260302_151436_311ad045.png"
+  },
+  {
+    "id": "equip_026",
+    "name": "炎魔战争面具",
+    "slot": "头盔",
+    "type": "战争面具",
+    "rarity": "魔法",
+    "level": 38,
+    "stats": {
+      "critRate": "12%",
+      "暗影伤害": "+12%"
+    },
+    "effects": [
+      "触发暴击率+47%"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "从深渊中带来的神秘器物的头盔装备。",
+    "icon": "/icons/equipicon_26_20260302_151437_8d9c36df.png"
+  },
+  {
+    "id": "equip_027",
+    "name": "虚空死灵骨冠",
+    "slot": "头盔",
+    "type": "死灵骨冠",
+    "rarity": "魔法",
+    "level": 43,
+    "stats": {
+      "magic": 110,
+      "毒素伤害": "+25%"
+    },
+    "effects": [
+      "增强暴击率+29%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "被黑暗力量彻底浸透的头盔装备。",
+    "icon": "/icons/equipicon_27_20260302_151438_fa7a9b24.png"
+  },
+  {
+    "id": "equip_028",
+    "name": "炎魔荆棘盔",
+    "slot": "头盔",
+    "type": "荆棘盔",
+    "rarity": "普通",
+    "level": 1,
+    "stats": {
+      "critRate": "49%",
+      "暗影伤害": "+49%"
+    },
+    "effects": [
+      "提升法术冷却+23%"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "被黑暗力量彻底浸透的头盔装备。",
+    "icon": "/icons/equipicon_28_20260302_151439_72e961c8.png"
+  },
+  {
+    "id": "equip_029",
+    "name": "暗影死灵骨冠",
+    "slot": "头盔",
+    "type": "死灵骨冠",
+    "rarity": "普通",
+    "level": 16,
+    "stats": {
+      "defense": 124,
+      "毒素伤害": "+28%"
+    },
+    "effects": [
+      "激活暴击率+29%"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "从深渊中带来的神秘器物的头盔装备。",
+    "icon": "/icons/equipicon_29_20260302_151440_d44fdcc8.png"
+  },
+  {
+    "id": "equip_030",
+    "name": "腐化法师帽",
+    "slot": "头盔",
+    "type": "法师帽",
+    "rarity": "传奇",
+    "level": 20,
+    "stats": {
+      "defense": 199,
+      "冰霜伤害": "+16%"
+    },
+    "effects": [
+      "提升暗影技能强度+45%",
+      "特效: 击杀回复生命"
+    ],
+    "lore": "沾染过无数冒险者的鲜血",
+    "description": "被黑暗力量彻底浸透的头盔装备。",
+    "icon": "/icons/equipicon_30_20260302_151441_e667ce56.png"
+  },
+  {
+    "id": "equip_031",
+    "name": "冰霜暗影兜帽",
+    "slot": "头盔",
+    "type": "暗影兜帽",
+    "rarity": "稀有",
+    "level": 14,
+    "stats": {
+      "critRate": "26%",
+      "毒素伤害": "+26%"
+    },
+    "effects": [
+      "释放暗影技能强度+15%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "被黑暗力量彻底浸透的头盔装备。",
+    "icon": "/icons/equipicon_01_20260302_151410_b1efae44.png"
+  },
+  {
+    "id": "equip_032",
+    "name": "腐化锁甲",
+    "slot": "护甲",
+    "type": "锁甲",
+    "rarity": "稀有",
+    "level": 50,
+    "stats": {
+      "magic": 63,
+      "火焰伤害": "+50%"
+    },
+    "effects": [
+      "触发法术冷却+37%"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "散发着腐败气息的古老武器的护甲装备。",
+    "icon": "/icons/equipicon_02_20260302_151411_a7c45e39.png"
+  },
+  {
+    "id": "equip_033",
+    "name": "死灵锁甲",
+    "slot": "护甲",
+    "type": "锁甲",
+    "rarity": "普通",
+    "level": 35,
+    "stats": {
+      "critRate": "33%",
+      "物理伤害": "+33%"
+    },
+    "effects": [
+      "增强攻击速度+18%"
+    ],
+    "lore": "传说中曾属于一位堕落英雄",
+    "description": "被黑暗力量彻底浸透的护甲装备。",
+    "icon": "/icons/equipicon_03_20260302_151412_6e6bf1b8.png"
+  },
+  {
+    "id": "equip_034",
+    "name": "虚空符文重甲",
+    "slot": "护甲",
+    "type": "符文重甲",
+    "rarity": "普通",
+    "level": 23,
+    "stats": {
+      "defense": 83,
+      "全属性": "+53%"
+    },
+    "effects": [
+      "提升生命偷取+45%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "从深渊中带来的神秘器物的护甲装备。",
+    "icon": "/icons/equipicon_04_20260302_151413_4e088dac.png"
+  },
+  {
+    "id": "equip_035",
+    "name": "恶魔皮甲",
+    "slot": "护甲",
+    "type": "皮甲",
+    "rarity": "魔法",
+    "level": 11,
+    "stats": {
+      "attack": 75,
+      "火焰伤害": "+36%"
+    },
+    "effects": [
+      "释放攻击速度+25%"
+    ],
+    "lore": "沾染过无数冒险者的鲜血",
+    "description": "镶嵌了恶魔宝石的强大护具的护甲装备。",
+    "icon": "/icons/equipicon_05_20260302_151414_c8a3831c.png"
+  },
+  {
+    "id": "equip_036",
+    "name": "深渊亡者铠甲",
+    "slot": "护甲",
+    "type": "亡者铠甲",
+    "rarity": "普通",
+    "level": 25,
+    "stats": {
+      "defense": 39,
+      "火焰伤害": "+40%"
+    },
+    "effects": [
+      "触发生命偷取+29%"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "镶嵌了恶魔宝石的强大护具的护甲装备。",
+    "icon": "/icons/equipicon_06_20260302_151415_fab798f9.png"
+  },
+  {
+    "id": "equip_037",
+    "name": "腐化亡者铠甲",
+    "slot": "护甲",
+    "type": "亡者铠甲",
+    "rarity": "魔法",
+    "level": 26,
+    "stats": {
+      "mpRegen": "27%",
+      "暗影伤害": "+27%"
+    },
+    "effects": [
+      "释放生命偷取+42%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "从深渊中带来的神秘器物的护甲装备。",
+    "icon": "/icons/equipicon_07_20260302_151416_157daae9.png"
+  },
+  {
+    "id": "equip_038",
+    "name": "虚空锁甲",
+    "slot": "护甲",
+    "type": "锁甲",
+    "rarity": "普通",
+    "level": 17,
+    "stats": {
+      "magic": 75,
+      "暗影伤害": "+47%"
+    },
+    "effects": [
+      "提升法术冷却+37%"
+    ],
+    "lore": "沾染过无数冒险者的鲜血",
+    "description": "被黑暗力量彻底浸透的护甲装备。",
+    "icon": "/icons/equipicon_08_20260302_151417_1d716535.png"
+  },
+  {
+    "id": "equip_039",
+    "name": "炼狱暗影战甲",
+    "slot": "护甲",
+    "type": "暗影战甲",
+    "rarity": "传奇",
+    "level": 8,
+    "stats": {
+      "defense": 128,
+      "冰霜伤害": "+46%"
+    },
+    "effects": [
+      "提升暴击率+37%",
+      "特效: 每10秒触发虚空爆炸"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "从深渊中带来的神秘器物的护甲装备。",
+    "icon": "/icons/equipicon_09_20260302_151419_1daf9c1a.png"
+  },
+  {
+    "id": "equip_040",
+    "name": "堕落亡者铠甲",
+    "slot": "护甲",
+    "type": "亡者铠甲",
+    "rarity": "魔法",
+    "level": 24,
+    "stats": {
+      "lifeSteal": 140,
+      "冰霜伤害": "+14%"
+    },
+    "effects": [
+      "激活生命偷取+17%"
+    ],
+    "lore": "沾染过无数冒险者的鲜血",
+    "description": "从深渊中带来的神秘器物的护甲装备。",
+    "icon": "/icons/equipicon_10_20260302_151420_ecb5e383.png"
+  },
+  {
+    "id": "equip_041",
+    "name": "幽冥亡者铠甲",
+    "slot": "护甲",
+    "type": "亡者铠甲",
+    "rarity": "稀有",
+    "level": 21,
+    "stats": {
+      "magic": 133,
+      "物理伤害": "+54%"
+    },
+    "effects": [
+      "增强死灵力量+36%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "镶嵌了恶魔宝石的强大护具的护甲装备。",
+    "icon": "/icons/equipicon_11_20260302_151421_f3cc9fbf.png"
+  },
+  {
+    "id": "equip_042",
+    "name": "冰霜暗影战甲",
+    "slot": "护甲",
+    "type": "暗影战甲",
+    "rarity": "魔法",
+    "level": 26,
+    "stats": {
+      "magic": 170,
+      "冰霜伤害": "+10%"
+    },
+    "effects": [
+      "增强攻击速度+47%"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "被黑暗力量彻底浸透的护甲装备。",
+    "icon": "/icons/equipicon_12_20260302_151422_996fd275.png"
+  },
+  {
+    "id": "equip_043",
+    "name": "诅咒铁爪",
+    "slot": "手套",
+    "type": "铁爪",
+    "rarity": "史诗",
+    "level": 44,
+    "stats": {
+      "speed": 84,
+      "全属性": "+42%"
+    },
+    "effects": [
+      "增强暴击率+15%",
+      "特效: 攻击附带诅咒"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "从深渊中带来的神秘器物的手套装备。",
+    "icon": "/icons/equipicon_13_20260302_151423_194c4993.png"
+  },
+  {
+    "id": "equip_044",
+    "name": "虚空战斗手套",
+    "slot": "手套",
+    "type": "战斗手套",
+    "rarity": "魔法",
+    "level": 44,
+    "stats": {
+      "mpRegen": "24%",
+      "火焰伤害": "+24%"
+    },
+    "effects": [
+      "增强暗影技能强度+12%"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "充满死亡气息的可怕装备的手套装备。",
+    "icon": "/icons/equipicon_14_20260302_151424_cc34d2cf.png"
+  },
+  {
+    "id": "equip_045",
+    "name": "冰霜战斗手套",
+    "slot": "手套",
+    "type": "战斗手套",
+    "rarity": "史诗",
+    "level": 27,
+    "stats": {
+      "defense": 191,
+      "全属性": "+46%"
+    },
+    "effects": [
+      "触发攻击速度+35%",
+      "特效: 击杀回复生命"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "散发着腐败气息的古老武器的手套装备。",
+    "icon": "/icons/equipicon_15_20260302_151425_0c2b849b.png"
+  },
+  {
+    "id": "equip_046",
+    "name": "炎魔战斗手套",
+    "slot": "手套",
+    "type": "战斗手套",
+    "rarity": "稀有",
+    "level": 15,
+    "stats": {
+      "critRate": "54%",
+      "毒素伤害": "+54%"
+    },
+    "effects": [
+      "提升法术冷却+25%"
+    ],
+    "lore": "传说中曾属于一位堕落英雄",
+    "description": "充满死亡气息的可怕装备的手套装备。",
+    "icon": "/icons/equipicon_16_20260302_151426_cb32ea96.png"
+  },
+  {
+    "id": "equip_047",
+    "name": "暗影铁爪",
+    "slot": "手套",
+    "type": "铁爪",
+    "rarity": "传奇",
+    "level": 36,
+    "stats": {
+      "mpRegen": "30%",
+      "毒素伤害": "+30%"
+    },
+    "effects": [
+      "激活暴击率+42%",
+      "特效: 免疫减速效果"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "充满死亡气息的可怕装备的手套装备。",
+    "icon": "/icons/equipicon_17_20260302_151427_81585a96.png"
+  },
+  {
+    "id": "equip_048",
+    "name": "炎魔暗影手套",
+    "slot": "手套",
+    "type": "暗影手套",
+    "rarity": "史诗",
+    "level": 29,
+    "stats": {
+      "defense": 96,
+      "全属性": "+58%"
+    },
+    "effects": [
+      "释放法术冷却+41%",
+      "特效: 击杀回复生命"
+    ],
+    "lore": "沾染过无数冒险者的鲜血",
+    "description": "充满死亡气息的可怕装备的手套装备。",
+    "icon": "/icons/equipicon_18_20260302_151428_3dbe7da9.png"
+  },
+  {
+    "id": "equip_049",
+    "name": "死灵骨刺手套",
+    "slot": "手套",
+    "type": "骨刺手套",
+    "rarity": "魔法",
+    "level": 16,
+    "stats": {
+      "magic": 99,
+      "物理伤害": "+31%"
+    },
+    "effects": [
+      "提升死灵力量+19%"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "充满死亡气息的可怕装备的手套装备。",
+    "icon": "/icons/equipicon_19_20260302_151429_e6cab77f.png"
+  },
+  {
+    "id": "equip_050",
+    "name": "恶魔暗影手套",
+    "slot": "手套",
+    "type": "暗影手套",
+    "rarity": "魔法",
+    "level": 5,
+    "stats": {
+      "magic": 136,
+      "物理伤害": "+36%"
+    },
+    "effects": [
+      "触发攻击速度+13%"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "充满死亡气息的可怕装备的手套装备。",
+    "icon": "/icons/equipicon_20_20260302_151430_5092b3b3.png"
+  },
+  {
+    "id": "equip_051",
+    "name": "炼狱诅咒手套",
+    "slot": "手套",
+    "type": "诅咒手套",
+    "rarity": "普通",
+    "level": 49,
+    "stats": {
+      "speed": 177,
+      "暗影伤害": "+34%"
+    },
+    "effects": [
+      "释放生命偷取+34%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "从深渊中带来的神秘器物的手套装备。",
+    "icon": "/icons/equipicon_21_20260302_151431_6b7cdc7a.png"
+  },
+  {
+    "id": "equip_052",
+    "name": "恶魔骨刺手套",
+    "slot": "手套",
+    "type": "骨刺手套",
+    "rarity": "传奇",
+    "level": 39,
+    "stats": {
+      "defense": 86,
+      "冰霜伤害": "+41%"
+    },
+    "effects": [
+      "触发攻击速度+11%",
+      "特效: 免疫减速效果"
+    ],
+    "lore": "沾染过无数冒险者的鲜血",
+    "description": "充满死亡气息的可怕装备的手套装备。",
+    "icon": "/icons/equipicon_22_20260302_151432_a14d54db.png"
+  },
+  {
+    "id": "equip_053",
+    "name": "恶魔暗影靴",
+    "slot": "靴子",
+    "type": "暗影靴",
+    "rarity": "史诗",
+    "level": 9,
+    "stats": {
+      "attack": 189,
+      "毒素伤害": "+44%"
+    },
+    "effects": [
+      "激活法术冷却+11%",
+      "特效: 每10秒触发虚空爆炸"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "镶嵌了恶魔宝石的强大护具的靴子装备。",
+    "icon": "/icons/equipicon_23_20260302_151434_d7864ea5.png"
+  },
+  {
+    "id": "equip_054",
+    "name": "禁忌死灵战靴",
+    "slot": "靴子",
+    "type": "死灵战靴",
+    "rarity": "普通",
+    "level": 4,
+    "stats": {
+      "magic": 96,
+      "火焰伤害": "+34%"
+    },
+    "effects": [
+      "触发生命偷取+31%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "被黑暗力量彻底浸透的靴子装备。",
+    "icon": "/icons/equipicon_24_20260302_151435_87cbf4c8.png"
+  },
+  {
+    "id": "equip_055",
+    "name": "深渊死灵战靴",
+    "slot": "靴子",
+    "type": "死灵战靴",
+    "rarity": "魔法",
+    "level": 6,
+    "stats": {
+      "lifeSteal": 150,
+      "物理伤害": "+11%"
+    },
+    "effects": [
+      "提升生命偷取+24%"
+    ],
+    "lore": "传说中曾属于一位堕落英雄",
+    "description": "散发着腐败气息的古老武器的靴子装备。",
+    "icon": "/icons/equipicon_25_20260302_151436_311ad045.png"
+  },
+  {
+    "id": "equip_056",
+    "name": "深渊战靴",
+    "slot": "靴子",
+    "type": "战靴",
+    "rarity": "魔法",
+    "level": 13,
+    "stats": {
+      "defense": 35,
+      "火焰伤害": "+49%"
+    },
+    "effects": [
+      "增强攻击速度+17%"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "镶嵌了恶魔宝石的强大护具的靴子装备。",
+    "icon": "/icons/equipicon_26_20260302_151437_8d9c36df.png"
+  },
+  {
+    "id": "equip_057",
+    "name": "诅咒刺客步履",
+    "slot": "靴子",
+    "type": "刺客步履",
+    "rarity": "魔法",
+    "level": 50,
+    "stats": {
+      "critRate": "20%",
+      "物理伤害": "+20%"
+    },
+    "effects": [
+      "提升死灵力量+29%"
+    ],
+    "lore": "传说中曾属于一位堕落英雄",
+    "description": "从深渊中带来的神秘器物的靴子装备。",
+    "icon": "/icons/equipicon_27_20260302_151438_fa7a9b24.png"
+  },
+  {
+    "id": "equip_058",
+    "name": "腐化速度之靴",
+    "slot": "靴子",
+    "type": "速度之靴",
+    "rarity": "稀有",
+    "level": 26,
+    "stats": {
+      "critRate": "14%",
+      "全属性": "+14%"
+    },
+    "effects": [
+      "增强暗影技能强度+29%"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "散发着腐败气息的古老武器的靴子装备。",
+    "icon": "/icons/equipicon_28_20260302_151439_72e961c8.png"
+  },
+  {
+    "id": "equip_059",
+    "name": "深渊幽灵行者",
+    "slot": "靴子",
+    "type": "幽灵行者",
+    "rarity": "普通",
+    "level": 23,
+    "stats": {
+      "lifeSteal": 166,
+      "冰霜伤害": "+37%"
+    },
+    "effects": [
+      "提升法术冷却+31%"
+    ],
+    "lore": "传说中曾属于一位堕落英雄",
+    "description": "充满死亡气息的可怕装备的靴子装备。",
+    "icon": "/icons/equipicon_29_20260302_151440_d44fdcc8.png"
+  },
+  {
+    "id": "equip_060",
+    "name": "禁忌死灵战靴",
+    "slot": "靴子",
+    "type": "死灵战靴",
+    "rarity": "普通",
+    "level": 28,
+    "stats": {
+      "mpRegen": "50%",
+      "毒素伤害": "+50%"
+    },
+    "effects": [
+      "增强攻击速度+21%"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "被黑暗力量彻底浸透的靴子装备。",
+    "icon": "/icons/equipicon_30_20260302_151441_e667ce56.png"
+  },
+  {
+    "id": "equip_061",
+    "name": "冰霜幽灵行者",
+    "slot": "靴子",
+    "type": "幽灵行者",
+    "rarity": "史诗",
+    "level": 30,
+    "stats": {
+      "critRate": "56%",
+      "冰霜伤害": "+56%"
+    },
+    "effects": [
+      "释放死灵力量+15%",
+      "特效: 攻击附带诅咒"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "镶嵌了恶魔宝石的强大护具的靴子装备。",
+    "icon": "/icons/equipicon_01_20260302_151410_b1efae44.png"
+  },
+  {
+    "id": "equip_062",
+    "name": "深渊死灵战靴",
+    "slot": "靴子",
+    "type": "死灵战靴",
+    "rarity": "稀有",
+    "level": 22,
+    "stats": {
+      "mpRegen": "41%",
+      "冰霜伤害": "+41%"
+    },
+    "effects": [
+      "增强攻击速度+23%"
+    ],
+    "lore": "沾染过无数冒险者的鲜血",
+    "description": "被黑暗力量彻底浸透的靴子装备。",
+    "icon": "/icons/equipicon_02_20260302_151411_a7c45e39.png"
+  },
+  {
+    "id": "equip_063",
+    "name": "虚空骨节腰带",
+    "slot": "腰带",
+    "type": "骨节腰带",
+    "rarity": "魔法",
+    "level": 36,
+    "stats": {
+      "defense": 32,
+      "暗影伤害": "+43%"
+    },
+    "effects": [
+      "增强暴击率+36%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "从深渊中带来的神秘器物的腰带装备。",
+    "icon": "/icons/equipicon_03_20260302_151412_6e6bf1b8.png"
+  },
+  {
+    "id": "equip_064",
+    "name": "深渊法力腰带",
+    "slot": "腰带",
+    "type": "法力腰带",
+    "rarity": "史诗",
+    "level": 42,
+    "stats": {
+      "mpRegen": "38%",
+      "暗影伤害": "+38%"
+    },
+    "effects": [
+      "提升生命偷取+24%",
+      "特效: 免疫减速效果"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "被黑暗力量彻底浸透的腰带装备。",
+    "icon": "/icons/equipicon_04_20260302_151413_4e088dac.png"
+  },
+  {
+    "id": "equip_065",
+    "name": "堕落元素腰带",
+    "slot": "腰带",
+    "type": "元素腰带",
+    "rarity": "稀有",
+    "level": 31,
+    "stats": {
+      "magic": 171,
+      "毒素伤害": "+43%"
+    },
+    "effects": [
+      "激活生命偷取+32%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "被黑暗力量彻底浸透的腰带装备。",
+    "icon": "/icons/equipicon_05_20260302_151414_c8a3831c.png"
+  },
+  {
+    "id": "equip_066",
+    "name": "幽冥骨节腰带",
+    "slot": "腰带",
+    "type": "骨节腰带",
+    "rarity": "魔法",
+    "level": 8,
+    "stats": {
+      "attack": 79,
+      "全属性": "+30%"
+    },
+    "effects": [
+      "激活暴击率+21%"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "镶嵌了恶魔宝石的强大护具的腰带装备。",
+    "icon": "/icons/equipicon_06_20260302_151415_fab798f9.png"
+  },
+  {
+    "id": "equip_067",
+    "name": "恶魔暗影腰带",
+    "slot": "腰带",
+    "type": "暗影腰带",
+    "rarity": "魔法",
+    "level": 47,
+    "stats": {
+      "critRate": "58%",
+      "物理伤害": "+58%"
+    },
+    "effects": [
+      "释放暗影技能强度+22%"
+    ],
+    "lore": "沾染过无数冒险者的鲜血",
+    "description": "镶嵌了恶魔宝石的强大护具的腰带装备。",
+    "icon": "/icons/equipicon_07_20260302_151416_157daae9.png"
+  },
+  {
+    "id": "equip_068",
+    "name": "虚空法力腰带",
+    "slot": "腰带",
+    "type": "法力腰带",
+    "rarity": "魔法",
+    "level": 1,
+    "stats": {
+      "magic": 166,
+      "暗影伤害": "+18%"
+    },
+    "effects": [
+      "提升法术冷却+28%"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "充满死亡气息的可怕装备的腰带装备。",
+    "icon": "/icons/equipicon_08_20260302_151417_1d716535.png"
+  },
+  {
+    "id": "equip_069",
+    "name": "死灵战斗腰带",
+    "slot": "腰带",
+    "type": "战斗腰带",
+    "rarity": "魔法",
+    "level": 31,
+    "stats": {
+      "magic": 152,
+      "火焰伤害": "+38%"
+    },
+    "effects": [
+      "提升生命偷取+40%"
+    ],
+    "lore": "传说中曾属于一位堕落英雄",
+    "description": "散发着腐败气息的古老武器的腰带装备。",
+    "icon": "/icons/equipicon_09_20260302_151419_1daf9c1a.png"
+  },
+  {
+    "id": "equip_070",
+    "name": "炼狱暗影腰带",
+    "slot": "腰带",
+    "type": "暗影腰带",
+    "rarity": "普通",
+    "level": 37,
+    "stats": {
+      "attack": 191,
+      "火焰伤害": "+53%"
+    },
+    "effects": [
+      "增强法术冷却+29%"
+    ],
+    "lore": "传说中曾属于一位堕落英雄",
+    "description": "镶嵌了恶魔宝石的强大护具的腰带装备。",
+    "icon": "/icons/equipicon_10_20260302_151420_ecb5e383.png"
+  },
+  {
+    "id": "equip_071",
+    "name": "死灵元素腰带",
+    "slot": "腰带",
+    "type": "元素腰带",
+    "rarity": "稀有",
+    "level": 39,
+    "stats": {
+      "critRate": "60%",
+      "火焰伤害": "+60%"
+    },
+    "effects": [
+      "激活攻击速度+38%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "被黑暗力量彻底浸透的腰带装备。",
+    "icon": "/icons/equipicon_11_20260302_151421_f3cc9fbf.png"
+  },
+  {
+    "id": "equip_072",
+    "name": "禁忌龙魂项链",
+    "slot": "项链",
+    "type": "龙魂项链",
+    "rarity": "稀有",
+    "level": 20,
+    "stats": {
+      "attack": 175,
+      "物理伤害": "+49%"
+    },
+    "effects": [
+      "提升死灵力量+50%"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "被黑暗力量彻底浸透的项链装备。",
+    "icon": "/icons/equipicon_12_20260302_151422_996fd275.png"
+  },
+  {
+    "id": "equip_073",
+    "name": "堕落生命吊坠",
+    "slot": "项链",
+    "type": "生命吊坠",
+    "rarity": "普通",
+    "level": 16,
+    "stats": {
+      "attack": 74,
+      "火焰伤害": "+45%"
+    },
+    "effects": [
+      "提升攻击速度+38%"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "充满死亡气息的可怕装备的项链装备。",
+    "icon": "/icons/equipicon_13_20260302_151423_194c4993.png"
+  },
+  {
+    "id": "equip_074",
+    "name": "幽冥生命吊坠",
+    "slot": "项链",
+    "type": "生命吊坠",
+    "rarity": "魔法",
+    "level": 19,
+    "stats": {
+      "mpRegen": "54%",
+      "毒素伤害": "+54%"
+    },
+    "effects": [
+      "提升暴击率+24%"
+    ],
+    "lore": "沾染过无数冒险者的鲜血",
+    "description": "从深渊中带来的神秘器物的项链装备。",
+    "icon": "/icons/equipicon_14_20260302_151424_cc34d2cf.png"
+  },
+  {
+    "id": "equip_075",
+    "name": "堕落暗影之心",
+    "slot": "项链",
+    "type": "暗影之心",
+    "rarity": "稀有",
+    "level": 8,
+    "stats": {
+      "lifeSteal": 169,
+      "火焰伤害": "+24%"
+    },
+    "effects": [
+      "释放死灵力量+14%"
+    ],
+    "lore": "传说中曾属于一位堕落英雄",
+    "description": "镶嵌了恶魔宝石的强大护具的项链装备。",
+    "icon": "/icons/equipicon_15_20260302_151425_0c2b849b.png"
+  },
+  {
+    "id": "equip_076",
+    "name": "深渊死灵宝珠",
+    "slot": "项链",
+    "type": "死灵宝珠",
+    "rarity": "魔法",
+    "level": 29,
+    "stats": {
+      "lifeSteal": 61,
+      "冰霜伤害": "+39%"
+    },
+    "effects": [
+      "触发生命偷取+42%"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "充满死亡气息的可怕装备的项链装备。",
+    "icon": "/icons/equipicon_16_20260302_151426_cb32ea96.png"
+  },
+  {
+    "id": "equip_077",
+    "name": "诅咒生命吊坠",
+    "slot": "项链",
+    "type": "生命吊坠",
+    "rarity": "普通",
+    "level": 28,
+    "stats": {
+      "magic": 112,
+      "暗影伤害": "+48%"
+    },
+    "effects": [
+      "提升死灵力量+46%"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "散发着腐败气息的古老武器的项链装备。",
+    "icon": "/icons/equipicon_17_20260302_151427_81585a96.png"
+  },
+  {
+    "id": "equip_078",
+    "name": "深渊虚空护符",
+    "slot": "项链",
+    "type": "虚空护符",
+    "rarity": "魔法",
+    "level": 37,
+    "stats": {
+      "mpRegen": "58%",
+      "火焰伤害": "+58%"
+    },
+    "effects": [
+      "触发法术冷却+38%"
+    ],
+    "lore": "沾染过无数冒险者的鲜血",
+    "description": "镶嵌了恶魔宝石的强大护具的项链装备。",
+    "icon": "/icons/equipicon_18_20260302_151428_3dbe7da9.png"
+  },
+  {
+    "id": "equip_079",
+    "name": "冰霜诅咒印记",
+    "slot": "项链",
+    "type": "诅咒印记",
+    "rarity": "史诗",
+    "level": 6,
+    "stats": {
+      "speed": 150,
+      "冰霜伤害": "+32%"
+    },
+    "effects": [
+      "释放暴击率+16%",
+      "特效: 击杀回复生命"
+    ],
+    "lore": "沾染过无数冒险者的鲜血",
+    "description": "充满死亡气息的可怕装备的项链装备。",
+    "icon": "/icons/equipicon_19_20260302_151429_e6cab77f.png"
+  },
+  {
+    "id": "equip_080",
+    "name": "恶魔诅咒印记",
+    "slot": "项链",
+    "type": "诅咒印记",
+    "rarity": "魔法",
+    "level": 43,
+    "stats": {
+      "critRate": "58%",
+      "暗影伤害": "+58%"
+    },
+    "effects": [
+      "触发暗影技能强度+30%"
+    ],
+    "lore": "沾染过无数冒险者的鲜血",
+    "description": "被黑暗力量彻底浸透的项链装备。",
+    "icon": "/icons/equipicon_20_20260302_151430_5092b3b3.png"
+  },
+  {
+    "id": "equip_081",
+    "name": "死灵死灵宝戒",
+    "slot": "戒指",
+    "type": "死灵宝戒",
+    "rarity": "传奇",
+    "level": 1,
+    "stats": {
+      "speed": 198,
+      "毒素伤害": "+44%"
+    },
+    "effects": [
+      "提升死灵力量+43%",
+      "特效: 攻击附带诅咒"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "充满死亡气息的可怕装备的戒指装备。",
+    "icon": "/icons/equipicon_21_20260302_151431_6b7cdc7a.png"
+  },
+  {
+    "id": "equip_082",
+    "name": "堕落死灵宝戒",
+    "slot": "戒指",
+    "type": "死灵宝戒",
+    "rarity": "普通",
+    "level": 14,
+    "stats": {
+      "defense": 98,
+      "冰霜伤害": "+45%"
+    },
+    "effects": [
+      "触发暴击率+41%"
+    ],
+    "lore": "传说中曾属于一位堕落英雄",
+    "description": "散发着腐败气息的古老武器的戒指装备。",
+    "icon": "/icons/equipicon_22_20260302_151432_a14d54db.png"
+  },
+  {
+    "id": "equip_083",
+    "name": "堕落元素戒指",
+    "slot": "戒指",
+    "type": "元素戒指",
+    "rarity": "魔法",
+    "level": 46,
+    "stats": {
+      "critRate": "29%",
+      "暗影伤害": "+29%"
+    },
+    "effects": [
+      "激活攻击速度+15%"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "散发着腐败气息的古老武器的戒指装备。",
+    "icon": "/icons/equipicon_23_20260302_151434_d7864ea5.png"
+  },
+  {
+    "id": "equip_084",
+    "name": "诅咒生命戒指",
+    "slot": "戒指",
+    "type": "生命戒指",
+    "rarity": "普通",
+    "level": 32,
+    "stats": {
+      "lifeSteal": 104,
+      "冰霜伤害": "+42%"
+    },
+    "effects": [
+      "触发攻击速度+40%"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "充满死亡气息的可怕装备的戒指装备。",
+    "icon": "/icons/equipicon_24_20260302_151435_87cbf4c8.png"
+  },
+  {
+    "id": "equip_085",
+    "name": "血腥力量戒指",
+    "slot": "戒指",
+    "type": "力量戒指",
+    "rarity": "稀有",
+    "level": 13,
+    "stats": {
+      "lifeSteal": 183,
+      "火焰伤害": "+42%"
+    },
+    "effects": [
+      "提升生命偷取+36%"
+    ],
+    "lore": "沾染过无数冒险者的鲜血",
+    "description": "从深渊中带来的神秘器物的戒指装备。",
+    "icon": "/icons/equipicon_25_20260302_151436_311ad045.png"
+  },
+  {
+    "id": "equip_086",
+    "name": "幽冥生命戒指",
+    "slot": "戒指",
+    "type": "生命戒指",
+    "rarity": "魔法",
+    "level": 47,
+    "stats": {
+      "critRate": "47%",
+      "全属性": "+47%"
+    },
+    "effects": [
+      "触发死灵力量+38%"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "充满死亡气息的可怕装备的戒指装备。",
+    "icon": "/icons/equipicon_26_20260302_151437_8d9c36df.png"
+  },
+  {
+    "id": "equip_087",
+    "name": "虚空暗影指环",
+    "slot": "戒指",
+    "type": "暗影指环",
+    "rarity": "传奇",
+    "level": 49,
+    "stats": {
+      "speed": 169,
+      "冰霜伤害": "+34%"
+    },
+    "effects": [
+      "增强暴击率+25%",
+      "特效: 免疫减速效果"
+    ],
+    "lore": "由古代黑暗仪式所铸造",
+    "description": "充满死亡气息的可怕装备的戒指装备。",
+    "icon": "/icons/equipicon_27_20260302_151438_fa7a9b24.png"
+  },
+  {
+    "id": "equip_088",
+    "name": "腐化暗影指环",
+    "slot": "戒指",
+    "type": "暗影指环",
+    "rarity": "史诗",
+    "level": 46,
+    "stats": {
+      "lifeSteal": 127,
+      "全属性": "+34%"
+    },
+    "effects": [
+      "增强攻击速度+12%",
+      "特效: 击杀回复生命"
+    ],
+    "lore": "在永恒黑暗中沉睡了千年",
+    "description": "从深渊中带来的神秘器物的戒指装备。",
+    "icon": "/icons/equipicon_28_20260302_151439_72e961c8.png"
+  },
+  {
+    "id": "equip_089",
+    "name": "虚空生命戒指",
+    "slot": "戒指",
+    "type": "生命戒指",
+    "rarity": "史诗",
+    "level": 7,
+    "stats": {
+      "attack": 164,
+      "全属性": "+39%"
+    },
+    "effects": [
+      "增强攻击速度+19%",
+      "特效: 每10秒触发虚空爆炸"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "被黑暗力量彻底浸透的戒指装备。",
+    "icon": "/icons/equipicon_29_20260302_151440_d44fdcc8.png"
+  },
+  {
+    "id": "equip_090",
+    "name": "虚空元素戒指",
+    "slot": "戒指",
+    "type": "元素戒指",
+    "rarity": "稀有",
+    "level": 42,
+    "stats": {
+      "mpRegen": "31%",
+      "全属性": "+31%"
+    },
+    "effects": [
+      "激活攻击速度+30%"
+    ],
+    "lore": "来自另一个已毁灭的世界",
+    "description": "从深渊中带来的神秘器物的戒指装备。",
+    "icon": "/icons/equipicon_30_20260302_151441_e667ce56.png"
+  },
+  {
+    "id": "equip_091",
+    "name": "黑暗套装手套",
+    "slot": "套装",
+    "type": "手套",
+    "rarity": "传奇",
+    "level": 50,
+    "stats": {
+      "attack": "25%",
+      "all": "+30%"
+    },
+    "effects": [
+      "套装效果: 暗影领域",
+      "全属性+25%"
+    ],
+    "lore": "黑暗神明的套装之一。",
+    "description": "深邃黑暗套装的一部分。",
+    "icon": "/icons/equipicon_01_20260302_151410_b1efae44.png"
+  },
+  {
+    "id": "equip_092",
+    "name": "黑暗套装战盔",
+    "slot": "套装",
+    "type": "头盔",
+    "rarity": "传奇",
+    "level": 50,
+    "stats": {
+      "defense": "30%",
+      "magic": "25%"
+    },
+    "effects": [
+      "套装效果: 黑暗守护",
+      "受到的伤害-15%"
+    ],
+    "lore": "黑暗神明的套装之一。",
+    "description": "深邃黑暗套装的一部分。",
+    "icon": "/icons/equipicon_02_20260302_151411_a7c45e39.png"
+  },
+  {
+    "id": "equip_093",
+    "name": "黑暗套装战靴",
+    "slot": "套装",
+    "type": "靴子",
+    "rarity": "传奇",
+    "level": 50,
+    "stats": {
+      "speed": "40%",
+      "evasion": "20%"
+    },
+    "effects": [
+      "套装效果: 虚影步伐",
+      "闪避后反击伤害+80%"
+    ],
+    "lore": "黑暗神明的套装之一。",
+    "description": "深邃黑暗套装的一部分。",
+    "icon": "/icons/equipicon_03_20260302_151412_6e6bf1b8.png"
+  },
+  {
+    "id": "equip_094",
+    "name": "末日巨锤",
+    "slot": "主手",
+    "type": "战锤",
+    "rarity": "史诗",
+    "level": 45,
+    "stats": {
+      "attack": 180,
+      "stunChance": "35%"
+    },
+    "effects": [
+      "晕眩持续时间+2s",
+      "晕眩敌人受到双倍伤害"
+    ],
+    "lore": "末日战争中唯一留存的武器。",
+    "description": "能够震碎大地的恐怖战锤。",
+    "icon": "/icons/equipicon_04_20260302_151413_4e088dac.png"
+  },
+  {
+    "id": "equip_095",
+    "name": "死灵圣典",
+    "slot": "副手",
+    "type": "圣典",
+    "rarity": "史诗",
+    "level": 42,
+    "stats": {
+      "magic": 110,
+      "necroBonus": "45%"
+    },
+    "effects": [
+      "死灵技能MP消耗-30%",
+      "召唤上限+4"
+    ],
+    "lore": "死灵法师们最珍视的禁书。",
+    "description": "记录了所有死灵秘术的黑暗典籍。",
+    "icon": "/icons/equipicon_05_20260302_151414_c8a3831c.png"
+  },
+  {
+    "id": "equip_096",
+    "name": "龙鳞战甲",
+    "slot": "护甲",
+    "type": "锁甲",
+    "rarity": "传奇",
+    "level": 50,
+    "stats": {
+      "defense": 220,
+      "allRes": "30%"
+    },
+    "effects": [
+      "免疫一次致命伤害（CD:180s）",
+      "受击时反弹30%伤害"
+    ],
+    "lore": "以古龙鳞片铸造的无上铠甲。",
+    "description": "散发着龙之威严的传奇铠甲。",
+    "icon": "/icons/equipicon_06_20260302_151415_fab798f9.png"
+  },
+  {
+    "id": "equip_097",
+    "name": "时间封印",
+    "slot": "戒指",
+    "type": "戒指",
+    "rarity": "传奇",
+    "level": 48,
+    "stats": {
+      "allStats": "20%",
+      "cd": "-15%"
+    },
+    "effects": [
+      "每30s可使时间停止2秒",
+      "停止期间免疫所有伤害"
+    ],
+    "lore": "传说中时间巫师的遗留之物。",
+    "description": "戴上后能感受到时间流动的神秘戒指。",
+    "icon": "/icons/equipicon_07_20260302_151416_157daae9.png"
+  },
+  {
+    "id": "equip_098",
+    "name": "混沌之源",
+    "slot": "项链",
+    "type": "项链",
+    "rarity": "传奇",
+    "level": 48,
+    "stats": {
+      "chaos": "60%",
+      "allDmg": "35%"
+    },
+    "effects": [
+      "随机触发: 火/冰/暗影/闪电爆炸",
+      "每次攻击15%概率造成5倍伤害"
+    ],
+    "lore": "混沌之神的碎裂神器。",
+    "description": "散发着不稳定混沌能量的危险项链。",
+    "icon": "/icons/equipicon_08_20260302_151417_1d716535.png"
+  },
+  {
+    "id": "equip_099",
+    "name": "深渊腰链",
+    "slot": "腰带",
+    "type": "腰带",
+    "rarity": "史诗",
+    "level": 40,
+    "stats": {
+      "hpMax": "+500",
+      "darkBonus": "30%"
+    },
+    "effects": [
+      "受伤时释放暗影爆炸",
+      "每次受击积累暗影能量"
+    ],
+    "lore": "从深渊中带来的黑色腰链。",
+    "description": "充满深渊能量的重型腰链。",
+    "icon": "/icons/equipicon_09_20260302_151419_1daf9c1a.png"
+  },
+  {
+    "id": "equip_100",
+    "name": "虚空凝视面具",
+    "slot": "头盔",
+    "type": "战争面具",
+    "rarity": "传奇",
+    "level": 50,
+    "stats": {
+      "magic": "35%",
+      "darkRes": "40%"
+    },
+    "effects": [
+      "视野范围+100%",
+      "看穿隐身效果",
+      "攻击带有虚空穿透"
+    ],
+    "lore": "据说戴上后能看穿一切虚假。",
+    "description": "镶嵌了虚空宝石的神秘面具。",
+    "icon": "/icons/equipicon_10_20260302_151420_ecb5e383.png"
+  }
+]

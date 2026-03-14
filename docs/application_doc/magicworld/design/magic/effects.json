@@ -1,0 +1,115 @@
+[
+  {
+    "id": "damage",
+    "name": "伤害",
+    "icon": "💀",
+    "desc": "对目标造成伤害，根据元素类型计算抗性。",
+    "params": {
+      "base":        { "type": "string", "desc": "基础伤害表达式，如 '150%' 或 '200+50*level'" },
+      "crit_chance": { "type": "number", "default": 0.05, "desc": "暴击率" },
+      "crit_mult":   { "type": "number", "default": 1.5,  "desc": "暴击伤害倍率" }
+    }
+  },
+  {
+    "id": "dot",
+    "name": "持续伤害",
+    "icon": "☣️",
+    "desc": "施加随时间累积的持续伤害状态。",
+    "params": {
+      "damage_per_tick": { "type": "string", "desc": "每跳伤害" },
+      "duration":        { "type": "number", "default": 3, "desc": "持续时间（秒）" },
+      "interval":        { "type": "number", "default": 0.5,"desc": "触发间隔（秒）" },
+      "stacks":          { "type": "boolean","default": true, "desc": "是否可叠加层数" },
+      "max_stacks":      { "type": "number", "default": 5 }
+    }
+  },
+  {
+    "id": "heal",
+    "name": "治愈",
+    "icon": "💚",
+    "desc": "恢复目标生命值。",
+    "params": {
+      "base":       { "type": "string", "desc": "治疗量" },
+      "hot":        { "type": "boolean","default": false, "desc": "是否为持续治愈" },
+      "duration":   { "type": "number", "default": 3 },
+      "interval":   { "type": "number", "default": 1 }
+    }
+  },
+  {
+    "id": "buff",
+    "name": "增益",
+    "icon": "⬆️",
+    "desc": "为目标添加正面状态效果。",
+    "params": {
+      "stat":     { "type": "enum", "values": ["attack","defense","speed","crit","magic_resist","all"], "desc": "增益属性" },
+      "amount":   { "type": "number", "desc": "增益数值（百分比）" },
+      "duration": { "type": "number", "default": 5 }
+    }
+  },
+  {
+    "id": "debuff",
+    "name": "减益",
+    "icon": "⬇️",
+    "desc": "为目标施加负面状态效果。",
+    "params": {
+      "stat":     { "type": "enum", "values": ["attack","defense","speed","crit","magic_resist","all"] },
+      "amount":   { "type": "number", "desc": "减益数值（百分比）" },
+      "duration": { "type": "number", "default": 3 }
+    }
+  },
+  {
+    "id": "cc",
+    "name": "控制",
+    "icon": "🔒",
+    "desc": "对目标施加控制效果（眩晕、冰冻、击退等）。",
+    "params": {
+      "type":         { "type": "enum", "values": ["stun","freeze","knockback","pull","root","sleep","blind"] },
+      "duration":     { "type": "number", "default": 1.5 },
+      "knockback_dist": { "type": "number", "default": 5, "desc": "击退距离（格），仅knockback有效" }
+    }
+  },
+  {
+    "id": "shield",
+    "name": "护盾",
+    "icon": "🛡️",
+    "desc": "为目标创建吸收伤害的护盾。",
+    "params": {
+      "amount":   { "type": "string", "desc": "护盾量" },
+      "duration": { "type": "number", "default": 5 },
+      "element_absorb": { "type": "string", "desc": "只吸收特定元素伤害，null=全吸收" }
+    }
+  },
+  {
+    "id": "mark",
+    "name": "标记",
+    "icon": "🎯",
+    "desc": "在目标身上放置标记，配合其他技能触发特殊效果。",
+    "params": {
+      "duration":  { "type": "number", "default": 5 },
+      "trigger_on":{ "type": "enum", "values": ["any_hit","same_element_hit","crit","kill"], "default": "any_hit" },
+      "effect_id": { "type": "string", "desc": "标记触发时额外执行的效果ID" }
+    }
+  },
+  {
+    "id": "summon_entity",
+    "name": "召唤实体",
+    "icon": "🐲",
+    "desc": "召唤一个战斗单位协助战斗。",
+    "params": {
+      "entity_id":  { "type": "string", "desc": "召唤物模板ID" },
+      "inherit_pct":{ "type": "number", "default": 0.3, "desc": "继承施法者属性百分比" },
+      "ai":         { "type": "enum", "values": ["aggressive","defensive","passive"], "default": "aggressive" }
+    }
+  },
+  {
+    "id": "teleport",
+    "name": "位移",
+    "icon": "🌀",
+    "desc": "瞬间移动施法者或目标到指定位置。",
+    "params": {
+      "target":      { "type": "enum", "values": ["caster","target","cursor"], "default": "caster" },
+      "destination": { "type": "enum", "values": ["cursor","behind_target","target_pos"], "default": "cursor" },
+      "stun_on_land":{ "type": "boolean","default": false }
+    }
+  }
+]

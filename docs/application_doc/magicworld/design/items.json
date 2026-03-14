@@ -1,0 +1,1713 @@
+[
+  {
+    "id": "item_001",
+    "name": "生命精华",
+    "type": "消耗品",
+    "rarity": "普通",
+    "stackMax": 99,
+    "effect": "立即恢复800生命值",
+    "description": "从黑暗生物提取的生命精华。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_01_20260302_151503_d3190389.png"
+  },
+  {
+    "id": "item_002",
+    "name": "魔力水晶",
+    "type": "消耗品",
+    "rarity": "普通",
+    "stackMax": 99,
+    "effect": "立即恢复400魔力值",
+    "description": "蕴含纯净魔力的蓝色水晶。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_02_20260302_151504_8e57ddd1.png"
+  },
+  {
+    "id": "item_003",
+    "name": "大型治疗药水",
+    "type": "消耗品",
+    "rarity": "魔法",
+    "stackMax": 50,
+    "effect": "恢复2000生命值，5秒内每秒恢复100",
+    "description": "炼金大师秘制的高效药水。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_03_20260302_151505_c8552e0c.png"
+  },
+  {
+    "id": "item_004",
+    "name": "大型法力药水",
+    "type": "消耗品",
+    "rarity": "魔法",
+    "stackMax": 50,
+    "effect": "恢复1000魔力，减少技能冷却10%",
+    "description": "凝缩了大量魔力的蓝色药剂。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_04_20260302_151506_2093df29.png"
+  },
+  {
+    "id": "item_005",
+    "name": "暗影精华",
+    "type": "消耗品",
+    "rarity": "稀有",
+    "stackMax": 20,
+    "effect": "暗影伤害+50%持续60秒",
+    "description": "充满暗影能量的黑色液体。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_05_20260302_151507_59ebeacf.png"
+  },
+  {
+    "id": "item_006",
+    "name": "火焰爆炸瓶",
+    "type": "消耗品",
+    "rarity": "魔法",
+    "stackMax": 30,
+    "effect": "投掷后爆炸，造成300%火焰AOE伤害",
+    "description": "内含高度可燃液体的玻璃瓶。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_06_20260302_151508_2e95f088.png"
+  },
+  {
+    "id": "item_007",
+    "name": "冻结手雷",
+    "type": "消耗品",
+    "rarity": "魔法",
+    "stackMax": 20,
+    "effect": "冻结半径5米内所有敌人5秒",
+    "description": "灌装了极地冰晶的特殊手雷。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_07_20260302_151509_f38d2247.png"
+  },
+  {
+    "id": "item_008",
+    "name": "毒雾炸弹",
+    "type": "消耗品",
+    "rarity": "稀有",
+    "stackMax": 20,
+    "effect": "释放毒雾，持续10秒使敌人中毒",
+    "description": "散布致命毒素的黑色炸弹。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_08_20260302_151510_5616884a.png"
+  },
+  {
+    "id": "item_009",
+    "name": "生命石",
+    "type": "消耗品",
+    "rarity": "稀有",
+    "stackMax": 10,
+    "effect": "立即全额恢复HP和MP",
+    "description": "只在极度危险时使用的珍贵宝石。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_09_20260302_151511_93678abc.png"
+  },
+  {
+    "id": "item_010",
+    "name": "力量爆发剂",
+    "type": "消耗品",
+    "rarity": "稀有",
+    "stackMax": 10,
+    "effect": "攻击力+100%持续30秒",
+    "description": "服用后力量暴涨的红色药剂。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_10_20260302_151513_78e1058f.png"
+  },
+  {
+    "id": "item_011",
+    "name": "速度药水",
+    "type": "消耗品",
+    "rarity": "普通",
+    "stackMax": 99,
+    "effect": "移动和攻击速度+50%持续20秒",
+    "description": "让你快如闪电的黄色药水。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_11_20260302_151514_844dd283.png"
+  },
+  {
+    "id": "item_012",
+    "name": "无敌药水",
+    "type": "消耗品",
+    "rarity": "传奇",
+    "stackMax": 5,
+    "effect": "5秒内无敌",
+    "description": "传说中的神秘液体，极为罕见。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_12_20260302_151515_17b8d60b.png"
+  },
+  {
+    "id": "item_013",
+    "name": "复活药水",
+    "type": "消耗品",
+    "rarity": "史诗",
+    "stackMax": 3,
+    "effect": "死亡时自动触发，复活并恢复50%HP",
+    "description": "能从死亡边缘拉回的奇迹药水。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_13_20260302_151516_4e82eeea.png"
+  },
+  {
+    "id": "item_014",
+    "name": "经验药水",
+    "type": "消耗品",
+    "rarity": "魔法",
+    "stackMax": 20,
+    "effect": "获得额外经验值+50%持续30分钟",
+    "description": "学者提炼的特殊知识精华。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_14_20260302_151517_4c3401a2.png"
+  },
+  {
+    "id": "item_015",
+    "name": "金币磁石",
+    "type": "消耗品",
+    "rarity": "魔法",
+    "stackMax": 10,
+    "effect": "5分钟内金币掉落+100%",
+    "description": "吸引财富的神秘物品。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_15_20260302_151518_41477909.png"
+  },
+  {
+    "id": "item_016",
+    "name": "骷髅骨粉",
+    "type": "材料",
+    "rarity": "普通",
+    "stackMax": 999,
+    "effect": "合成卷轴的材料",
+    "description": "制作冰系法器的核心材料",
+    "source": [
+      "击杀法师类怪物",
+      "副本掉落"
+    ],
+    "icon": "/icons/itemicon_16_20260302_151519_7883704d.png"
+  },
+  {
+    "id": "item_017",
+    "name": "死灵核心",
+    "type": "材料",
+    "rarity": "普通",
+    "stackMax": 999,
+    "effect": "合成药水的材料",
+    "description": "锻造死灵武器的关键材料",
+    "source": [
+      "击杀骷髅类怪物"
+    ],
+    "icon": "/icons/itemicon_17_20260302_151520_76df6594.png"
+  },
+  {
+    "id": "item_018",
+    "name": "暗影晶体",
+    "type": "材料",
+    "rarity": "普通",
+    "stackMax": 999,
+    "effect": "合成卷轴的材料",
+    "description": "高级合成材料，十分稀有",
+    "source": [
+      "击杀法师类怪物",
+      "副本掉落"
+    ],
+    "icon": "/icons/itemicon_18_20260302_151521_ed198b3a.png"
+  },
+  {
+    "id": "item_019",
+    "name": "地狱火种",
+    "type": "材料",
+    "rarity": "普通",
+    "stackMax": 999,
+    "effect": "合成药水的材料",
+    "description": "炼金和合成的基础原料",
+    "source": [
+      "击杀骷髅类怪物"
+    ],
+    "icon": "/icons/itemicon_19_20260302_151522_bdcd04dd.png"
+  },
+  {
+    "id": "item_020",
+    "name": "冰霜碎片",
+    "type": "材料",
+    "rarity": "普通",
+    "stackMax": 999,
+    "effect": "合成卷轴的材料",
+    "description": "用于合成暗影装备",
+    "source": [
+      "Boss必掉",
+      "副本宝箱"
+    ],
+    "icon": "/icons/itemicon_20_20260302_151523_29d09baa.png"
+  },
+  {
+    "id": "item_021",
+    "name": "恶魔皮革",
+    "type": "材料",
+    "rarity": "普通",
+    "stackMax": 999,
+    "effect": "合成药水的材料",
+    "description": "锻造死灵武器的关键材料",
+    "source": [
+      "Boss必掉",
+      "副本宝箱"
+    ],
+    "icon": "/icons/itemicon_21_20260302_151524_0d9ba5d0.png"
+  },
+  {
+    "id": "item_022",
+    "name": "龙鳞碎片",
+    "type": "材料",
+    "rarity": "普通",
+    "stackMax": 999,
+    "effect": "合成药水的材料",
+    "description": "制作冰系法器的核心材料",
+    "source": [
+      "精英怪掉落"
+    ],
+    "icon": "/icons/itemicon_22_20260302_151525_86a40130.png"
+  },
+  {
+    "id": "item_023",
+    "name": "幽灵之气",
+    "type": "材料",
+    "rarity": "普通",
+    "stackMax": 999,
+    "effect": "合成装备的材料",
+    "description": "用于合成暗影装备",
+    "source": [
+      "精英怪掉落"
+    ],
+    "icon": "/icons/itemicon_23_20260302_151526_4f6bd06c.png"
+  },
+  {
+    "id": "item_024",
+    "name": "腐化精华",
+    "type": "材料",
+    "rarity": "普通",
+    "stackMax": 999,
+    "effect": "合成符文的材料",
+    "description": "锻造死灵武器的关键材料",
+    "source": [
+      "击杀法师类怪物",
+      "副本掉落"
+    ],
+    "icon": "/icons/itemicon_24_20260302_151527_fc668744.png"
+  },
+  {
+    "id": "item_025",
+    "name": "闪电球",
+    "type": "材料",
+    "rarity": "普通",
+    "stackMax": 999,
+    "effect": "合成药水的材料",
+    "description": "用于合成暗影装备",
+    "source": [
+      "击杀骷髅类怪物"
+    ],
+    "icon": "/icons/itemicon_25_20260302_151528_d5acaece.png"
+  },
+  {
+    "id": "item_026",
+    "name": "混沌之石",
+    "type": "材料",
+    "rarity": "魔法",
+    "stackMax": 999,
+    "effect": "合成药水的材料",
+    "description": "炼金和合成的基础原料",
+    "source": [
+      "Boss必掉",
+      "副本宝箱"
+    ],
+    "icon": "/icons/itemicon_26_20260302_151530_1cb29df1.png"
+  },
+  {
+    "id": "item_027",
+    "name": "传奇矿石",
+    "type": "材料",
+    "rarity": "魔法",
+    "stackMax": 999,
+    "effect": "合成装备的材料",
+    "description": "用于合成暗影装备",
+    "source": [
+      "击杀法师类怪物",
+      "副本掉落"
+    ],
+    "icon": "/icons/itemicon_27_20260302_151531_0d6bdd2d.png"
+  },
+  {
+    "id": "item_028",
+    "name": "深渊沙砾",
+    "type": "材料",
+    "rarity": "魔法",
+    "stackMax": 999,
+    "effect": "合成卷轴的材料",
+    "description": "用于合成暗影装备",
+    "source": [
+      "击杀骷髅类怪物"
+    ],
+    "icon": "/icons/itemicon_28_20260302_151532_4be47681.png"
+  },
+  {
+    "id": "item_029",
+    "name": "诅咒羽毛",
+    "type": "材料",
+    "rarity": "魔法",
+    "stackMax": 999,
+    "effect": "合成符文的材料",
+    "description": "用于合成暗影装备",
+    "source": [
+      "击杀骷髅类怪物"
+    ],
+    "icon": "/icons/itemicon_29_20260302_151533_51af4573.png"
+  },
+  {
+    "id": "item_030",
+    "name": "魔法草药",
+    "type": "材料",
+    "rarity": "魔法",
+    "stackMax": 999,
+    "effect": "合成卷轴的材料",
+    "description": "高级合成材料，十分稀有",
+    "source": [
+      "击杀骷髅类怪物"
+    ],
+    "icon": "/icons/itemicon_30_20260302_151534_0d772c16.png"
+  },
+  {
+    "id": "item_031",
+    "name": "符文碎片",
+    "type": "材料",
+    "rarity": "稀有",
+    "stackMax": 999,
+    "effect": "合成卷轴的材料",
+    "description": "炼金和合成的基础原料",
+    "source": [
+      "击杀骷髅类怪物"
+    ],
+    "icon": "/icons/itemicon_01_20260302_151503_d3190389.png"
+  },
+  {
+    "id": "item_032",
+    "name": "神秘宝矿",
+    "type": "材料",
+    "rarity": "稀有",
+    "stackMax": 999,
+    "effect": "合成符文的材料",
+    "description": "炼金和合成的基础原料",
+    "source": [
+      "击杀法师类怪物",
+      "副本掉落"
+    ],
+    "icon": "/icons/itemicon_02_20260302_151504_8e57ddd1.png"
+  },
+  {
+    "id": "item_033",
+    "name": "炎魔之心",
+    "type": "材料",
+    "rarity": "稀有",
+    "stackMax": 999,
+    "effect": "合成药水的材料",
+    "description": "炼金和合成的基础原料",
+    "source": [
+      "Boss必掉",
+      "副本宝箱"
+    ],
+    "icon": "/icons/itemicon_03_20260302_151505_c8552e0c.png"
+  },
+  {
+    "id": "item_034",
+    "name": "冰霜之魂",
+    "type": "材料",
+    "rarity": "稀有",
+    "stackMax": 999,
+    "effect": "合成符文的材料",
+    "description": "锻造死灵武器的关键材料",
+    "source": [
+      "Boss必掉",
+      "副本宝箱"
+    ],
+    "icon": "/icons/itemicon_04_20260302_151506_2093df29.png"
+  },
+  {
+    "id": "item_035",
+    "name": "虚空尘埃",
+    "type": "材料",
+    "rarity": "稀有",
+    "stackMax": 999,
+    "effect": "合成装备的材料",
+    "description": "用于合成暗影装备",
+    "source": [
+      "击杀骷髅类怪物"
+    ],
+    "icon": "/icons/itemicon_05_20260302_151507_59ebeacf.png"
+  },
+  {
+    "id": "item_036",
+    "name": "骨质粉末",
+    "type": "材料",
+    "rarity": "史诗",
+    "stackMax": 999,
+    "effect": "合成符文的材料",
+    "description": "用于合成暗影装备",
+    "source": [
+      "精英怪掉落"
+    ],
+    "icon": "/icons/itemicon_06_20260302_151508_2e95f088.png"
+  },
+  {
+    "id": "item_037",
+    "name": "恶魔之血",
+    "type": "材料",
+    "rarity": "史诗",
+    "stackMax": 999,
+    "effect": "合成符文的材料",
+    "description": "用于合成暗影装备",
+    "source": [
+      "精英怪掉落"
+    ],
+    "icon": "/icons/itemicon_07_20260302_151509_f38d2247.png"
+  },
+  {
+    "id": "item_038",
+    "name": "神圣碎晶",
+    "type": "材料",
+    "rarity": "史诗",
+    "stackMax": 999,
+    "effect": "合成符文的材料",
+    "description": "用于合成暗影装备",
+    "source": [
+      "Boss必掉",
+      "副本宝箱"
+    ],
+    "icon": "/icons/itemicon_08_20260302_151510_5616884a.png"
+  },
+  {
+    "id": "item_039",
+    "name": "黑暗树脂",
+    "type": "材料",
+    "rarity": "史诗",
+    "stackMax": 999,
+    "effect": "合成装备的材料",
+    "description": "锻造死灵武器的关键材料",
+    "source": [
+      "精英怪掉落"
+    ],
+    "icon": "/icons/itemicon_09_20260302_151511_93678abc.png"
+  },
+  {
+    "id": "item_040",
+    "name": "时间之沙",
+    "type": "材料",
+    "rarity": "史诗",
+    "stackMax": 999,
+    "effect": "合成装备的材料",
+    "description": "用于合成暗影装备",
+    "source": [
+      "Boss必掉",
+      "副本宝箱"
+    ],
+    "icon": "/icons/itemicon_10_20260302_151513_78e1058f.png"
+  },
+  {
+    "id": "item_041",
+    "name": "红宝石",
+    "type": "宝石",
+    "rarity": "魔法",
+    "stackMax": 10,
+    "effect": "镶嵌后攻击力+20",
+    "description": "光芒闪烁的红宝石，专为装备镶嵌而设计。",
+    "source": [
+      "挖矿获取",
+      "副本宝箱",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_11_20260302_151514_844dd283.png"
+  },
+  {
+    "id": "item_042",
+    "name": "蓝宝石",
+    "type": "宝石",
+    "rarity": "魔法",
+    "stackMax": 10,
+    "effect": "镶嵌后魔力上限+150",
+    "description": "光芒闪烁的蓝宝石，专为装备镶嵌而设计。",
+    "source": [
+      "挖矿获取",
+      "副本宝箱",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_12_20260302_151515_17b8d60b.png"
+  },
+  {
+    "id": "item_043",
+    "name": "绿宝石",
+    "type": "宝石",
+    "rarity": "魔法",
+    "stackMax": 10,
+    "effect": "镶嵌后生命回复+10/s",
+    "description": "光芒闪烁的绿宝石，专为装备镶嵌而设计。",
+    "source": [
+      "挖矿获取",
+      "副本宝箱",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_13_20260302_151516_4e82eeea.png"
+  },
+  {
+    "id": "item_044",
+    "name": "紫宝石",
+    "type": "宝石",
+    "rarity": "稀有",
+    "stackMax": 10,
+    "effect": "镶嵌后暗影伤害+15%",
+    "description": "光芒闪烁的紫宝石，专为装备镶嵌而设计。",
+    "source": [
+      "挖矿获取",
+      "副本宝箱",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_14_20260302_151517_4c3401a2.png"
+  },
+  {
+    "id": "item_045",
+    "name": "黑曜石",
+    "type": "宝石",
+    "rarity": "稀有",
+    "stackMax": 10,
+    "effect": "镶嵌后穿透力+20%",
+    "description": "光芒闪烁的黑曜石，专为装备镶嵌而设计。",
+    "source": [
+      "挖矿获取",
+      "副本宝箱",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_15_20260302_151518_41477909.png"
+  },
+  {
+    "id": "item_046",
+    "name": "冰晶石",
+    "type": "宝石",
+    "rarity": "稀有",
+    "stackMax": 10,
+    "effect": "镶嵌后冰系伤害+20%",
+    "description": "光芒闪烁的冰晶石，专为装备镶嵌而设计。",
+    "source": [
+      "挖矿获取",
+      "副本宝箱",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_16_20260302_151519_7883704d.png"
+  },
+  {
+    "id": "item_047",
+    "name": "火焰宝石",
+    "type": "宝石",
+    "rarity": "稀有",
+    "stackMax": 10,
+    "effect": "镶嵌后火系伤害+20%",
+    "description": "光芒闪烁的火焰宝石，专为装备镶嵌而设计。",
+    "source": [
+      "挖矿获取",
+      "副本宝箱",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_17_20260302_151520_76df6594.png"
+  },
+  {
+    "id": "item_048",
+    "name": "完美钻石",
+    "type": "宝石",
+    "rarity": "史诗",
+    "stackMax": 10,
+    "effect": "镶嵌后全属性+10%",
+    "description": "光芒闪烁的完美钻石，专为装备镶嵌而设计。",
+    "source": [
+      "挖矿获取",
+      "副本宝箱",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_18_20260302_151521_ed198b3a.png"
+  },
+  {
+    "id": "item_049",
+    "name": "腐蚀宝珠",
+    "type": "宝石",
+    "rarity": "史诗",
+    "stackMax": 10,
+    "effect": "镶嵌后毒素伤害+25%，减甲10%",
+    "description": "光芒闪烁的腐蚀宝珠，专为装备镶嵌而设计。",
+    "source": [
+      "挖矿获取",
+      "副本宝箱",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_19_20260302_151522_bdcd04dd.png"
+  },
+  {
+    "id": "item_050",
+    "name": "虚空之眼",
+    "type": "宝石",
+    "rarity": "传奇",
+    "stackMax": 10,
+    "effect": "镶嵌后所有伤害+15%并忽视15%防御",
+    "description": "光芒闪烁的虚空之眼，专为装备镶嵌而设计。",
+    "source": [
+      "挖矿获取",
+      "副本宝箱",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_20_20260302_151523_29d09baa.png"
+  },
+  {
+    "id": "item_051",
+    "name": "传送卷轴",
+    "type": "卷轴",
+    "rarity": "普通",
+    "stackMax": 10,
+    "effect": "立即传送到城镇",
+    "description": "刻满神秘符文的传送卷轴。",
+    "source": [
+      "商店购买",
+      "击杀巫师类",
+      "宝箱"
+    ],
+    "icon": "/icons/itemicon_21_20260302_151524_0d9ba5d0.png"
+  },
+  {
+    "id": "item_052",
+    "name": "死灵召唤卷轴",
+    "type": "卷轴",
+    "rarity": "魔法",
+    "stackMax": 10,
+    "effect": "立即召唤5个骷髅战士持续60秒",
+    "description": "刻满神秘符文的死灵召唤卷轴。",
+    "source": [
+      "商店购买",
+      "击杀巫师类",
+      "宝箱"
+    ],
+    "icon": "/icons/itemicon_22_20260302_151525_86a40130.png"
+  },
+  {
+    "id": "item_053",
+    "name": "技能重置卷轴",
+    "type": "卷轴",
+    "rarity": "稀有",
+    "stackMax": 10,
+    "effect": "重置所有技能点",
+    "description": "刻满神秘符文的技能重置卷轴。",
+    "source": [
+      "商店购买",
+      "击杀巫师类",
+      "宝箱"
+    ],
+    "icon": "/icons/itemicon_23_20260302_151526_4f6bd06c.png"
+  },
+  {
+    "id": "item_054",
+    "name": "强化卷轴",
+    "type": "卷轴",
+    "rarity": "稀有",
+    "stackMax": 10,
+    "effect": "随机强化一件装备一个属性",
+    "description": "刻满神秘符文的强化卷轴。",
+    "source": [
+      "商店购买",
+      "击杀巫师类",
+      "宝箱"
+    ],
+    "icon": "/icons/itemicon_24_20260302_151527_fc668744.png"
+  },
+  {
+    "id": "item_055",
+    "name": "诅咒卷轴",
+    "type": "卷轴",
+    "rarity": "魔法",
+    "stackMax": 10,
+    "effect": "对范围内敌人施加诅咒，降低30%属性",
+    "description": "刻满神秘符文的诅咒卷轴。",
+    "source": [
+      "商店购买",
+      "击杀巫师类",
+      "宝箱"
+    ],
+    "icon": "/icons/itemicon_25_20260302_151528_d5acaece.png"
+  },
+  {
+    "id": "item_056",
+    "name": "清醒卷轴",
+    "type": "卷轴",
+    "rarity": "普通",
+    "stackMax": 10,
+    "effect": "解除身上所有负面效果",
+    "description": "刻满神秘符文的清醒卷轴。",
+    "source": [
+      "商店购买",
+      "击杀巫师类",
+      "宝箱"
+    ],
+    "icon": "/icons/itemicon_26_20260302_151530_1cb29df1.png"
+  },
+  {
+    "id": "item_057",
+    "name": "鉴定卷轴",
+    "type": "卷轴",
+    "rarity": "普通",
+    "stackMax": 10,
+    "effect": "鉴定一件神秘装备",
+    "description": "刻满神秘符文的鉴定卷轴。",
+    "source": [
+      "商店购买",
+      "击杀巫师类",
+      "宝箱"
+    ],
+    "icon": "/icons/itemicon_27_20260302_151531_0d6bdd2d.png"
+  },
+  {
+    "id": "item_058",
+    "name": "地图卷轴",
+    "type": "卷轴",
+    "rarity": "魔法",
+    "stackMax": 10,
+    "effect": "揭示当前区域完整地图",
+    "description": "刻满神秘符文的地图卷轴。",
+    "source": [
+      "商店购买",
+      "击杀巫师类",
+      "宝箱"
+    ],
+    "icon": "/icons/itemicon_28_20260302_151532_4be47681.png"
+  },
+  {
+    "id": "item_059",
+    "name": "时间卷轴",
+    "type": "卷轴",
+    "rarity": "史诗",
+    "stackMax": 10,
+    "effect": "将时间倒退10秒",
+    "description": "刻满神秘符文的时间卷轴。",
+    "source": [
+      "商店购买",
+      "击杀巫师类",
+      "宝箱"
+    ],
+    "icon": "/icons/itemicon_29_20260302_151533_51af4573.png"
+  },
+  {
+    "id": "item_060",
+    "name": "死亡协议",
+    "type": "卷轴",
+    "rarity": "传奇",
+    "stackMax": 10,
+    "effect": "使用后变为不死状态持续60秒",
+    "description": "刻满神秘符文的死亡协议。",
+    "source": [
+      "商店购买",
+      "击杀巫师类",
+      "宝箱"
+    ],
+    "icon": "/icons/itemicon_30_20260302_151534_0d772c16.png"
+  },
+  {
+    "id": "item_061",
+    "name": "暗影符文",
+    "type": "符文",
+    "rarity": "魔法",
+    "stackMax": 20,
+    "effect": "刻入装备，附加暗影伤害",
+    "description": "充满神秘力量的暗影符文，镶刻后永久生效。",
+    "source": [
+      "Boss掉落",
+      "特殊任务",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_01_20260302_151503_d3190389.png"
+  },
+  {
+    "id": "item_062",
+    "name": "力量符文",
+    "type": "符文",
+    "rarity": "普通",
+    "stackMax": 20,
+    "effect": "刻入装备，力量+15",
+    "description": "充满神秘力量的力量符文，镶刻后永久生效。",
+    "source": [
+      "Boss掉落",
+      "特殊任务",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_02_20260302_151504_8e57ddd1.png"
+  },
+  {
+    "id": "item_063",
+    "name": "速度符文",
+    "type": "符文",
+    "rarity": "普通",
+    "stackMax": 20,
+    "effect": "刻入装备，攻击速度+10%",
+    "description": "充满神秘力量的速度符文，镶刻后永久生效。",
+    "source": [
+      "Boss掉落",
+      "特殊任务",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_03_20260302_151505_c8552e0c.png"
+  },
+  {
+    "id": "item_064",
+    "name": "生命符文",
+    "type": "符文",
+    "rarity": "魔法",
+    "stackMax": 20,
+    "effect": "刻入装备，生命上限+200",
+    "description": "充满神秘力量的生命符文，镶刻后永久生效。",
+    "source": [
+      "Boss掉落",
+      "特殊任务",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_04_20260302_151506_2093df29.png"
+  },
+  {
+    "id": "item_065",
+    "name": "诅咒符文",
+    "type": "符文",
+    "rarity": "稀有",
+    "stackMax": 20,
+    "effect": "刻入装备，攻击带有诅咒效果",
+    "description": "充满神秘力量的诅咒符文，镶刻后永久生效。",
+    "source": [
+      "Boss掉落",
+      "特殊任务",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_05_20260302_151507_59ebeacf.png"
+  },
+  {
+    "id": "item_066",
+    "name": "死灵符文",
+    "type": "符文",
+    "rarity": "稀有",
+    "stackMax": 20,
+    "effect": "刻入装备，死灵力量+25%",
+    "description": "充满神秘力量的死灵符文，镶刻后永久生效。",
+    "source": [
+      "Boss掉落",
+      "特殊任务",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_06_20260302_151508_2e95f088.png"
+  },
+  {
+    "id": "item_067",
+    "name": "元素符文",
+    "type": "符文",
+    "rarity": "史诗",
+    "stackMax": 20,
+    "effect": "刻入装备，随机增强一个元素伤害35%",
+    "description": "充满神秘力量的元素符文，镶刻后永久生效。",
+    "source": [
+      "Boss掉落",
+      "特殊任务",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_07_20260302_151509_f38d2247.png"
+  },
+  {
+    "id": "item_068",
+    "name": "传奇符文",
+    "type": "符文",
+    "rarity": "传奇",
+    "stackMax": 20,
+    "effect": "刻入装备，所有属性+20%并添加随机强力效果",
+    "description": "充满神秘力量的传奇符文，镶刻后永久生效。",
+    "source": [
+      "Boss掉落",
+      "特殊任务",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_08_20260302_151510_5616884a.png"
+  },
+  {
+    "id": "item_069",
+    "name": "虚空符文",
+    "type": "符文",
+    "rarity": "史诗",
+    "stackMax": 20,
+    "effect": "刻入装备，攻击带有虚空穿透），忽视25%防御",
+    "description": "充满神秘力量的虚空符文，镶刻后永久生效。",
+    "source": [
+      "Boss掉落",
+      "特殊任务",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_09_20260302_151511_93678abc.png"
+  },
+  {
+    "id": "item_070",
+    "name": "混沌符文",
+    "type": "符文",
+    "rarity": "传奇",
+    "stackMax": 20,
+    "effect": "效果随机，可能极强也可能极弱",
+    "description": "充满神秘力量的混沌符文，镶刻后永久生效。",
+    "source": [
+      "Boss掉落",
+      "特殊任务",
+      "合成"
+    ],
+    "icon": "/icons/itemicon_10_20260302_151513_78e1058f.png"
+  },
+  {
+    "id": "item_071",
+    "name": "腐化地牢钥匙",
+    "type": "钥匙",
+    "rarity": "魔法",
+    "stackMax": 1,
+    "effect": "开启腐化地牢入口",
+    "description": "能够开启特殊区域的腐化地牢钥匙。",
+    "source": [
+      "Boss掉落",
+      "特殊任务"
+    ],
+    "icon": "/icons/itemicon_11_20260302_151514_844dd283.png"
+  },
+  {
+    "id": "item_072",
+    "name": "地狱熔炉钥匙",
+    "type": "钥匙",
+    "rarity": "稀有",
+    "stackMax": 1,
+    "effect": "开启地狱熔炉副本",
+    "description": "能够开启特殊区域的地狱熔炉钥匙。",
+    "source": [
+      "Boss掉落",
+      "特殊任务"
+    ],
+    "icon": "/icons/itemicon_12_20260302_151515_17b8d60b.png"
+  },
+  {
+    "id": "item_073",
+    "name": "古墓封印钥匙",
+    "type": "钥匙",
+    "rarity": "魔法",
+    "stackMax": 1,
+    "effect": "开启古代墓穴",
+    "description": "能够开启特殊区域的古墓封印钥匙。",
+    "source": [
+      "Boss掉落",
+      "特殊任务"
+    ],
+    "icon": "/icons/itemicon_13_20260302_151516_4e82eeea.png"
+  },
+  {
+    "id": "item_074",
+    "name": "虚空裂缝钥匙",
+    "type": "钥匙",
+    "rarity": "史诗",
+    "stackMax": 1,
+    "effect": "开启虚空裂缝次元副本",
+    "description": "能够开启特殊区域的虚空裂缝钥匙。",
+    "source": [
+      "Boss掉落",
+      "特殊任务"
+    ],
+    "icon": "/icons/itemicon_14_20260302_151517_4c3401a2.png"
+  },
+  {
+    "id": "item_075",
+    "name": "传奇宝箱钥匙",
+    "type": "钥匙",
+    "rarity": "传奇",
+    "stackMax": 1,
+    "effect": "开启传奇宝箱，必定掉落史诗以上道具",
+    "description": "能够开启特殊区域的传奇宝箱钥匙。",
+    "source": [
+      "Boss掉落",
+      "特殊任务"
+    ],
+    "icon": "/icons/itemicon_15_20260302_151518_41477909.png"
+  },
+  {
+    "id": "item_076",
+    "name": "黑暗神器碎片",
+    "type": "特殊",
+    "rarity": "史诗",
+    "stackMax": 1,
+    "effect": "收集10片可合成黑暗神器",
+    "description": "远古黑暗神器的碎片，散发着邪恶气息。",
+    "source": [
+      "Boss必掉",
+      "传奇任务",
+      "特殊事件"
+    ],
+    "icon": "/icons/itemicon_16_20260302_151519_7883704d.png"
+  },
+  {
+    "id": "item_077",
+    "name": "龙晶之核",
+    "type": "特殊",
+    "rarity": "传奇",
+    "stackMax": 1,
+    "effect": "大幅提升角色全属性",
+    "description": "从古龙心脏中提取的超级精华。",
+    "source": [
+      "Boss必掉",
+      "传奇任务",
+      "特殊事件"
+    ],
+    "icon": "/icons/itemicon_17_20260302_151520_76df6594.png"
+  },
+  {
+    "id": "item_078",
+    "name": "时间水晶",
+    "type": "特殊",
+    "rarity": "传奇",
+    "stackMax": 1,
+    "effect": "凝固时间5秒",
+    "description": "承载了时间之神力量的稀世宝物。",
+    "source": [
+      "Boss必掉",
+      "传奇任务",
+      "特殊事件"
+    ],
+    "icon": "/icons/itemicon_18_20260302_151521_ed198b3a.png"
+  },
+  {
+    "id": "item_079",
+    "name": "混沌卵",
+    "type": "特殊",
+    "rarity": "史诗",
+    "stackMax": 1,
+    "effect": "孵化后获得随机宠物",
+    "description": "从混沌次元中带来的神秘蛋。",
+    "source": [
+      "Boss必掉",
+      "传奇任务",
+      "特殊事件"
+    ],
+    "icon": "/icons/itemicon_19_20260302_151522_bdcd04dd.png"
+  },
+  {
+    "id": "item_080",
+    "name": "恶魔契约书",
+    "type": "特殊",
+    "rarity": "传奇",
+    "stackMax": 1,
+    "effect": "与恶魔立约，大幅提升能力，但有代价",
+    "description": "用鲜血书写的危险契约。",
+    "source": [
+      "Boss必掉",
+      "传奇任务",
+      "特殊事件"
+    ],
+    "icon": "/icons/itemicon_20_20260302_151523_29d09baa.png"
+  },
+  {
+    "id": "item_081",
+    "name": "永生泉水",
+    "type": "特殊",
+    "rarity": "传奇",
+    "stackMax": 1,
+    "effect": "永久提升生命上限500",
+    "description": "传说中神灵泉眼的一瓶泉水。",
+    "source": [
+      "Boss必掉",
+      "传奇任务",
+      "特殊事件"
+    ],
+    "icon": "/icons/itemicon_21_20260302_151524_0d9ba5d0.png"
+  },
+  {
+    "id": "item_082",
+    "name": "智慧秘典",
+    "type": "特殊",
+    "rarity": "史诗",
+    "stackMax": 1,
+    "effect": "解锁一个随机传奇技能",
+    "description": "积累了古代智慧的神秘书籍。",
+    "source": [
+      "Boss必掉",
+      "传奇任务",
+      "特殊事件"
+    ],
+    "icon": "/icons/itemicon_22_20260302_151525_86a40130.png"
+  },
+  {
+    "id": "item_083",
+    "name": "黑暗精灵石",
+    "type": "特殊",
+    "rarity": "史诗",
+    "stackMax": 1,
+    "effect": "召唤黑暗精灵协助战斗24小时",
+    "description": "封印了黑暗精灵意识的宝石。",
+    "source": [
+      "Boss必掉",
+      "传奇任务",
+      "特殊事件"
+    ],
+    "icon": "/icons/itemicon_23_20260302_151526_4f6bd06c.png"
+  },
+  {
+    "id": "item_084",
+    "name": "星界碎片",
+    "type": "特殊",
+    "rarity": "传奇",
+    "stackMax": 1,
+    "effect": "随机传送到星界秘境",
+    "description": "来自星界的神秘碎片。",
+    "source": [
+      "Boss必掉",
+      "传奇任务",
+      "特殊事件"
+    ],
+    "icon": "/icons/itemicon_24_20260302_151527_fc668744.png"
+  },
+  {
+    "id": "item_085",
+    "name": "命运轮盘",
+    "type": "特殊",
+    "rarity": "史诗",
+    "stackMax": 1,
+    "effect": "随机触发极好或极坏的效果",
+    "description": "命运之神遗留的赌博道具。",
+    "source": [
+      "Boss必掉",
+      "传奇任务",
+      "特殊事件"
+    ],
+    "icon": "/icons/itemicon_25_20260302_151528_d5acaece.png"
+  },
+  {
+    "id": "item_086",
+    "name": "光明与黑暗",
+    "type": "特殊",
+    "rarity": "传奇",
+    "stackMax": 1,
+    "effect": "获得双重元素加成",
+    "description": "据说同时持有光明与黑暗的终极宝物。",
+    "source": [
+      "Boss必掉",
+      "传奇任务",
+      "特殊事件"
+    ],
+    "icon": "/icons/itemicon_26_20260302_151530_1cb29df1.png"
+  },
+  {
+    "id": "item_087",
+    "name": "亡者之眼",
+    "type": "特殊",
+    "rarity": "稀有",
+    "stackMax": 1,
+    "effect": "透视所有隐藏物品和秘密通道",
+    "description": "从亡者那里获取的神秘双眼之一。",
+    "source": [
+      "Boss必掉",
+      "传奇任务",
+      "特殊事件"
+    ],
+    "icon": "/icons/itemicon_27_20260302_151531_0d6bdd2d.png"
+  },
+  {
+    "id": "item_088",
+    "name": "永恒战魂",
+    "type": "特殊",
+    "rarity": "传奇",
+    "stackMax": 1,
+    "effect": "战斗开始时激活，全属性暴增100%持续10秒",
+    "description": "沉睡在战场遗迹中的古老战魂。",
+    "source": [
+      "Boss必掉",
+      "传奇任务",
+      "特殊事件"
+    ],
+    "icon": "/icons/itemicon_28_20260302_151532_4be47681.png"
+  },
+  {
+    "id": "item_089",
+    "name": "深渊之门",
+    "type": "特殊",
+    "rarity": "史诗",
+    "stackMax": 1,
+    "effect": "打开临时副本入口，内有强敌和宝藏",
+    "description": "通往深渊世界的便携门户。",
+    "source": [
+      "Boss必掉",
+      "传奇任务",
+      "特殊事件"
+    ],
+    "icon": "/icons/itemicon_29_20260302_151533_51af4573.png"
+  },
+  {
+    "id": "item_090",
+    "name": "世界之心",
+    "type": "特殊",
+    "rarity": "传奇",
+    "stackMax": 1,
+    "effect": "永久提升角色所有属性5%（可叠加5次）",
+    "description": "据说是世界最核心的能量结晶。",
+    "source": [
+      "Boss必掉",
+      "传奇任务",
+      "特殊事件"
+    ],
+    "icon": "/icons/itemicon_30_20260302_151534_0d772c16.png"
+  },
+  {
+    "id": "item_091",
+    "name": "黑暗王权印章",
+    "type": "任务物品",
+    "rarity": "稀有",
+    "stackMax": 1,
+    "effect": "开启黑暗王国主线",
+    "description": "重要的任务道具，慎重对待。",
+    "source": [
+      "主线任务",
+      "NPC赠予"
+    ],
+    "icon": "/icons/itemicon_01_20260302_151503_d3190389.png"
+  },
+  {
+    "id": "item_092",
+    "name": "骸骨地图",
+    "type": "任务物品",
+    "rarity": "魔法",
+    "stackMax": 1,
+    "effect": "指向古代宝藏",
+    "description": "重要的任务道具，慎重对待。",
+    "source": [
+      "主线任务",
+      "NPC赠予"
+    ],
+    "icon": "/icons/itemicon_02_20260302_151504_8e57ddd1.png"
+  },
+  {
+    "id": "item_093",
+    "name": "失落的骨笛",
+    "type": "任务物品",
+    "rarity": "稀有",
+    "stackMax": 1,
+    "effect": "召唤神秘骸骨商人",
+    "description": "重要的任务道具，慎重对待。",
+    "source": [
+      "主线任务",
+      "NPC赠予"
+    ],
+    "icon": "/icons/itemicon_03_20260302_151505_c8552e0c.png"
+  },
+  {
+    "id": "item_094",
+    "name": "暗语密码本",
+    "type": "任务物品",
+    "rarity": "魔法",
+    "stackMax": 1,
+    "effect": "解读古代文字",
+    "description": "重要的任务道具，慎重对待。",
+    "source": [
+      "主线任务",
+      "NPC赠予"
+    ],
+    "icon": "/icons/itemicon_04_20260302_151506_2093df29.png"
+  },
+  {
+    "id": "item_095",
+    "name": "被诅咒的珠宝",
+    "type": "任务物品",
+    "rarity": "史诗",
+    "stackMax": 1,
+    "effect": "主线任务物品，不可丢弃",
+    "description": "重要的任务道具，慎重对待。",
+    "source": [
+      "主线任务",
+      "NPC赠予"
+    ],
+    "icon": "/icons/itemicon_05_20260302_151507_59ebeacf.png"
+  },
+  {
+    "id": "item_096",
+    "name": "恶魔之印",
+    "type": "任务物品",
+    "rarity": "稀有",
+    "stackMax": 1,
+    "effect": "与恶魔势力相关任务",
+    "description": "重要的任务道具，慎重对待。",
+    "source": [
+      "主线任务",
+      "NPC赠予"
+    ],
+    "icon": "/icons/itemicon_06_20260302_151508_2e95f088.png"
+  },
+  {
+    "id": "item_097",
+    "name": "先知的预言书",
+    "type": "任务物品",
+    "rarity": "稀有",
+    "stackMax": 1,
+    "effect": "记载着未来的神秘预言",
+    "description": "重要的任务道具，慎重对待。",
+    "source": [
+      "主线任务",
+      "NPC赠予"
+    ],
+    "icon": "/icons/itemicon_07_20260302_151509_f38d2247.png"
+  },
+  {
+    "id": "item_098",
+    "name": "世界树枝条",
+    "type": "任务物品",
+    "rarity": "传奇",
+    "stackMax": 1,
+    "effect": "极其罕见的传奇任务材料",
+    "description": "重要的任务道具，慎重对待。",
+    "source": [
+      "主线任务",
+      "NPC赠予"
+    ],
+    "icon": "/icons/itemicon_08_20260302_151510_5616884a.png"
+  },
+  {
+    "id": "item_099",
+    "name": "时空裂缝坐标",
+    "type": "任务物品",
+    "rarity": "史诗",
+    "stackMax": 1,
+    "effect": "开启时空副本的坐标",
+    "description": "重要的任务道具，慎重对待。",
+    "source": [
+      "主线任务",
+      "NPC赠予"
+    ],
+    "icon": "/icons/itemicon_09_20260302_151511_93678abc.png"
+  },
+  {
+    "id": "item_100",
+    "name": "亡者之名录",
+    "type": "任务物品",
+    "rarity": "魔法",
+    "stackMax": 1,
+    "effect": "记录所有亡者名字的黑书",
+    "description": "重要的任务道具，慎重对待。",
+    "source": [
+      "主线任务",
+      "NPC赠予"
+    ],
+    "icon": "/icons/itemicon_10_20260302_151513_78e1058f.png"
+  },
+  {
+    "id": "item_101",
+    "name": "传送碎晶",
+    "type": "消耗品",
+    "rarity": "稀有",
+    "stackMax": 10,
+    "effect": "瞬间传送到已探索的地图节点",
+    "description": "内藏空间褶皱的碎晶，打碎后释放传送门。",
+    "source": [
+      "商店购买",
+      "副本掉落"
+    ],
+    "icon": "/icons/itemicon_101_20260302_174055_467040ce.png"
+  },
+  {
+    "id": "item_102",
+    "name": "幸运符石",
+    "type": "消耗品",
+    "rarity": "普通",
+    "stackMax": 99,
+    "effect": "30分钟内幸运值+15，爆率微幅提升",
+    "description": "附有祝福纹路的小石，握住它感觉心情愉快。",
+    "source": [
+      "商店购买",
+      "击杀精英怪"
+    ],
+    "icon": "/icons/itemicon_102_20260302_174057_8991b807.png"
+  },
+  {
+    "id": "item_103",
+    "name": "炼金溶剂",
+    "type": "材料",
+    "rarity": "普通",
+    "stackMax": 99,
+    "effect": "用于合成高级药剂的催化剂",
+    "description": "散发淡绿色荧光的神秘液体，炼金师的必备原料。",
+    "source": [
+      "商店购买",
+      "击杀法师类怪物"
+    ],
+    "icon": "/icons/itemicon_103_20260302_174100_97efc757.png"
+  },
+  {
+    "id": "item_104",
+    "name": "龙息结晶",
+    "type": "材料",
+    "rarity": "史诗",
+    "stackMax": 20,
+    "effect": "锻造龙系武器的核心材料",
+    "description": "由龙族呼出的灼热之息凝固而成，温度极高。",
+    "source": [
+      "击杀龙族怪物",
+      "副本掉落"
+    ],
+    "icon": "/icons/itemicon_104_20260302_174102_a17b48c1.png"
+  },
+  {
+    "id": "item_105",
+    "name": "星辰碎片",
+    "type": "材料",
+    "rarity": "传奇",
+    "stackMax": 5,
+    "effect": "合成天文级装备的稀有材料",
+    "description": "从流星中提取的物质，闪烁着宇宙的光芒。",
+    "source": [
+      "天文事件",
+      "传说副本"
+    ],
+    "icon": "/icons/itemicon_105_20260302_174104_6b973242.png"
+  },
+  {
+    "id": "item_106",
+    "name": "冰霜之心",
+    "type": "材料",
+    "rarity": "稀有",
+    "stackMax": 10,
+    "effect": "制造冰系武器和护甲的关键材料",
+    "description": "来自极地冰川深处，永不融化的神秘冰核。",
+    "source": [
+      "冰雪副本",
+      "击杀冰系精英怪"
+    ],
+    "icon": "/icons/itemicon_106_20260302_174107_1618ead5.png"
+  },
+  {
+    "id": "item_107",
+    "name": "时间沙漏",
+    "type": "消耗品",
+    "rarity": "史诗",
+    "stackMax": 3,
+    "effect": "倒转时间15秒，复原所有状态",
+    "description": "能将时间倒流的神器，使用后沙粒向上逆流。",
+    "source": [
+      "传说任务奖励",
+      "拍卖行"
+    ],
+    "icon": "/icons/itemicon_107_20260302_174109_50087f81.png"
+  },
+  {
+    "id": "item_108",
+    "name": "凤凰泪珠",
+    "type": "消耗品",
+    "rarity": "传奇",
+    "stackMax": 1,
+    "effect": "立即复活并恢复全部生命值",
+    "description": "凤凰临终时流下的眼泪，蕴含重生的神圣之力。",
+    "source": [
+      "传说副本",
+      "主线任务"
+    ],
+    "icon": "/icons/itemicon_108_20260302_174111_c924abbd.png"
+  },
+  {
+    "id": "item_109",
+    "name": "毒蛛之丝",
+    "type": "材料",
+    "rarity": "普通",
+    "stackMax": 99,
+    "effect": "制作毒系武器和陷阱的原材料",
+    "description": "由巨型毒蜘蛛吐出的蛛丝，浸透了致命毒素。",
+    "source": [
+      "击杀蜘蛛类怪物",
+      "毒沼副本"
+    ],
+    "icon": "/icons/itemicon_109_20260302_174114_81cfe504.png"
+  },
+  {
+    "id": "item_110",
+    "name": "月华晶露",
+    "type": "消耗品",
+    "rarity": "稀有",
+    "stackMax": 20,
+    "effect": "恢复魔法值500点，并清除负面状态",
+    "description": "满月之夜从月光中凝结的神圣露水。",
+    "source": [
+      "月夜活动",
+      "商店购买"
+    ],
+    "icon": "/icons/itemicon_110_20260302_174116_1b6b768b.png"
+  },
+  {
+    "id": "item_111",
+    "name": "雷霆核心",
+    "type": "材料",
+    "rarity": "史诗",
+    "stackMax": 5,
+    "effect": "锻造雷系传奇武器的核心",
+    "description": "从雷暴中心提取的电能结晶，充满破坏性的力量。",
+    "source": [
+      "雷暴副本",
+      "击杀雷系精英"
+    ],
+    "icon": "/icons/itemicon_111_20260302_174118_b6653483.png"
+  },
+  {
+    "id": "item_112",
+    "name": "深渊之眼",
+    "type": "消耗品",
+    "rarity": "史诗",
+    "stackMax": 3,
+    "effect": "透视周围区域所有隐藏怪物和陷阱",
+    "description": "来自深渊生物的眼球，拥有看穿黑暗的能力。",
+    "source": [
+      "深渊副本",
+      "击杀深渊类怪物"
+    ],
+    "icon": "/icons/itemicon_112_20260302_174121_9d9aa6eb.png"
+  },
+  {
+    "id": "item_113",
+    "name": "封印之符",
+    "type": "消耗品",
+    "rarity": "稀有",
+    "stackMax": 10,
+    "effect": "封印目标技能10秒",
+    "description": "古代法师编写的封印符咒，散发着神秘的压制气息。",
+    "source": [
+      "商店购买",
+      "任务奖励"
+    ],
+    "icon": "/icons/itemicon_113_20260302_174123_a342f5df.png"
+  },
+  {
+    "id": "item_114",
+    "name": "血之魔晶",
+    "type": "材料",
+    "rarity": "史诗",
+    "stackMax": 10,
+    "effect": "合成吸血类装备的关键材料",
+    "description": "由纯血吸血鬼的血液结晶而成，深红色散发诡异光芒。",
+    "source": [
+      "击杀吸血鬼精英",
+      "血月副本"
+    ],
+    "icon": "/icons/itemicon_114_20260302_174125_1fd4cc8e.png"
+  },
+  {
+    "id": "item_115",
+    "name": "净化圣水",
+    "type": "消耗品",
+    "rarity": "稀有",
+    "stackMax": 30,
+    "effect": "清除所有诅咒和负面状态",
+    "description": "经过神圣仪式祝福的圣水，能驱散一切黑暗力量。",
+    "source": [
+      "神殿任务",
+      "神官NPC"
+    ],
+    "icon": "/icons/itemicon_115_20260302_174128_e6344b81.png"
+  },
+  {
+    "id": "item_116",
+    "name": "末日之石",
+    "type": "消耗品",
+    "rarity": "传奇",
+    "stackMax": 1,
+    "effect": "对周围所有敌人造成极大伤害",
+    "description": "蕴含世界末日能量的黑石，使用时慎之又慎。",
+    "source": [
+      "终末副本",
+      "世界Boss掉落"
+    ],
+    "icon": "/icons/itemicon_116_20260302_174130_e4101cb0.png"
+  },
+  {
+    "id": "item_117",
+    "name": "古神之血",
+    "type": "材料",
+    "rarity": "传奇",
+    "stackMax": 1,
+    "effect": "传说级装备强化的唯一材料",
+    "description": "远古神明留下的血液，充满超越人类理解的力量。",
+    "source": [
+      "终极Boss掉落"
+    ],
+    "icon": "/icons/itemicon_117_20260302_174132_8d46d4a5.png"
+  },
+  {
+    "id": "item_118",
+    "name": "混沌之核",
+    "type": "材料",
+    "rarity": "传奇",
+    "stackMax": 1,
+    "effect": "合成混沌系列传说装备的核心",
+    "description": "混沌能量的结晶体，外观随机变化，充满不可预测的力量。",
+    "source": [
+      "混沌副本",
+      "随机世界事件"
+    ],
+    "icon": "/icons/itemicon_118_20260302_174135_48ed3de7.png"
+  },
+  {
+    "id": "item_119",
+    "name": "时空钥匙",
+    "type": "任务物品",
+    "rarity": "史诗",
+    "stackMax": 1,
+    "effect": "开启时空裂缝副本的专属钥匙",
+    "description": "能扭曲时空的神秘钥匙，是进入时空裂缝的唯一通道。",
+    "source": [
+      "主线任务",
+      "时空事件"
+    ],
+    "icon": "/icons/itemicon_119_20260302_174137_8e4cf32e.png"
+  },
+  {
+    "id": "item_120",
+    "name": "永恒之源",
+    "type": "消耗品",
+    "rarity": "传奇",
+    "stackMax": 1,
+    "effect": "永久提升角色上限生命值200点",
+    "description": "蕴含永恒生命力的神圣精华，极为稀少珍贵。",
+    "source": [
+      "传说任务",
+      "世界Boss掉落"
+    ],
+    "icon": "/icons/itemicon_120_20260302_174139_1eff1eef.png"
+  }
+]

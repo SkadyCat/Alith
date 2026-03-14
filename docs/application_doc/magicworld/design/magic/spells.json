@@ -1,0 +1,257 @@
+[
+  {
+    "id": "spell_fireball",
+    "name": "火球术",
+    "icon": "🔥",
+    "rarity": "普通",
+    "element": "fire",
+    "level": 1,
+    "mana_cost": 30,
+    "cast_time": 0.8,
+    "cooldown": 4,
+    "description": "发射一枚火焰弹体，命中时爆炸造成范围伤害。",
+    "delivery": {
+      "type": "projectile",
+      "params": { "speed": 18, "count": 1, "range": 25 },
+      "modifiers": [
+        { "id": "linger", "params": { "duration": 2, "radius": 3 } }
+      ]
+    },
+    "on_hit": [
+      { "effect": "damage", "params": { "base": "120%", "crit_chance": 0.05 } },
+      { "effect": "dot",    "params": { "damage_per_tick": "15%", "duration": 3, "stacks": true, "max_stacks": 3 } }
+    ]
+  },
+  {
+    "id": "spell_frostbolt",
+    "name": "寒冰箭",
+    "icon": "❄️",
+    "rarity": "普通",
+    "element": "ice",
+    "level": 1,
+    "mana_cost": 25,
+    "cast_time": 0.6,
+    "cooldown": 3,
+    "description": "射出一枚寒冰箭，命中后减速目标。",
+    "delivery": {
+      "type": "projectile",
+      "params": { "speed": 22, "count": 1, "range": 20 },
+      "modifiers": []
+    },
+    "on_hit": [
+      { "effect": "damage", "params": { "base": "90%" } },
+      { "effect": "debuff", "params": { "stat": "speed", "amount": 40, "duration": 2 } }
+    ]
+  },
+  {
+    "id": "spell_chain_lightning",
+    "name": "连锁闪电",
+    "icon": "⚡",
+    "rarity": "稀有",
+    "element": "lightning",
+    "level": 5,
+    "mana_cost": 50,
+    "cast_time": 0.5,
+    "cooldown": 6,
+    "description": "发射一道闪电弹体，命中后连锁到附近3个敌人，每段递减伤害。",
+    "delivery": {
+      "type": "projectile",
+      "params": { "speed": 25, "count": 1, "range": 15 },
+      "modifiers": [
+        { "id": "chain", "params": { "chains": 3, "range": 7, "damage_decay": 0.7 } },
+        { "id": "pierce","params": { "count": 1 } }
+      ]
+    },
+    "on_hit": [
+      { "effect": "damage", "params": { "base": "160%", "crit_chance": 0.1 } },
+      { "effect": "debuff", "params": { "stat": "magic_resist", "amount": 20, "duration": 3 } }
+    ]
+  },
+  {
+    "id": "spell_meteor_shower",
+    "name": "流星雨",
+    "icon": "☄️",
+    "rarity": "史诗",
+    "element": "fire",
+    "level": 15,
+    "mana_cost": 120,
+    "cast_time": 2.0,
+    "cooldown": 20,
+    "description": "向目标区域连射多颗陨石，每颗命中后产生爆炸并留下岩浆地面。",
+    "delivery": {
+      "type": "projectile",
+      "params": { "speed": 30, "count": 1, "range": 35, "spread": 10 },
+      "modifiers": [
+        { "id": "barrage",       "params": { "count": 6, "interval": 0.3, "spread": 8 } },
+        { "id": "slow_projectile","params": { "speed_mult": 0.5, "size_mult": 2.5, "damage_mult": 1.8 } },
+        { "id": "linger",        "params": { "duration": 4, "radius": 4, "interval": 0.5 } }
+      ]
+    },
+    "on_hit": [
+      { "effect": "damage", "params": { "base": "250%", "crit_chance": 0.15 } },
+      { "effect": "cc",     "params": { "type": "knockback", "knockback_dist": 4 } },
+      { "effect": "dot",    "params": { "damage_per_tick": "30%", "duration": 4 } },
+      { "effect": "ground_effect_inline", "params": { "duration": 5, "radius": 4 } }
+    ]
+  },
+  {
+    "id": "spell_void_storm",
+    "name": "虚空风暴",
+    "icon": "🌀",
+    "rarity": "传说",
+    "element": "void",
+    "level": 20,
+    "mana_cost": 200,
+    "cast_time": 1.5,
+    "cooldown": 30,
+    "description": "在目标位置召唤持续8秒的虚空漩涡，每秒脉冲伤害并吸引附近敌人。随时间扩大。",
+    "delivery": {
+      "type": "persistent",
+      "params": { "duration": 8, "interval": 1, "radius": 4 },
+      "modifiers": [
+        { "id": "pulse",  "params": { "interval": 1, "radius": 5, "damage_mult": 0.6 } },
+        { "id": "expand", "params": { "final_radius_mult": 2.5, "expand_time": 4 } },
+        { "id": "aura",   "params": { "radius": 8, "target": "enemies", "follows": false } }
+      ]
+    },
+    "on_hit": [
+      { "effect": "damage", "params": { "base": "80%", "crit_chance": 0.1 } },
+      { "effect": "debuff", "params": { "stat": "all", "amount": 15, "duration": 2 } },
+      { "effect": "cc",     "params": { "type": "pull", "duration": 0.3 } }
+    ]
+  },
+  {
+    "id": "spell_arcane_mirror",
+    "name": "奥术镜",
+    "icon": "🔮",
+    "rarity": "精英",
+    "element": "arcane",
+    "level": 10,
+    "mana_cost": 80,
+    "cast_time": 0.3,
+    "cooldown": 12,
+    "description": "发射一枚弹体，命中后分裂为4枚反弹子弹，每枚最多弹跳2次并回响一次。",
+    "delivery": {
+      "type": "projectile",
+      "params": { "speed": 20, "count": 1, "range": 20 },
+      "modifiers": [
+        { "id": "split",   "params": { "count": 4, "trigger": "on_hit", "angle_spread": 90, "inherit_mods": true } },
+        { "id": "bounce",  "params": { "count": 2, "range": 6, "damage_decay": 0.8 } },
+        { "id": "echo",    "params": { "delay": 0.4, "count": 1, "damage_mult": 0.4 } }
+      ]
+    },
+    "on_hit": [
+      { "effect": "damage", "params": { "base": "100%", "crit_chance": 0.2, "crit_mult": 2.0 } },
+      { "effect": "mark",   "params": { "duration": 4, "trigger_on": "crit", "effect_id": "arcane_burst" } }
+    ]
+  },
+  {
+    "id": "spell_poison_nova",
+    "name": "毒爆",
+    "icon": "☠️",
+    "rarity": "稀有",
+    "element": "poison",
+    "level": 8,
+    "mana_cost": 60,
+    "cast_time": 1.0,
+    "cooldown": 10,
+    "description": "即时在自身周围爆发一圈毒液，随后在地面留下毒沼，对区域内敌人叠加毒层。",
+    "delivery": {
+      "type": "instant",
+      "params": { "target": "all_enemies" },
+      "modifiers": [
+        { "id": "aura",   "params": { "radius": 6, "target": "enemies", "follows": false } },
+        { "id": "linger", "params": { "duration": 5, "radius": 6, "interval": 0.5 } },
+        { "id": "cascade","params": { "depth": 1, "radius_decay": 0.4, "damage_decay": 0.3 } }
+      ]
+    },
+    "on_hit": [
+      { "effect": "damage", "params": { "base": "60%" } },
+      { "effect": "dot",    "params": { "damage_per_tick": "20%", "duration": 5, "stacks": true, "max_stacks": 8 } },
+      { "effect": "debuff", "params": { "stat": "defense", "amount": 20, "duration": 5 } }
+    ]
+  },
+  {
+    "id": "spell_holy_beam",
+    "name": "神圣光束",
+    "icon": "✨",
+    "rarity": "精英",
+    "element": "holy",
+    "level": 12,
+    "mana_cost": 90,
+    "cast_time": 0.0,
+    "cooldown": 8,
+    "description": "持续3秒的旋转神圣射线，同时治疗附近友军。",
+    "delivery": {
+      "type": "beam",
+      "params": { "length": 15, "width": 1.5, "tick_rate": 4, "duration": 3 },
+      "modifiers": [
+        { "id": "rotating", "params": { "speed_deg": 90, "radius": 0, "count": 1 } },
+        { "id": "aura",     "params": { "radius": 5, "target": "allies", "follows": true } }
+      ]
+    },
+    "on_hit": [
+      { "effect": "damage", "params": { "base": "40%" } },
+      { "effect": "debuff", "params": { "stat": "attack", "amount": 25, "duration": 2 } }
+    ],
+    "on_tick_ally": [
+      { "effect": "heal",   "params": { "base": "5%", "hot": false } }
+    ]
+  },
+  {
+    "id": "spell_shadow_snipe",
+    "name": "暗影狙击",
+    "icon": "🌑",
+    "rarity": "传说",
+    "element": "shadow",
+    "level": 18,
+    "mana_cost": 110,
+    "cast_time": 2.0,
+    "cooldown": 15,
+    "description": "蓄力2秒发射穿透弹体，无视护甲，命中后爆散8枚追踪子弹。",
+    "delivery": {
+      "type": "projectile",
+      "params": { "speed": 50, "count": 1, "range": 60 },
+      "modifiers": [
+        { "id": "pierce",        "params": { "count": -1, "damage_decay": 0.9 } },
+        { "id": "slow_projectile","params": { "speed_mult": 0.01, "size_mult": 3.0, "damage_mult": 2.0 } },
+        { "id": "nova_on_expire","params": { "count": 8, "radius": 10, "inherit_element": true } },
+        { "id": "homing",        "params": { "turn_rate": 360, "lock_range": 30, "retarget": true } }
+      ]
+    },
+    "on_hit": [
+      { "effect": "damage", "params": { "base": "400%", "crit_chance": 0.3, "crit_mult": 3.0 } },
+      { "effect": "debuff", "params": { "stat": "magic_resist", "amount": 50, "duration": 5 } },
+      { "effect": "dot",    "params": { "damage_per_tick": "50%", "duration": 4, "stacks": false } }
+    ]
+  },
+  {
+    "id": "spell_earth_fortress",
+    "name": "大地堡垒",
+    "icon": "🪨",
+    "rarity": "史诗",
+    "element": "earth",
+    "level": 16,
+    "mana_cost": 150,
+    "cast_time": 1.0,
+    "cooldown": 25,
+    "description": "以自身为中心持续10秒光环，减速并流血附近敌人，同时为友军提供护甲光环。",
+    "delivery": {
+      "type": "persistent",
+      "params": { "duration": 10, "interval": 1, "radius": 5 },
+      "modifiers": [
+        { "id": "aura",     "params": { "radius": 6, "target": "enemies", "follows": true } },
+        { "id": "pulse",    "params": { "interval": 2, "radius": 6, "damage_mult": 0.4 } },
+        { "id": "empowered","params": { "damage_mult": 1.3, "area_mult": 1.2, "duration_mult": 1.0, "speed_mult": 1.0 } }
+      ]
+    },
+    "on_hit": [
+      { "effect": "damage", "params": { "base": "50%" } },
+      { "effect": "cc",     "params": { "type": "root", "duration": 1.5 } },
+      { "effect": "dot",    "params": { "damage_per_tick": "25%", "duration": 3, "stacks": true, "max_stacks": 5 } }
+    ],
+    "on_tick_ally": [
+      { "effect": "buff", "params": { "stat": "defense", "amount": 30, "duration": 2 } }
+    ]
+  }
+]

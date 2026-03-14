@@ -1,0 +1,2093 @@
+[
+  {
+    "id": "split",
+    "name": "分裂",
+    "icon": "/icons/modifiers/split.png",
+    "category": "trajectory",
+    "applies_to": [
+      "projectile",
+      "beam"
+    ],
+    "desc": "弹体在命中或到达中途时分裂为多枚子弹体。",
+    "params": {
+      "count": {
+        "type": "number",
+        "default": 2,
+        "desc": "分裂数量"
+      },
+      "trigger": {
+        "type": "enum",
+        "values": [
+          "on_hit",
+          "on_expire",
+          "on_halfway"
+        ],
+        "default": "on_hit"
+      },
+      "angle_spread": {
+        "type": "number",
+        "default": 45,
+        "desc": "分裂角度（度）"
+      },
+      "inherit_mods": {
+        "type": "boolean",
+        "default": false,
+        "desc": "子弹继承其他修饰符"
+      }
+    },
+    "conflicts": [
+      "fork"
+    ],
+    "tags": [
+      "multishot",
+      "secondary_projectile"
+    ]
+  },
+  {
+    "id": "bounce",
+    "name": "弹跳",
+    "icon": "/icons/modifiers/bounce.png",
+    "category": "trajectory",
+    "applies_to": [
+      "projectile",
+      "beam"
+    ],
+    "desc": "弹体命中后反弹到附近目标或墙壁，继续造成伤害。",
+    "params": {
+      "count": {
+        "type": "number",
+        "default": 2,
+        "desc": "最大弹跳次数"
+      },
+      "range": {
+        "type": "number",
+        "default": 8,
+        "desc": "弹跳搜索范围（格）"
+      },
+      "damage_decay": {
+        "type": "number",
+        "default": 0.8,
+        "desc": "每次弹跳后伤害倍率"
+      },
+      "prefer_new": {
+        "type": "boolean",
+        "default": true,
+        "desc": "优先选择未命中的目标"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "chaining",
+      "multi_target"
+    ]
+  },
+  {
+    "id": "pierce",
+    "name": "穿透",
+    "icon": "/icons/modifiers/pierce.png",
+    "category": "trajectory",
+    "applies_to": [
+      "projectile",
+      "beam"
+    ],
+    "desc": "弹体穿过目标，继续飞行并命中路径上的其他目标。",
+    "params": {
+      "count": {
+        "type": "number",
+        "default": 3,
+        "desc": "最多穿透目标数，-1=无限"
+      },
+      "damage_decay": {
+        "type": "number",
+        "default": 1.0,
+        "desc": "穿透后伤害倍率"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "multi_target",
+      "linear"
+    ]
+  },
+  {
+    "id": "chain",
+    "name": "连锁",
+    "icon": "/icons/modifiers/chain.png",
+    "category": "trajectory",
+    "applies_to": [
+      "projectile",
+      "instant",
+      "area"
+    ],
+    "desc": "命中后自动弹射到附近敌人，类似闪电连锁效果。",
+    "params": {
+      "chains": {
+        "type": "number",
+        "default": 3,
+        "desc": "最大连锁次数"
+      },
+      "range": {
+        "type": "number",
+        "default": 6,
+        "desc": "连锁搜索范围（格）"
+      },
+      "damage_decay": {
+        "type": "number",
+        "default": 0.7,
+        "desc": "每段连锁伤害倍率"
+      },
+      "can_revisit": {
+        "type": "boolean",
+        "default": false,
+        "desc": "是否可重复连锁同一目标"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "chaining",
+      "multi_target"
+    ]
+  },
+  {
+    "id": "homing",
+    "name": "追踪",
+    "icon": "/icons/modifiers/homing.png",
+    "category": "trajectory",
+    "applies_to": [
+      "projectile"
+    ],
+    "desc": "弹体自动追踪最近的敌人，命中率极高。",
+    "params": {
+      "turn_rate": {
+        "type": "number",
+        "default": 180,
+        "desc": "每秒最大转向角度"
+      },
+      "lock_range": {
+        "type": "number",
+        "default": 20,
+        "desc": "锁定目标的最大距离"
+      },
+      "retarget": {
+        "type": "boolean",
+        "default": false,
+        "desc": "目标死亡后重新锁定"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "guidance",
+      "single_target_focus"
+    ]
+  },
+  {
+    "id": "fork",
+    "name": "分叉",
+    "icon": "/icons/modifiers/fork.png",
+    "category": "trajectory",
+    "applies_to": [
+      "projectile",
+      "beam"
+    ],
+    "desc": "发射时即分叉为多条路径，各自独立飞行，不共享命中。",
+    "params": {
+      "count": {
+        "type": "number",
+        "default": 2,
+        "desc": "分叉数量（含原始方向）"
+      },
+      "angle": {
+        "type": "number",
+        "default": 20,
+        "desc": "分叉夹角（度）"
+      }
+    },
+    "conflicts": [
+      "split",
+      "barrage"
+    ],
+    "tags": [
+      "multishot"
+    ]
+  },
+  {
+    "id": "returning",
+    "name": "回旋",
+    "icon": "/icons/modifiers/returning.png",
+    "category": "trajectory",
+    "applies_to": [
+      "projectile"
+    ],
+    "desc": "弹体到达最远点后返回施法者，命中路径上的目标。",
+    "params": {
+      "hit_on_return": {
+        "type": "boolean",
+        "default": true,
+        "desc": "返程是否造成伤害"
+      },
+      "damage_return": {
+        "type": "number",
+        "default": 0.5,
+        "desc": "返程伤害倍率"
+      }
+    },
+    "conflicts": [
+      "homing"
+    ],
+    "tags": [
+      "trajectory",
+      "boomerang"
+    ]
+  },
+  {
+    "id": "slow_projectile",
+    "name": "减速弹",
+    "icon": "/icons/modifiers/slow_projectile.png",
+    "category": "trajectory",
+    "applies_to": [
+      "projectile"
+    ],
+    "desc": "弹体速度降低，但体积和伤害增大。",
+    "params": {
+      "speed_mult": {
+        "type": "number",
+        "default": 0.4,
+        "desc": "速度倍率"
+      },
+      "size_mult": {
+        "type": "number",
+        "default": 2.0,
+        "desc": "体积倍率（影响判定范围）"
+      },
+      "damage_mult": {
+        "type": "number",
+        "default": 1.5,
+        "desc": "伤害倍率"
+      }
+    },
+    "conflicts": [
+      "barrage"
+    ],
+    "tags": [
+      "amplified"
+    ]
+  },
+  {
+    "id": "rotating",
+    "name": "旋转",
+    "icon": "/icons/modifiers/rotating.png",
+    "category": "trajectory",
+    "applies_to": [
+      "persistent",
+      "beam"
+    ],
+    "desc": "效果围绕施法者或目标旋转。",
+    "params": {
+      "speed_deg": {
+        "type": "number",
+        "default": 120,
+        "desc": "每秒旋转角度"
+      },
+      "radius": {
+        "type": "number",
+        "default": 5,
+        "desc": "旋转轨道半径（格）"
+      },
+      "count": {
+        "type": "number",
+        "default": 1,
+        "desc": "同时旋转的副本数"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "orbit",
+      "multi_target"
+    ]
+  },
+  {
+    "id": "spiral",
+    "name": "螺旋",
+    "icon": "/icons/modifiers/spiral.png",
+    "category": "trajectory",
+    "applies_to": [
+      "projectile",
+      "beam"
+    ],
+    "desc": "弹体以螺旋轨迹飞行，覆盖更宽的判定路径，难以躲避。",
+    "params": {
+      "radius": {
+        "type": "number",
+        "default": 2,
+        "desc": "螺旋半径（格）"
+      },
+      "revolutions": {
+        "type": "number",
+        "default": 3,
+        "desc": "旋转圈数"
+      },
+      "tighten": {
+        "type": "boolean",
+        "default": false,
+        "desc": "螺旋逐渐收紧"
+      }
+    },
+    "conflicts": [
+      "homing"
+    ],
+    "tags": [
+      "multi_target",
+      "wide_path"
+    ]
+  },
+  {
+    "id": "expand",
+    "name": "扩大",
+    "icon": "/icons/modifiers/expand.png",
+    "category": "area",
+    "applies_to": [
+      "area",
+      "persistent"
+    ],
+    "desc": "范围随时间逐渐扩大。",
+    "params": {
+      "final_radius_mult": {
+        "type": "number",
+        "default": 2.0,
+        "desc": "最终半径相对于初始的倍率"
+      },
+      "expand_time": {
+        "type": "number",
+        "default": 2.0,
+        "desc": "扩展耗时（秒）"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "aoe",
+      "scaling"
+    ]
+  },
+  {
+    "id": "linger",
+    "name": "残留",
+    "icon": "/icons/modifiers/linger.png",
+    "category": "area",
+    "applies_to": [
+      "area",
+      "projectile"
+    ],
+    "desc": "效果在命中点留下持续区域，持续伤害或减速。",
+    "params": {
+      "duration": {
+        "type": "number",
+        "default": 3,
+        "desc": "残留时间（秒）"
+      },
+      "radius": {
+        "type": "number",
+        "default": 3,
+        "desc": "残留范围（格）"
+      },
+      "interval": {
+        "type": "number",
+        "default": 0.5,
+        "desc": "触发间隔（秒）"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "persistent",
+      "hazard"
+    ]
+  },
+  {
+    "id": "cascade",
+    "name": "级联",
+    "icon": "/icons/modifiers/cascade.png",
+    "category": "area",
+    "applies_to": [
+      "area"
+    ],
+    "desc": "爆炸在命中的每个目标位置再次触发小型爆炸。",
+    "params": {
+      "depth": {
+        "type": "number",
+        "default": 1,
+        "desc": "级联层数"
+      },
+      "radius_decay": {
+        "type": "number",
+        "default": 0.5,
+        "desc": "子爆炸半径倍率"
+      },
+      "damage_decay": {
+        "type": "number",
+        "default": 0.4,
+        "desc": "子爆炸伤害倍率"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "aoe",
+      "chain_reaction"
+    ]
+  },
+  {
+    "id": "ground_effect",
+    "name": "地面效果",
+    "icon": "/icons/modifiers/ground_effect.png",
+    "category": "area",
+    "applies_to": [
+      "area"
+    ],
+    "desc": "在目标地面创建一个持续性区域（岩浆池、冰面、毒沼等）。",
+    "params": {
+      "duration": {
+        "type": "number",
+        "default": 5,
+        "desc": "持续时间（秒）"
+      },
+      "radius": {
+        "type": "number",
+        "default": 4,
+        "desc": "区域半径"
+      },
+      "slow_mult": {
+        "type": "number",
+        "default": 0.6,
+        "desc": "移速倍率"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "hazard",
+      "persistent",
+      "ground"
+    ]
+  },
+  {
+    "id": "ring",
+    "name": "环形",
+    "icon": "/icons/modifiers/ring.png",
+    "category": "area",
+    "applies_to": [
+      "area"
+    ],
+    "desc": "仅在圆环边缘区域造成伤害，中心为安全区，迫使目标移动到内圈。",
+    "params": {
+      "inner_radius": {
+        "type": "number",
+        "default": 3,
+        "desc": "安全区内径（格）"
+      },
+      "outer_radius": {
+        "type": "number",
+        "default": 6,
+        "desc": "外径（格）"
+      },
+      "damage_mult": {
+        "type": "number",
+        "default": 1.2,
+        "desc": "环形区域伤害倍率"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "aoe",
+      "zoning"
+    ]
+  },
+  {
+    "id": "cone",
+    "name": "锥形",
+    "icon": "/icons/modifiers/cone.png",
+    "category": "area",
+    "applies_to": [
+      "area",
+      "beam"
+    ],
+    "desc": "将圆形区域变为扇形锥形区域，前方伤害更集中。",
+    "params": {
+      "angle": {
+        "type": "number",
+        "default": 60,
+        "desc": "锥形夹角（度）"
+      },
+      "range": {
+        "type": "number",
+        "default": 8,
+        "desc": "锥形长度（格）"
+      },
+      "damage_falloff": {
+        "type": "boolean",
+        "default": false,
+        "desc": "距离越远伤害越低"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "directional",
+      "aoe"
+    ]
+  },
+  {
+    "id": "ripple",
+    "name": "涟漪",
+    "icon": "/icons/modifiers/ripple.png",
+    "category": "area",
+    "applies_to": [
+      "area"
+    ],
+    "desc": "多个同心圆波依次向外扩散，每波都能造成伤害。",
+    "params": {
+      "waves": {
+        "type": "number",
+        "default": 3,
+        "desc": "波次数量"
+      },
+      "wave_speed": {
+        "type": "number",
+        "default": 5,
+        "desc": "每波扩散速度（格/秒）"
+      },
+      "wave_interval": {
+        "type": "number",
+        "default": 0.3,
+        "desc": "波次间隔（秒）"
+      },
+      "damage_decay": {
+        "type": "number",
+        "default": 0.8,
+        "desc": "每波伤害倍率"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "aoe",
+      "multi_hit"
+    ]
+  },
+  {
+    "id": "gravity_well",
+    "name": "引力井",
+    "icon": "/icons/modifiers/gravity_well.png",
+    "category": "area",
+    "applies_to": [
+      "area",
+      "persistent"
+    ],
+    "desc": "将范围内敌人持续拉向中心，使其聚集便于集中打击。",
+    "params": {
+      "pull_force": {
+        "type": "number",
+        "default": 5,
+        "desc": "拉力（格/秒²）"
+      },
+      "max_range": {
+        "type": "number",
+        "default": 8,
+        "desc": "作用范围（格）"
+      },
+      "duration": {
+        "type": "number",
+        "default": 3,
+        "desc": "持续时间（秒）"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "cc",
+      "pull"
+    ]
+  },
+  {
+    "id": "wall",
+    "name": "魔法墙",
+    "icon": "/icons/modifiers/wall.png",
+    "category": "area",
+    "applies_to": [
+      "area",
+      "instant"
+    ],
+    "desc": "在指定位置创建一道线形魔法屏障，阻挡并伤害穿越的目标。",
+    "params": {
+      "length": {
+        "type": "number",
+        "default": 6,
+        "desc": "墙体长度（格）"
+      },
+      "height": {
+        "type": "number",
+        "default": 3,
+        "desc": "墙体高度（格）"
+      },
+      "duration": {
+        "type": "number",
+        "default": 4,
+        "desc": "持续时间（秒）"
+      },
+      "damage_on_touch": {
+        "type": "boolean",
+        "default": true,
+        "desc": "接触时造成伤害"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "obstacle",
+      "zoning",
+      "persistent"
+    ]
+  },
+  {
+    "id": "vacuum",
+    "name": "真空爆破",
+    "icon": "/icons/modifiers/vacuum.png",
+    "category": "area",
+    "applies_to": [
+      "area"
+    ],
+    "desc": "先将范围内所有目标吸向中心，然后猛烈向外爆炸弹开。",
+    "params": {
+      "suck_duration": {
+        "type": "number",
+        "default": 0.5,
+        "desc": "吸引持续时间（秒）"
+      },
+      "blast_force": {
+        "type": "number",
+        "default": 15,
+        "desc": "爆炸推力（格/秒）"
+      },
+      "blast_damage_mult": {
+        "type": "number",
+        "default": 1.5,
+        "desc": "爆炸伤害倍率"
+      }
+    },
+    "conflicts": [
+      "gravity_well"
+    ],
+    "tags": [
+      "cc",
+      "knockback",
+      "burst"
+    ]
+  },
+  {
+    "id": "pulse",
+    "name": "脉冲",
+    "icon": "/icons/modifiers/pulse.png",
+    "category": "persistent",
+    "applies_to": [
+      "persistent",
+      "summon"
+    ],
+    "desc": "定期向周围释放一次范围爆发。",
+    "params": {
+      "interval": {
+        "type": "number",
+        "default": 1.0,
+        "desc": "脉冲间隔（秒）"
+      },
+      "radius": {
+        "type": "number",
+        "default": 4,
+        "desc": "脉冲范围（格）"
+      },
+      "damage_mult": {
+        "type": "number",
+        "default": 0.5,
+        "desc": "脉冲伤害倍率"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "aoe",
+      "tempo"
+    ]
+  },
+  {
+    "id": "aura",
+    "name": "光环",
+    "icon": "/icons/modifiers/aura.png",
+    "category": "persistent",
+    "applies_to": [
+      "persistent",
+      "summon",
+      "instant"
+    ],
+    "desc": "以施法者或目标为中心，持续对范围内生效。",
+    "params": {
+      "radius": {
+        "type": "number",
+        "default": 5,
+        "desc": "光环半径（格）"
+      },
+      "target": {
+        "type": "enum",
+        "values": [
+          "allies",
+          "enemies",
+          "self"
+        ],
+        "default": "enemies"
+      },
+      "follows": {
+        "type": "boolean",
+        "default": true,
+        "desc": "光环是否跟随施法者移动"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "buff",
+      "debuff",
+      "passive_area"
+    ]
+  },
+  {
+    "id": "drain",
+    "name": "吸能场",
+    "icon": "/icons/modifiers/drain.png",
+    "category": "persistent",
+    "applies_to": [
+      "persistent",
+      "area"
+    ],
+    "desc": "持续吸取范围内敌人的能量/法力，转化为施法者资源。",
+    "params": {
+      "drain_rate": {
+        "type": "number",
+        "default": 10,
+        "desc": "每秒吸取量"
+      },
+      "radius": {
+        "type": "number",
+        "default": 5,
+        "desc": "吸取范围（格）"
+      },
+      "convert_ratio": {
+        "type": "number",
+        "default": 0.5,
+        "desc": "吸取量转化为自身的比率"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "resource_steal",
+      "sustain"
+    ]
+  },
+  {
+    "id": "storm",
+    "name": "风暴核",
+    "icon": "/icons/modifiers/storm.png",
+    "category": "persistent",
+    "applies_to": [
+      "persistent",
+      "area"
+    ],
+    "desc": "在范围内随机位置持续生成闪电/陨石/毒云等伤害点。",
+    "params": {
+      "hit_rate": {
+        "type": "number",
+        "default": 3,
+        "desc": "每秒随机命中次数"
+      },
+      "strike_radius": {
+        "type": "number",
+        "default": 1,
+        "desc": "每次打击的范围（格）"
+      },
+      "storm_radius": {
+        "type": "number",
+        "default": 8,
+        "desc": "风暴覆盖范围（格）"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "random",
+      "aoe",
+      "persistent"
+    ]
+  },
+  {
+    "id": "mirror_field",
+    "name": "镜面域",
+    "icon": "/icons/modifiers/mirror_field.png",
+    "category": "persistent",
+    "applies_to": [
+      "persistent"
+    ],
+    "desc": "在范围内创建镜面场，反射进入的敌方弹体并转化为友方攻击。",
+    "params": {
+      "reflect_chance": {
+        "type": "number",
+        "default": 0.5,
+        "desc": "反射概率"
+      },
+      "reflect_damage_mult": {
+        "type": "number",
+        "default": 0.8,
+        "desc": "反射后伤害倍率"
+      },
+      "duration": {
+        "type": "number",
+        "default": 5,
+        "desc": "持续时间（秒）"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "reflect",
+      "defensive"
+    ]
+  },
+  {
+    "id": "ward",
+    "name": "结界",
+    "icon": "/icons/modifiers/ward.png",
+    "category": "persistent",
+    "applies_to": [
+      "persistent",
+      "instant"
+    ],
+    "desc": "在区域边缘创建不可见阻挡屏障，敌人无法进入，友军可自由穿越。",
+    "params": {
+      "radius": {
+        "type": "number",
+        "default": 6,
+        "desc": "结界半径（格）"
+      },
+      "duration": {
+        "type": "number",
+        "default": 8,
+        "desc": "持续时间（秒）"
+      },
+      "damage_on_touch": {
+        "type": "number",
+        "default": 50,
+        "desc": "触碰边界造成的伤害"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "defensive",
+      "zoning",
+      "barrier"
+    ]
+  },
+  {
+    "id": "beacon",
+    "name": "信标",
+    "icon": "/icons/modifiers/beacon.png",
+    "category": "persistent",
+    "applies_to": [
+      "persistent",
+      "summon"
+    ],
+    "desc": "以信标为中心，增强范围内友方单位的伤害、防御和移速。",
+    "params": {
+      "radius": {
+        "type": "number",
+        "default": 8,
+        "desc": "信标范围（格）"
+      },
+      "damage_buff": {
+        "type": "number",
+        "default": 0.2,
+        "desc": "伤害加成"
+      },
+      "defense_buff": {
+        "type": "number",
+        "default": 0.15,
+        "desc": "防御加成"
+      },
+      "speed_buff": {
+        "type": "number",
+        "default": 0.1,
+        "desc": "移速加成"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "support",
+      "buff",
+      "aoe"
+    ]
+  },
+  {
+    "id": "vortex",
+    "name": "漩涡",
+    "icon": "/icons/modifiers/vortex.png",
+    "category": "persistent",
+    "applies_to": [
+      "persistent",
+      "area"
+    ],
+    "desc": "持续吸引范围内的弹体和敌人向中心旋转汇聚，扭曲弹道轨迹。",
+    "params": {
+      "pull_radius": {
+        "type": "number",
+        "default": 6,
+        "desc": "吸引范围（格）"
+      },
+      "rotation_speed": {
+        "type": "number",
+        "default": 120,
+        "desc": "旋转角速度（度/秒）"
+      },
+      "duration": {
+        "type": "number",
+        "default": 4,
+        "desc": "持续时间（秒）"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "cc",
+      "pull",
+      "projectile_deflect"
+    ]
+  },
+  {
+    "id": "growth",
+    "name": "成长",
+    "icon": "/icons/modifiers/growth.png",
+    "category": "persistent",
+    "applies_to": [
+      "persistent",
+      "summon"
+    ],
+    "desc": "效果强度随时间逐渐增长，越到后期越强力。",
+    "params": {
+      "growth_rate": {
+        "type": "number",
+        "default": 0.1,
+        "desc": "每秒强度增长倍率"
+      },
+      "max_multiplier": {
+        "type": "number",
+        "default": 3.0,
+        "desc": "最大强度倍率"
+      },
+      "duration": {
+        "type": "number",
+        "default": 10,
+        "desc": "持续时间（秒）"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "scaling",
+      "ramp_up"
+    ]
+  },
+  {
+    "id": "nova_on_expire",
+    "name": "爆散",
+    "icon": "/icons/modifiers/nova_on_expire.png",
+    "category": "trigger",
+    "applies_to": [
+      "projectile"
+    ],
+    "desc": "弹体到达最大射程或命中时，向四周爆发多枚子弹。",
+    "params": {
+      "count": {
+        "type": "number",
+        "default": 8,
+        "desc": "爆散方向数"
+      },
+      "radius": {
+        "type": "number",
+        "default": 5,
+        "desc": "子弹射程"
+      },
+      "inherit_element": {
+        "type": "boolean",
+        "default": true
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "secondary_projectile",
+      "aoe"
+    ]
+  },
+  {
+    "id": "echo",
+    "name": "回响",
+    "icon": "/icons/modifiers/echo.png",
+    "category": "trigger",
+    "applies_to": [
+      "instant",
+      "area",
+      "projectile"
+    ],
+    "desc": "技能触发后，延迟一段时间自动再次触发一次（伤害降低）。",
+    "params": {
+      "delay": {
+        "type": "number",
+        "default": 0.5,
+        "desc": "回响延迟（秒）"
+      },
+      "count": {
+        "type": "number",
+        "default": 1,
+        "desc": "回响次数"
+      },
+      "damage_mult": {
+        "type": "number",
+        "default": 0.5,
+        "desc": "回响伤害倍率"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "secondary_cast",
+      "amplified"
+    ]
+  },
+  {
+    "id": "chain_on_kill",
+    "name": "灭杀连锁",
+    "icon": "/icons/modifiers/chain_on_kill.png",
+    "category": "trigger",
+    "applies_to": [
+      "projectile",
+      "instant",
+      "area"
+    ],
+    "desc": "目标被击杀时，立即向附近敌人弹射一次额外攻击。",
+    "params": {
+      "chains": {
+        "type": "number",
+        "default": 3,
+        "desc": "最大连锁次数"
+      },
+      "range": {
+        "type": "number",
+        "default": 8,
+        "desc": "连锁范围（格）"
+      },
+      "damage_mult": {
+        "type": "number",
+        "default": 0.6,
+        "desc": "连锁攻击伤害倍率"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "kill_trigger",
+      "chaining"
+    ]
+  },
+  {
+    "id": "detonator",
+    "name": "引爆器",
+    "icon": "/icons/modifiers/detonator.png",
+    "category": "trigger",
+    "applies_to": [
+      "projectile",
+      "area",
+      "persistent"
+    ],
+    "desc": "在目标位置留下潜伏标记，可手动或在特定条件下触发范围爆炸。",
+    "params": {
+      "max_charges": {
+        "type": "number",
+        "default": 3,
+        "desc": "最大存放标记数"
+      },
+      "explosion_radius": {
+        "type": "number",
+        "default": 5,
+        "desc": "爆炸半径（格）"
+      },
+      "trigger_on": {
+        "type": "enum",
+        "values": [
+          "manual",
+          "timer",
+          "on_hit"
+        ],
+        "default": "manual"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "delayed",
+      "strategic",
+      "aoe"
+    ]
+  },
+  {
+    "id": "absorb",
+    "name": "吸收反弹",
+    "icon": "/icons/modifiers/absorb.png",
+    "category": "trigger",
+    "applies_to": [
+      "instant",
+      "persistent"
+    ],
+    "desc": "吸收一次伤害并储存，之后以加倍能量反弹给攻击者。",
+    "params": {
+      "max_absorb": {
+        "type": "number",
+        "default": 500,
+        "desc": "最大吸收伤害值"
+      },
+      "return_mult": {
+        "type": "number",
+        "default": 2.0,
+        "desc": "反弹伤害倍率"
+      },
+      "cooldown": {
+        "type": "number",
+        "default": 8,
+        "desc": "触发后冷却时间（秒）"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "defensive",
+      "counter",
+      "reflect"
+    ]
+  },
+  {
+    "id": "on_crit",
+    "name": "暴击触发",
+    "icon": "/icons/modifiers/on_crit.png",
+    "category": "trigger",
+    "applies_to": [
+      "projectile",
+      "instant",
+      "area",
+      "beam"
+    ],
+    "desc": "暴击命中时，额外触发一次特殊效果（爆炸、减速或诅咒）。",
+    "params": {
+      "bonus_effect": {
+        "type": "enum",
+        "values": [
+          "explosion",
+          "freeze",
+          "curse",
+          "stun"
+        ],
+        "default": "explosion"
+      },
+      "effect_scale": {
+        "type": "number",
+        "default": 0.5,
+        "desc": "额外效果强度倍率"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "crit_synergy",
+      "conditional"
+    ]
+  },
+  {
+    "id": "aftershock",
+    "name": "余震",
+    "icon": "/icons/modifiers/aftershock.png",
+    "category": "trigger",
+    "applies_to": [
+      "area",
+      "projectile"
+    ],
+    "desc": "技能落地后，延迟0.5秒在相同位置再次触发一次较弱的余震。",
+    "params": {
+      "delay": {
+        "type": "number",
+        "default": 0.5,
+        "desc": "余震延迟（秒）"
+      },
+      "shocks": {
+        "type": "number",
+        "default": 2,
+        "desc": "余震次数"
+      },
+      "damage_mult": {
+        "type": "number",
+        "default": 0.4,
+        "desc": "余震伤害倍率"
+      },
+      "radius_mult": {
+        "type": "number",
+        "default": 0.7,
+        "desc": "余震范围倍率"
+      }
+    },
+    "conflicts": [
+      "echo"
+    ],
+    "tags": [
+      "delayed",
+      "aoe"
+    ]
+  },
+  {
+    "id": "shatter",
+    "name": "碎裂",
+    "icon": "/icons/modifiers/shatter.png",
+    "category": "trigger",
+    "applies_to": [
+      "projectile",
+      "instant",
+      "area"
+    ],
+    "desc": "攻击被冰冻状态的目标时触发碎裂，造成大量范围伤害并清除冰冻。",
+    "params": {
+      "bonus_damage_mult": {
+        "type": "number",
+        "default": 3.0,
+        "desc": "对冰冻目标伤害倍率"
+      },
+      "shatter_radius": {
+        "type": "number",
+        "default": 3,
+        "desc": "碎片飞溅范围（格）"
+      },
+      "fragment_count": {
+        "type": "number",
+        "default": 6,
+        "desc": "飞溅碎片数量"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "synergy",
+      "freeze",
+      "burst"
+    ]
+  },
+  {
+    "id": "counter",
+    "name": "反击",
+    "icon": "/icons/modifiers/counter.png",
+    "category": "trigger",
+    "applies_to": [
+      "instant",
+      "persistent"
+    ],
+    "desc": "受到伤害时自动触发一次反击，向攻击者释放技能。",
+    "params": {
+      "cooldown": {
+        "type": "number",
+        "default": 3,
+        "desc": "反击冷却时间（秒）"
+      },
+      "damage_mult": {
+        "type": "number",
+        "default": 1.2,
+        "desc": "反击伤害倍率"
+      },
+      "range": {
+        "type": "number",
+        "default": 10,
+        "desc": "反击射程（格）"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "reactive",
+      "defensive",
+      "counter"
+    ]
+  },
+  {
+    "id": "empowered",
+    "name": "强化",
+    "icon": "/icons/modifiers/empowered.png",
+    "category": "amplifier",
+    "applies_to": [
+      "summon",
+      "projectile",
+      "area",
+      "instant",
+      "beam",
+      "persistent"
+    ],
+    "desc": "全面强化技能，提升伤害、范围和持续时间。",
+    "params": {
+      "damage_mult": {
+        "type": "number",
+        "default": 1.5,
+        "desc": "伤害倍率"
+      },
+      "area_mult": {
+        "type": "number",
+        "default": 1.3,
+        "desc": "范围倍率"
+      },
+      "duration_mult": {
+        "type": "number",
+        "default": 1.5,
+        "desc": "持续时间倍率"
+      },
+      "speed_mult": {
+        "type": "number",
+        "default": 1.2,
+        "desc": "速度倍率"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "amplified",
+      "global"
+    ]
+  },
+  {
+    "id": "overcharge",
+    "name": "超载",
+    "icon": "/icons/modifiers/overcharge.png",
+    "category": "amplifier",
+    "applies_to": [
+      "projectile",
+      "area",
+      "beam",
+      "instant"
+    ],
+    "desc": "蓄力时间越长，技能伤害和范围越大，但超时会自伤。",
+    "params": {
+      "max_charge_time": {
+        "type": "number",
+        "default": 3,
+        "desc": "最大蓄力时间（秒）"
+      },
+      "max_damage_mult": {
+        "type": "number",
+        "default": 4.0,
+        "desc": "最大伤害倍率"
+      },
+      "overload_damage": {
+        "type": "number",
+        "default": 0.2,
+        "desc": "蓄力超时自伤比例（%生命）"
+      }
+    },
+    "conflicts": [
+      "burst_fire"
+    ],
+    "tags": [
+      "charge",
+      "high_risk",
+      "amplified"
+    ]
+  },
+  {
+    "id": "lifesteal",
+    "name": "生命汲取",
+    "icon": "/icons/modifiers/lifesteal.png",
+    "category": "amplifier",
+    "applies_to": [
+      "projectile",
+      "area",
+      "instant",
+      "beam",
+      "persistent"
+    ],
+    "desc": "造成的伤害转化为施法者的生命值。",
+    "params": {
+      "steal_ratio": {
+        "type": "number",
+        "default": 0.2,
+        "desc": "伤害转化生命值的比率"
+      },
+      "max_per_hit": {
+        "type": "number",
+        "default": 200,
+        "desc": "单次命中最大回血量"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "sustain",
+      "drain"
+    ]
+  },
+  {
+    "id": "critical",
+    "name": "暴击强化",
+    "icon": "/icons/modifiers/critical.png",
+    "category": "amplifier",
+    "applies_to": [
+      "projectile",
+      "beam",
+      "instant",
+      "area"
+    ],
+    "desc": "大幅提升暴击率和暴击伤害倍率。",
+    "params": {
+      "crit_chance_bonus": {
+        "type": "number",
+        "default": 0.3,
+        "desc": "额外暴击率（0-1）"
+      },
+      "crit_damage_mult": {
+        "type": "number",
+        "default": 2.5,
+        "desc": "暴击伤害倍率"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "crit",
+      "amplified"
+    ]
+  },
+  {
+    "id": "penetrating",
+    "name": "穿甲",
+    "icon": "/icons/modifiers/penetrating.png",
+    "category": "amplifier",
+    "applies_to": [
+      "projectile",
+      "area",
+      "beam",
+      "instant"
+    ],
+    "desc": "技能完全无视目标的防御值和护盾层，直接造成真实伤害。",
+    "params": {
+      "penetration_pct": {
+        "type": "number",
+        "default": 1.0,
+        "desc": "穿甲比例（1.0=100%忽视护甲）"
+      },
+      "shield_bypass": {
+        "type": "boolean",
+        "default": true,
+        "desc": "是否绕过护盾"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "true_damage",
+      "anti_tank"
+    ]
+  },
+  {
+    "id": "twin_cast",
+    "name": "孪生施法",
+    "icon": "/icons/modifiers/twin_cast.png",
+    "category": "amplifier",
+    "applies_to": [
+      "projectile",
+      "area",
+      "instant",
+      "beam"
+    ],
+    "desc": "技能触发时，同时在镜像位置生成一个副本，两者同时作用。",
+    "params": {
+      "offset_angle": {
+        "type": "number",
+        "default": 20,
+        "desc": "副本偏移角度（度）"
+      },
+      "damage_mult": {
+        "type": "number",
+        "default": 0.8,
+        "desc": "副本伤害倍率"
+      },
+      "share_mods": {
+        "type": "boolean",
+        "default": true,
+        "desc": "副本继承所有修饰符"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "duplicate",
+      "multishot"
+    ]
+  },
+  {
+    "id": "ritual",
+    "name": "血契仪式",
+    "icon": "/icons/modifiers/ritual.png",
+    "category": "amplifier",
+    "applies_to": [
+      "summon",
+      "projectile",
+      "area",
+      "instant",
+      "beam",
+      "persistent"
+    ],
+    "desc": "施法时消耗施法者自身生命值，换取大幅强化的技能效果。",
+    "params": {
+      "hp_cost_pct": {
+        "type": "number",
+        "default": 0.1,
+        "desc": "消耗最大生命值的比例"
+      },
+      "power_mult": {
+        "type": "number",
+        "default": 2.0,
+        "desc": "技能强化倍率"
+      },
+      "min_hp_pct": {
+        "type": "number",
+        "default": 0.15,
+        "desc": "施法者低于此比例生命时不允许施法"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "high_risk",
+      "sacrifice",
+      "amplified"
+    ]
+  },
+  {
+    "id": "resonance",
+    "name": "元素共鸣",
+    "icon": "/icons/modifiers/resonance.png",
+    "category": "amplifier",
+    "applies_to": [
+      "projectile",
+      "area",
+      "instant",
+      "beam",
+      "persistent"
+    ],
+    "desc": "若目标已被相同元素效果命中，此次技能额外造成共鸣伤害。",
+    "params": {
+      "bonus_damage_mult": {
+        "type": "number",
+        "default": 0.5,
+        "desc": "共鸣额外伤害倍率"
+      },
+      "resonance_window": {
+        "type": "number",
+        "default": 5,
+        "desc": "共鸣窗口时间（秒）"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "synergy",
+      "element",
+      "combo"
+    ]
+  },
+  {
+    "id": "mastery",
+    "name": "精通",
+    "icon": "/icons/modifiers/mastery.png",
+    "category": "amplifier",
+    "applies_to": [
+      "summon",
+      "projectile",
+      "area",
+      "instant",
+      "beam",
+      "persistent"
+    ],
+    "desc": "每次成功命中为技能积累精通层数，层数越高冷却越短、效果越强。",
+    "params": {
+      "max_stacks": {
+        "type": "number",
+        "default": 5,
+        "desc": "最大精通层数"
+      },
+      "cooldown_reduce_per_stack": {
+        "type": "number",
+        "default": 0.05,
+        "desc": "每层冷却缩减（%）"
+      },
+      "damage_per_stack": {
+        "type": "number",
+        "default": 0.1,
+        "desc": "每层伤害加成"
+      },
+      "stack_duration": {
+        "type": "number",
+        "default": 8,
+        "desc": "层数持续时间（秒）"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "stack",
+      "scaling",
+      "sustain"
+    ]
+  },
+  {
+    "id": "sacrifice",
+    "name": "献祭",
+    "icon": "/icons/modifiers/sacrifice.png",
+    "category": "amplifier",
+    "applies_to": [
+      "summon",
+      "projectile",
+      "area",
+      "instant",
+      "beam",
+      "persistent"
+    ],
+    "desc": "消耗当前存活的召唤物，每消耗一个大幅增强下一次技能。",
+    "params": {
+      "power_per_summon": {
+        "type": "number",
+        "default": 0.5,
+        "desc": "每个召唤物提供的额外伤害倍率"
+      },
+      "max_summons_consumed": {
+        "type": "number",
+        "default": 3,
+        "desc": "最大消耗召唤物数量"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "sacrifice",
+      "summon_synergy",
+      "burst"
+    ]
+  },
+  {
+    "id": "barrage",
+    "name": "连射",
+    "icon": "/icons/modifiers/barrage.png",
+    "category": "tempo",
+    "applies_to": [
+      "projectile"
+    ],
+    "desc": "快速连续发射多次，每次略有角度偏差。",
+    "params": {
+      "count": {
+        "type": "number",
+        "default": 5,
+        "desc": "连射次数"
+      },
+      "interval": {
+        "type": "number",
+        "default": 0.1,
+        "desc": "每次间隔（秒）"
+      },
+      "spread": {
+        "type": "number",
+        "default": 5,
+        "desc": "随机散射角度（度）"
+      }
+    },
+    "conflicts": [
+      "fork"
+    ],
+    "tags": [
+      "multishot",
+      "rapid"
+    ]
+  },
+  {
+    "id": "charged",
+    "name": "蓄力",
+    "icon": "/icons/modifiers/charged.png",
+    "category": "tempo",
+    "applies_to": [
+      "projectile",
+      "area",
+      "beam",
+      "instant"
+    ],
+    "desc": "技能可以蓄力，按住时间越长效果越强（速度、伤害、范围递增）。",
+    "params": {
+      "min_charge_time": {
+        "type": "number",
+        "default": 0.3,
+        "desc": "最小有效蓄力时间（秒）"
+      },
+      "max_charge_time": {
+        "type": "number",
+        "default": 2.0,
+        "desc": "最大蓄力时间（秒）"
+      },
+      "max_power_mult": {
+        "type": "number",
+        "default": 3.0,
+        "desc": "最大强化倍率"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "charge",
+      "scaling"
+    ]
+  },
+  {
+    "id": "burst_fire",
+    "name": "爆发连射",
+    "icon": "/icons/modifiers/burst_fire.png",
+    "category": "tempo",
+    "applies_to": [
+      "projectile"
+    ],
+    "desc": "短时间内快速消耗所有弹药连发，之后进入较长冷却。",
+    "params": {
+      "burst_count": {
+        "type": "number",
+        "default": 8,
+        "desc": "连射弹数"
+      },
+      "fire_rate": {
+        "type": "number",
+        "default": 0.05,
+        "desc": "每发间隔（秒）"
+      },
+      "cooldown_mult": {
+        "type": "number",
+        "default": 2.0,
+        "desc": "冷却时间倍率"
+      }
+    },
+    "conflicts": [
+      "overcharge"
+    ],
+    "tags": [
+      "rapid",
+      "multishot",
+      "cooldown"
+    ]
+  },
+  {
+    "id": "delayed",
+    "name": "延迟起爆",
+    "icon": "/icons/modifiers/delayed.png",
+    "category": "tempo",
+    "applies_to": [
+      "projectile",
+      "area",
+      "instant"
+    ],
+    "desc": "技能延迟一段时间才在目标位置生效，期间可预判走位。",
+    "params": {
+      "delay": {
+        "type": "number",
+        "default": 1.0,
+        "desc": "起爆延迟（秒）"
+      },
+      "visible": {
+        "type": "boolean",
+        "default": true,
+        "desc": "落点标记是否可见"
+      },
+      "damage_bonus": {
+        "type": "number",
+        "default": 0.3,
+        "desc": "等待完成后额外伤害加成"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "delayed",
+      "positional"
+    ]
+  },
+  {
+    "id": "countdown",
+    "name": "倒计时雷",
+    "icon": "/icons/modifiers/countdown.png",
+    "category": "tempo",
+    "applies_to": [
+      "projectile",
+      "area"
+    ],
+    "desc": "弹体/区域到达目标位置后开始倒计时，时间到才爆炸，造成极大伤害。",
+    "params": {
+      "fuse_time": {
+        "type": "number",
+        "default": 2,
+        "desc": "引信倒计时（秒）"
+      },
+      "damage_mult": {
+        "type": "number",
+        "default": 5.0,
+        "desc": "最终爆炸伤害倍率"
+      },
+      "radius_mult": {
+        "type": "number",
+        "default": 2.0,
+        "desc": "爆炸范围倍率"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "delayed",
+      "high_burst",
+      "aoe"
+    ]
+  },
+  {
+    "id": "staggered",
+    "name": "错位发射",
+    "icon": "/icons/modifiers/staggered.png",
+    "category": "tempo",
+    "applies_to": [
+      "projectile"
+    ],
+    "desc": "多个弹体以不规则时间间隔发射，难以预判规律，令人措手不及。",
+    "params": {
+      "count": {
+        "type": "number",
+        "default": 4,
+        "desc": "错位弹体总数"
+      },
+      "min_interval": {
+        "type": "number",
+        "default": 0.1,
+        "desc": "最小间隔（秒）"
+      },
+      "max_interval": {
+        "type": "number",
+        "default": 0.6,
+        "desc": "最大间隔（秒）"
+      }
+    },
+    "conflicts": [
+      "barrage",
+      "burst_fire"
+    ],
+    "tags": [
+      "multishot",
+      "unpredictable"
+    ]
+  },
+  {
+    "id": "overdrive",
+    "name": "超速模式",
+    "icon": "/icons/modifiers/overdrive.png",
+    "category": "tempo",
+    "applies_to": [
+      "projectile",
+      "area",
+      "beam",
+      "instant",
+      "persistent"
+    ],
+    "desc": "暂时大幅提升施法速度和弹体速度，持续一段时间后进入超长冷却。",
+    "params": {
+      "duration": {
+        "type": "number",
+        "default": 5,
+        "desc": "超速持续时间（秒）"
+      },
+      "cast_speed_mult": {
+        "type": "number",
+        "default": 3.0,
+        "desc": "施法速度倍率"
+      },
+      "projectile_speed_mult": {
+        "type": "number",
+        "default": 2.0,
+        "desc": "弹体速度倍率"
+      },
+      "cooldown_after": {
+        "type": "number",
+        "default": 15,
+        "desc": "超速结束后冷却（秒）"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "speed",
+      "burst_window"
+    ]
+  },
+  {
+    "id": "cycle",
+    "name": "元素循环",
+    "icon": "/icons/modifiers/cycle.png",
+    "category": "tempo",
+    "applies_to": [
+      "projectile",
+      "area",
+      "instant",
+      "beam"
+    ],
+    "desc": "每次施法自动循环到下一个元素，形成连击组合效果。",
+    "params": {
+      "elements": {
+        "type": "array",
+        "default": [
+          "fire",
+          "ice",
+          "lightning"
+        ],
+        "desc": "循环元素列表"
+      },
+      "bonus_on_full_cycle": {
+        "type": "number",
+        "default": 0.5,
+        "desc": "完成一轮循环后额外伤害加成"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "rotation",
+      "element",
+      "combo"
+    ]
+  },
+  {
+    "id": "snipe",
+    "name": "狙击",
+    "icon": "/icons/modifiers/snipe.png",
+    "category": "tempo",
+    "applies_to": [
+      "projectile",
+      "beam"
+    ],
+    "desc": "蓄力越久弹体速度和穿透力越高，停止蓄力后瞬间释放超高速弹体。",
+    "params": {
+      "max_charge_time": {
+        "type": "number",
+        "default": 3,
+        "desc": "最大蓄力时间（秒）"
+      },
+      "max_speed_mult": {
+        "type": "number",
+        "default": 5.0,
+        "desc": "最大速度倍率"
+      },
+      "max_range_mult": {
+        "type": "number",
+        "default": 3.0,
+        "desc": "最大射程倍率"
+      },
+      "instant_release": {
+        "type": "boolean",
+        "default": true,
+        "desc": "停止蓄力时瞬间发射"
+      }
+    },
+    "conflicts": [
+      "barrage",
+      "burst_fire"
+    ],
+    "tags": [
+      "charge",
+      "high_range",
+      "pierce"
+    ]
+  },
+  {
+    "id": "volley",
+    "name": "齐射",
+    "icon": "/icons/modifiers/volley.png",
+    "category": "tempo",
+    "applies_to": [
+      "projectile"
+    ],
+    "desc": "积累多发弹药，全部同时发射，形成弹幕覆盖。",
+    "params": {
+      "volley_count": {
+        "type": "number",
+        "default": 6,
+        "desc": "齐射弹数"
+      },
+      "spread_angle": {
+        "type": "number",
+        "default": 30,
+        "desc": "弹幕扩散角度（度）"
+      },
+      "charge_time": {
+        "type": "number",
+        "default": 2,
+        "desc": "积累时间（秒）"
+      }
+    },
+    "conflicts": [
+      "staggered"
+    ],
+    "tags": [
+      "multishot",
+      "simultaneous",
+      "aoe"
+    ]
+  },
+  {
+    "id": "link",
+    "name": "锁链",
+    "icon": "/icons/modifiers/link.png",
+    "category": "persistent",
+    "applies_to": [
+      "persistent",
+      "instant",
+      "summon"
+    ],
+    "desc": "将多个目标彼此链接，链中一个受伤时其他目标也承受部分伤害，强制共享命运。",
+    "params": {
+      "max_targets": {
+        "type": "number",
+        "default": 3,
+        "desc": "最大链接目标数"
+      },
+      "share_ratio": {
+        "type": "number",
+        "default": 0.4,
+        "desc": "伤害分摊比率"
+      },
+      "range": {
+        "type": "number",
+        "default": 10,
+        "desc": "链接最大距离（格）"
+      },
+      "duration": {
+        "type": "number",
+        "default": 8,
+        "desc": "链接持续时间（秒）"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "cc",
+      "shared_damage",
+      "utility"
+    ]
+  },
+  {
+    "id": "mark_detonate",
+    "name": "标记引爆",
+    "icon": "/icons/modifiers/mark_detonate.png",
+    "category": "trigger",
+    "applies_to": [
+      "projectile",
+      "instant",
+      "area"
+    ],
+    "desc": "每次命中在目标身上积累引爆标记，达到指定层数时一次性引爆所有标记造成爆炸伤害。",
+    "params": {
+      "stacks_to_detonate": {
+        "type": "number",
+        "default": 5,
+        "desc": "触发引爆所需标记层数"
+      },
+      "detonate_damage_mult": {
+        "type": "number",
+        "default": 3.0,
+        "desc": "引爆伤害倍率"
+      },
+      "mark_duration": {
+        "type": "number",
+        "default": 10,
+        "desc": "标记持续时间（秒）"
+      }
+    },
+    "conflicts": [],
+    "tags": [
+      "stack",
+      "delayed",
+      "burst",
+      "conditional"
+    ]
+  }
+]

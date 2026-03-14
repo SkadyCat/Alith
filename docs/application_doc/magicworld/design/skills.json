@@ -1,0 +1,2368 @@
+[
+  {
+    "id": "skill_001",
+    "name": "死亡凝视",
+    "type": "主动",
+    "element": "暗影",
+    "level": 1,
+    "mpCost": 30,
+    "cooldown": 12,
+    "damage": "200%",
+    "rarity": "普通",
+    "description": "向目标发出死亡凝视，造成暗影伤害并降低其防御30%，持续5秒。",
+    "icon": "/icons/skillicon_01_20260302_151309_95c73784.png",
+    "tags": [
+      "单体",
+      "诅咒"
+    ]
+  },
+  {
+    "id": "skill_002",
+    "name": "骨矛投掷",
+    "type": "主动",
+    "element": "死灵",
+    "level": 1,
+    "mpCost": 20,
+    "cooldown": 5,
+    "damage": "180%",
+    "rarity": "普通",
+    "description": "召唤骨矛向目标投掷，穿透敌人造成死灵伤害。",
+    "icon": "/icons/skillicon_02_20260302_151310_877b6f04.png",
+    "tags": [
+      "投射物",
+      "单体"
+    ]
+  },
+  {
+    "id": "skill_003",
+    "name": "地狱烈焰",
+    "type": "主动",
+    "element": "火焰",
+    "level": 5,
+    "mpCost": 45,
+    "cooldown": 15,
+    "damage": "350%",
+    "rarity": "魔法",
+    "description": "召唤地狱之火覆盖区域，持续燃烧敌人3秒，每秒造成50%火焰伤害。",
+    "icon": "/icons/skillicon_03_20260302_151311_c6ad40c3.png",
+    "tags": [
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_004",
+    "name": "冰霜新星",
+    "type": "主动",
+    "element": "冰霜",
+    "level": 5,
+    "mpCost": 40,
+    "cooldown": 12,
+    "damage": "280%",
+    "rarity": "魔法",
+    "description": "释放冰霜爆炸，冻结周围所有敌人2秒并造成冰霜伤害。",
+    "icon": "/icons/skillicon_04_20260302_151312_4bc6b307.png",
+    "tags": [
+      "范围"
+    ]
+  },
+  {
+    "id": "skill_005",
+    "name": "闪电链",
+    "type": "主动",
+    "element": "闪电",
+    "level": 8,
+    "mpCost": 50,
+    "cooldown": 10,
+    "damage": "240%",
+    "rarity": "魔法",
+    "description": "释放闪电在敌人之间跳跃，最多弹跳5次，每次造成闪电伤害。",
+    "icon": "/icons/skillicon_05_20260302_151313_467cbe69.png",
+    "tags": [
+      "投射物",
+      "链接"
+    ]
+  },
+  {
+    "id": "skill_006",
+    "name": "毒素爆发",
+    "type": "主动",
+    "element": "毒素",
+    "level": 3,
+    "mpCost": 35,
+    "cooldown": 8,
+    "damage": "150%",
+    "rarity": "普通",
+    "description": "投掷毒素炸弹，爆炸后在区域内持续释放毒素，中毒敌人每秒损失3%最大生命。",
+    "icon": "/icons/skillicon_06_20260302_151314_158a5ce8.png",
+    "tags": [
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_007",
+    "name": "神圣之光",
+    "type": "主动",
+    "element": "神圣",
+    "level": 10,
+    "mpCost": 60,
+    "cooldown": 20,
+    "damage": "400%",
+    "rarity": "稀有",
+    "description": "召唤神圣光柱降临，对不死生物造成400%神圣伤害，对其他敌人造成200%伤害。",
+    "icon": "/icons/skillicon_07_20260302_151315_52d296eb.png",
+    "tags": [
+      "范围"
+    ]
+  },
+  {
+    "id": "skill_008",
+    "name": "虚空撕裂",
+    "type": "主动",
+    "element": "虚空",
+    "level": 15,
+    "mpCost": 80,
+    "cooldown": 25,
+    "damage": "500%",
+    "rarity": "稀有",
+    "description": "撕裂空间维度，造成巨大虚空伤害并使目标移动速度降低50%。",
+    "icon": "/icons/skillicon_08_20260302_151316_634e08d4.png",
+    "tags": [
+      "范围"
+    ]
+  },
+  {
+    "id": "skill_009",
+    "name": "灵魂收割",
+    "type": "主动",
+    "element": "死灵",
+    "level": 12,
+    "mpCost": 70,
+    "cooldown": 18,
+    "damage": "320%",
+    "rarity": "稀有",
+    "description": "收割目标的灵魂，造成死灵伤害并吸收其10%最大生命值回复自身。",
+    "icon": "/icons/skillicon_09_20260302_151317_e2bf7f9b.png",
+    "tags": [
+      "单体",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_010",
+    "name": "狂暴打击",
+    "type": "主动",
+    "element": "物理",
+    "level": 1,
+    "mpCost": 15,
+    "cooldown": 4,
+    "damage": "220%",
+    "rarity": "普通",
+    "description": "以狂暴之力猛击目标，造成高额物理伤害并有30%概率击退敌人。",
+    "icon": "/icons/skillicon_10_20260302_151318_8f5d5b8c.png",
+    "tags": [
+      "近战",
+      "单体"
+    ]
+  },
+  {
+    "id": "skill_011",
+    "name": "暗影穿刺",
+    "type": "主动",
+    "element": "暗影",
+    "level": 6,
+    "mpCost": 40,
+    "cooldown": 8,
+    "damage": "280%",
+    "rarity": "魔法",
+    "description": "化为暗影高速突进，穿刺路径上所有敌人，并在目标后方现身。",
+    "icon": "/icons/skillicon_11_20260302_151319_f64b9b5e.png",
+    "tags": [
+      "投射物",
+      "单体"
+    ]
+  },
+  {
+    "id": "skill_012",
+    "name": "召唤骷髅兵",
+    "type": "主动",
+    "element": "死灵",
+    "level": 4,
+    "mpCost": 50,
+    "cooldown": 30,
+    "damage": "0%",
+    "rarity": "魔法",
+    "description": "从地下召唤3具骷髅战士，持续20秒，骷髅兵攻击力为施法者攻击力的80%。",
+    "icon": "/icons/skillicon_12_20260302_151320_38b6c8db.png",
+    "tags": [
+      "召唤"
+    ]
+  },
+  {
+    "id": "skill_013",
+    "name": "炎爆术",
+    "type": "主动",
+    "element": "火焰",
+    "level": 2,
+    "mpCost": 25,
+    "cooldown": 6,
+    "damage": "200%",
+    "rarity": "普通",
+    "description": "发射一颗火球轰炸目标，爆炸产生小范围溅射伤害。",
+    "icon": "/icons/skillicon_13_20260302_151321_fd6870ec.png",
+    "tags": [
+      "投射物",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_014",
+    "name": "冰封大地",
+    "type": "主动",
+    "element": "冰霜",
+    "level": 18,
+    "mpCost": 100,
+    "cooldown": 35,
+    "damage": "600%",
+    "rarity": "史诗",
+    "description": "冻结整片大地，使所有敌人完全冻结5秒并造成巨大冰霜伤害，冻结期间受到的伤害增加50%。",
+    "icon": "/icons/skillicon_14_20260302_151322_d58e08ce.png",
+    "tags": [
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_015",
+    "name": "天雷万钧",
+    "type": "主动",
+    "element": "闪电",
+    "level": 20,
+    "mpCost": 120,
+    "cooldown": 40,
+    "damage": "800%",
+    "rarity": "史诗",
+    "description": "召唤九道天雷轰击目标区域，每道天雷造成独立闪电伤害，有概率麻痹敌人。",
+    "icon": "/icons/skillicon_15_20260302_151323_8266e385.png",
+    "tags": [
+      "范围",
+      "投射物"
+    ]
+  },
+  {
+    "id": "skill_016",
+    "name": "瘟疫之触",
+    "type": "主动",
+    "element": "毒素",
+    "level": 14,
+    "mpCost": 65,
+    "cooldown": 16,
+    "damage": "250%",
+    "rarity": "稀有",
+    "description": "以瘟疫之手触碰目标，传播致命疾病，中毒效果可蔓延至附近敌人。",
+    "icon": "/icons/skillicon_16_20260302_151324_4573634c.png",
+    "tags": [
+      "近战",
+      "持续",
+      "诅咒"
+    ]
+  },
+  {
+    "id": "skill_017",
+    "name": "圣盾祝福",
+    "type": "主动",
+    "element": "神圣",
+    "level": 8,
+    "mpCost": 45,
+    "cooldown": 20,
+    "damage": "0%",
+    "rarity": "魔法",
+    "description": "为自身或队友施加神圣护盾，吸收相当于施法者最大生命值30%的伤害，持续15秒。",
+    "icon": "/icons/skillicon_17_20260302_151326_3ae65c43.png",
+    "tags": [
+      "单体",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_018",
+    "name": "虚空凝视",
+    "type": "主动",
+    "element": "虚空",
+    "level": 22,
+    "mpCost": 140,
+    "cooldown": 45,
+    "damage": "900%",
+    "rarity": "传奇",
+    "description": "打开虚空之眼凝视目标，从虚空中抽取其生命力，造成毁灭性虚空伤害，并使目标在10秒内无法受到治疗。",
+    "icon": "/icons/skillicon_18_20260302_151327_854c6ac9.png",
+    "tags": [
+      "单体",
+      "诅咒"
+    ]
+  },
+  {
+    "id": "skill_019",
+    "name": "死亡爆裂",
+    "type": "主动",
+    "element": "死灵",
+    "level": 25,
+    "mpCost": 150,
+    "cooldown": 50,
+    "damage": "1000%",
+    "rarity": "传奇",
+    "description": "引爆附近所有亡灵随从，每只随从的爆炸造成1000%死灵伤害，同时回复施法者20%生命值。",
+    "icon": "/icons/skillicon_19_20260302_151328_50740bae.png",
+    "tags": [
+      "范围",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_020",
+    "name": "暗影之幕",
+    "type": "主动",
+    "element": "暗影",
+    "level": 10,
+    "mpCost": 55,
+    "cooldown": 22,
+    "damage": "0%",
+    "rarity": "稀有",
+    "description": "展开暗影之幕使自身隐形8秒，隐形期间移动速度提升30%，攻击时解除隐形并造成双倍伤害。",
+    "icon": "/icons/skillicon_20_20260302_151329_8d500f8b.png",
+    "tags": [
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_021",
+    "name": "熔岩喷涌",
+    "type": "主动",
+    "element": "火焰",
+    "level": 16,
+    "mpCost": 90,
+    "cooldown": 28,
+    "damage": "450%",
+    "rarity": "史诗",
+    "description": "从地下召唤熔岩喷涌而出，对区域内敌人造成大量火焰伤害，留下熔岩地带持续灼烧。",
+    "icon": "/icons/skillicon_21_20260302_151330_88617e4a.png",
+    "tags": [
+      "投射物",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_022",
+    "name": "冰霜护甲",
+    "type": "主动",
+    "element": "冰霜",
+    "level": 6,
+    "mpCost": 40,
+    "cooldown": 25,
+    "damage": "0%",
+    "rarity": "魔法",
+    "description": "以冰霜覆盖全身，增加防御力50%，攻击者有20%概率被冰冻，持续20秒。",
+    "icon": "/icons/skillicon_22_20260302_151331_0fae0bf1.png",
+    "tags": [
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_023",
+    "name": "雷霆震地",
+    "type": "主动",
+    "element": "闪电",
+    "level": 12,
+    "mpCost": 70,
+    "cooldown": 20,
+    "damage": "360%",
+    "rarity": "稀有",
+    "description": "以武器猛击地面，闪电向外扩散震击所有附近敌人，并有50%概率打断敌人施法。",
+    "icon": "/icons/skillicon_23_20260302_151332_0bd195e8.png",
+    "tags": [
+      "范围"
+    ]
+  },
+  {
+    "id": "skill_024",
+    "name": "毒液云雾",
+    "type": "主动",
+    "element": "毒素",
+    "level": 8,
+    "mpCost": 50,
+    "cooldown": 18,
+    "damage": "180%",
+    "rarity": "魔法",
+    "description": "释放大片毒液云雾，覆盖区域持续10秒，进入其中的敌人持续受到毒素伤害。",
+    "icon": "/icons/skillicon_24_20260302_151333_0d97c3f7.png",
+    "tags": [
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_025",
+    "name": "神圣复仇",
+    "type": "主动",
+    "element": "神圣",
+    "level": 18,
+    "mpCost": 110,
+    "cooldown": 38,
+    "damage": "700%",
+    "rarity": "史诗",
+    "description": "以神圣之力爆发，对周围所有敌人造成神圣伤害，并使队友在10秒内免疫黑暗效果。",
+    "icon": "/icons/skillicon_25_20260302_151334_0848f70d.png",
+    "tags": [
+      "近战",
+      "单体"
+    ]
+  },
+  {
+    "id": "skill_026",
+    "name": "虚空侵蚀",
+    "type": "主动",
+    "element": "虚空",
+    "level": 16,
+    "mpCost": 95,
+    "cooldown": 30,
+    "damage": "500%",
+    "rarity": "史诗",
+    "description": "用虚空能量侵蚀目标，降低其所有属性30%，持续15秒，效果可叠加3次。",
+    "icon": "/icons/skillicon_26_20260302_151335_0492b2c3.png",
+    "tags": [
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_027",
+    "name": "亡灵军团",
+    "type": "主动",
+    "element": "死灵",
+    "level": 30,
+    "mpCost": 200,
+    "cooldown": 60,
+    "damage": "0%",
+    "rarity": "传奇",
+    "description": "召唤一支庞大的亡灵军团，包含10具骷髅战士、3头骷髅骑兵和1位骷髅法师，持续45秒。",
+    "icon": "/icons/skillicon_27_20260302_151336_e65fd8ce.png",
+    "tags": [
+      "召唤",
+      "范围"
+    ]
+  },
+  {
+    "id": "skill_028",
+    "name": "血之汲取",
+    "type": "主动",
+    "element": "暗影",
+    "level": 7,
+    "mpCost": 40,
+    "cooldown": 10,
+    "damage": "160%",
+    "rarity": "魔法",
+    "description": "汲取目标生命力，造成暗影伤害并将20%伤害转化为自身生命值回复。",
+    "icon": "/icons/skillicon_28_20260302_151337_585348ee.png",
+    "tags": [
+      "单体",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_029",
+    "name": "末日审判",
+    "type": "主动",
+    "element": "神圣",
+    "level": 35,
+    "mpCost": 250,
+    "cooldown": 90,
+    "damage": "1500%",
+    "rarity": "传奇",
+    "description": "呼唤末日审判降临大地，巨大神圣光柱从天而降，对范围内所有敌人造成毁灭性伤害，对不死生物伤害翻倍。",
+    "icon": "/icons/skillicon_29_20260302_151338_6839ff81.png",
+    "tags": [
+      "范围",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_030",
+    "name": "旋风斩",
+    "type": "主动",
+    "element": "物理",
+    "level": 5,
+    "mpCost": 30,
+    "cooldown": 8,
+    "damage": "240%",
+    "rarity": "普通",
+    "description": "旋转猛击周围所有敌人，移动时持续造成伤害，持续3秒。",
+    "icon": "/icons/skillicon_30_20260302_151339_d1220185.png",
+    "tags": [
+      "近战",
+      "范围",
+      "移动"
+    ]
+  },
+  {
+    "id": "skill_031",
+    "name": "暗黑之力",
+    "type": "被动",
+    "element": "暗影",
+    "level": 1,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "普通",
+    "description": "被动提升暗影元素伤害10%，随技能等级提升增加更多伤害加成。",
+    "icon": "/icons/skillicon_01_20260302_151309_95c73784.png",
+    "tags": [
+      "被动"
+    ]
+  },
+  {
+    "id": "skill_032",
+    "name": "钢铁意志",
+    "type": "被动",
+    "element": "物理",
+    "level": 1,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "普通",
+    "description": "被动提升最大生命值15%，增强对物理伤害的抵抗力。",
+    "icon": "/icons/skillicon_02_20260302_151310_877b6f04.png",
+    "tags": [
+      "被动"
+    ]
+  },
+  {
+    "id": "skill_033",
+    "name": "元素共鸣",
+    "type": "被动",
+    "element": "火焰",
+    "level": 10,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "稀有",
+    "description": "连续使用不同元素技能时获得元素共鸣，使下次技能伤害提升25%。",
+    "icon": "/icons/skillicon_03_20260302_151311_c6ad40c3.png",
+    "tags": [
+      "被动"
+    ]
+  },
+  {
+    "id": "skill_034",
+    "name": "死亡印记",
+    "type": "被动",
+    "element": "死灵",
+    "level": 8,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "魔法",
+    "description": "击杀敌人后在其尸体上留下死亡印记，印记爆炸时造成小范围死灵伤害。",
+    "icon": "/icons/skillicon_04_20260302_151312_4bc6b307.png",
+    "tags": [
+      "被动",
+      "诅咒"
+    ]
+  },
+  {
+    "id": "skill_035",
+    "name": "冰霜洞察",
+    "type": "被动",
+    "element": "冰霜",
+    "level": 5,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "魔法",
+    "description": "对冰冻或减速状态的敌人造成额外20%冰霜伤害。",
+    "icon": "/icons/skillicon_05_20260302_151313_467cbe69.png",
+    "tags": [
+      "被动"
+    ]
+  },
+  {
+    "id": "skill_036",
+    "name": "雷霆精通",
+    "type": "被动",
+    "element": "闪电",
+    "level": 12,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "稀有",
+    "description": "闪电技能有15%概率触发连锁闪电，自动攻击最近的额外目标造成60%伤害。",
+    "icon": "/icons/skillicon_06_20260302_151314_158a5ce8.png",
+    "tags": [
+      "被动"
+    ]
+  },
+  {
+    "id": "skill_037",
+    "name": "毒素专家",
+    "type": "被动",
+    "element": "毒素",
+    "level": 6,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "魔法",
+    "description": "中毒效果持续时间延长50%，毒素伤害提升20%。",
+    "icon": "/icons/skillicon_07_20260302_151315_52d296eb.png",
+    "tags": [
+      "被动"
+    ]
+  },
+  {
+    "id": "skill_038",
+    "name": "神圣守护",
+    "type": "被动",
+    "element": "神圣",
+    "level": 15,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "稀有",
+    "description": "被动提供神圣护盾，每5秒吸收一次等同于最大生命值5%的伤害。",
+    "icon": "/icons/skillicon_08_20260302_151316_634e08d4.png",
+    "tags": [
+      "被动"
+    ]
+  },
+  {
+    "id": "skill_039",
+    "name": "虚空契约",
+    "type": "被动",
+    "element": "虚空",
+    "level": 20,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "史诗",
+    "description": "与虚空签订契约，生命值低于30%时虚空能量暴走，所有技能伤害提升50%，持续10秒，每次战斗触发一次。",
+    "icon": "/icons/skillicon_09_20260302_151317_e2bf7f9b.png",
+    "tags": [
+      "被动"
+    ]
+  },
+  {
+    "id": "skill_040",
+    "name": "亡灵主宰",
+    "type": "被动",
+    "element": "死灵",
+    "level": 18,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "史诗",
+    "description": "提升所有亡灵随从的攻击力30%和生命值50%，最大随从数量增加2只。",
+    "icon": "/icons/skillicon_10_20260302_151318_8f5d5b8c.png",
+    "tags": [
+      "被动",
+      "召唤"
+    ]
+  },
+  {
+    "id": "skill_041",
+    "name": "黑暗光环",
+    "type": "光环",
+    "element": "暗影",
+    "level": 5,
+    "mpCost": 10,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "魔法",
+    "description": "持续消耗魔法值维持暗影光环，使周围敌人受到的暗影伤害增加15%，范围5米。",
+    "icon": "/icons/skillicon_11_20260302_151319_f64b9b5e.png",
+    "tags": [
+      "光环"
+    ]
+  },
+  {
+    "id": "skill_042",
+    "name": "诅咒光环",
+    "type": "光环",
+    "element": "暗影",
+    "level": 10,
+    "mpCost": 15,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "稀有",
+    "description": "散发诅咒能量，降低周围敌人攻击力20%和移动速度20%，范围7米。",
+    "icon": "/icons/skillicon_12_20260302_151320_38b6c8db.png",
+    "tags": [
+      "光环",
+      "诅咒"
+    ]
+  },
+  {
+    "id": "skill_043",
+    "name": "圣光祷告",
+    "type": "光环",
+    "element": "神圣",
+    "level": 8,
+    "mpCost": 12,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "魔法",
+    "description": "持续祷告产生神圣光环，每5秒为队友回复相当于最大生命值2%的生命值。",
+    "icon": "/icons/skillicon_13_20260302_151321_fd6870ec.png",
+    "tags": [
+      "光环"
+    ]
+  },
+  {
+    "id": "skill_044",
+    "name": "冰霜之息",
+    "type": "光环",
+    "element": "冰霜",
+    "level": 12,
+    "mpCost": 18,
+    "cooldown": 0,
+    "damage": "80%",
+    "rarity": "稀有",
+    "description": "散发冰霜寒气，每秒对周围敌人造成冰霜伤害并降低其移动速度10%，范围4米。",
+    "icon": "/icons/skillicon_14_20260302_151322_d58e08ce.png",
+    "tags": [
+      "光环",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_045",
+    "name": "死亡光环",
+    "type": "光环",
+    "element": "死灵",
+    "level": 20,
+    "mpCost": 25,
+    "cooldown": 0,
+    "damage": "120%",
+    "rarity": "史诗",
+    "description": "散发死亡气息，每秒对周围所有敌人造成死灵伤害，并有5%概率立即杀死生命值低于10%的敌人。",
+    "icon": "/icons/skillicon_15_20260302_151323_8266e385.png",
+    "tags": [
+      "光环",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_046",
+    "name": "暗影箭雨",
+    "type": "主动",
+    "element": "暗影",
+    "level": 11,
+    "mpCost": 65,
+    "cooldown": 20,
+    "damage": "380%",
+    "rarity": "稀有",
+    "description": "召唤漫天暗影箭矢降落于目标区域，每支箭矢各自造成伤害，共计10支。",
+    "icon": "/icons/skillicon_16_20260302_151324_4573634c.png",
+    "tags": [
+      "投射物",
+      "范围"
+    ]
+  },
+  {
+    "id": "skill_047",
+    "name": "烈火龙息",
+    "type": "主动",
+    "element": "火焰",
+    "level": 25,
+    "mpCost": 160,
+    "cooldown": 55,
+    "damage": "1200%",
+    "rarity": "传奇",
+    "description": "借助古龙之力喷出灼热龙息，焚烧路径上所有敌人，留下燃烧地面持续伤害敌人15秒。",
+    "icon": "/icons/skillicon_17_20260302_151326_3ae65c43.png",
+    "tags": [
+      "范围",
+      "持续",
+      "投射物"
+    ]
+  },
+  {
+    "id": "skill_048",
+    "name": "冰晶护盾",
+    "type": "主动",
+    "element": "冰霜",
+    "level": 9,
+    "mpCost": 50,
+    "cooldown": 30,
+    "damage": "0%",
+    "rarity": "魔法",
+    "description": "以冰晶围绕自身形成护盾，挡住下3次攻击，每次挡下攻击时对攻击者造成反弹冰霜伤害。",
+    "icon": "/icons/skillicon_18_20260302_151327_854c6ac9.png",
+    "tags": [
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_049",
+    "name": "落雷天罚",
+    "type": "主动",
+    "element": "闪电",
+    "level": 28,
+    "mpCost": 180,
+    "cooldown": 65,
+    "damage": "1400%",
+    "rarity": "传奇",
+    "description": "召唤巨大天雷降落于目标位置，爆炸产生大范围闪电冲击波，对所有敌人造成闪电伤害。",
+    "icon": "/icons/skillicon_19_20260302_151328_50740bae.png",
+    "tags": [
+      "范围",
+      "投射物"
+    ]
+  },
+  {
+    "id": "skill_050",
+    "name": "蛇毒箭",
+    "type": "主动",
+    "element": "毒素",
+    "level": 4,
+    "mpCost": 25,
+    "cooldown": 6,
+    "damage": "140%",
+    "rarity": "普通",
+    "description": "发射涂有剧毒的箭矢，命中后使目标中毒，持续8秒每秒造成毒素伤害。",
+    "icon": "/icons/skillicon_20_20260302_151329_8d500f8b.png",
+    "tags": [
+      "投射物",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_051",
+    "name": "圣火净化",
+    "type": "主动",
+    "element": "神圣",
+    "level": 13,
+    "mpCost": 75,
+    "cooldown": 22,
+    "damage": "430%",
+    "rarity": "稀有",
+    "description": "以圣火净化目标，造成神圣伤害并驱散目标身上所有增益效果，对恶魔类敌人伤害额外提升50%。",
+    "icon": "/icons/skillicon_21_20260302_151330_88617e4a.png",
+    "tags": [
+      "范围"
+    ]
+  },
+  {
+    "id": "skill_052",
+    "name": "虚空之门",
+    "type": "主动",
+    "element": "虚空",
+    "level": 18,
+    "mpCost": 100,
+    "cooldown": 35,
+    "damage": "550%",
+    "rarity": "史诗",
+    "description": "打开通往虚空的大门，将目标吸入其中造成虚空伤害，再从另一位置抛出并重创目标。",
+    "icon": "/icons/skillicon_22_20260302_151331_0fae0bf1.png",
+    "tags": [
+      "移动"
+    ]
+  },
+  {
+    "id": "skill_053",
+    "name": "骷髅骑士召唤",
+    "type": "主动",
+    "element": "死灵",
+    "level": 16,
+    "mpCost": 90,
+    "cooldown": 40,
+    "damage": "0%",
+    "rarity": "史诗",
+    "description": "召唤强大的骷髅骑士，骑士骑乘骷髅战马持续20秒，其攻击力为施法者攻击力的150%。",
+    "icon": "/icons/skillicon_23_20260302_151332_0bd195e8.png",
+    "tags": [
+      "召唤"
+    ]
+  },
+  {
+    "id": "skill_054",
+    "name": "狂战士之怒",
+    "type": "主动",
+    "element": "物理",
+    "level": 14,
+    "mpCost": 60,
+    "cooldown": 25,
+    "damage": "320%",
+    "rarity": "稀有",
+    "description": "进入狂战士状态，15秒内攻击速度提升40%，攻击力提升30%，但防御力降低20%。",
+    "icon": "/icons/skillicon_24_20260302_151333_0d97c3f7.png",
+    "tags": [
+      "近战",
+      "范围"
+    ]
+  },
+  {
+    "id": "skill_055",
+    "name": "暗影爆炸",
+    "type": "主动",
+    "element": "暗影",
+    "level": 17,
+    "mpCost": 95,
+    "cooldown": 30,
+    "damage": "580%",
+    "rarity": "史诗",
+    "description": "在目标位置制造暗影能量集聚，2秒后发生剧烈爆炸，对范围内所有敌人造成大量暗影伤害。",
+    "icon": "/icons/skillicon_25_20260302_151334_0848f70d.png",
+    "tags": [
+      "范围",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_056",
+    "name": "炎魂转化",
+    "type": "主动",
+    "element": "火焰",
+    "level": 20,
+    "mpCost": 110,
+    "cooldown": 40,
+    "damage": "650%",
+    "rarity": "传奇",
+    "description": "将自身灵魂转化为纯粹火焰，对周围所有敌人造成火焰伤害，并使自身免疫伤害2秒。",
+    "icon": "/icons/skillicon_26_20260302_151335_0492b2c3.png",
+    "tags": [
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_057",
+    "name": "冰封时空",
+    "type": "主动",
+    "element": "冰霜",
+    "level": 30,
+    "mpCost": 200,
+    "cooldown": 75,
+    "damage": "1100%",
+    "rarity": "传奇",
+    "description": "冻结时间与空间，所有敌人完全停止行动8秒，停止期间受到冰霜伤害大幅增加。",
+    "icon": "/icons/skillicon_27_20260302_151336_e65fd8ce.png",
+    "tags": [
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_058",
+    "name": "球形闪电",
+    "type": "主动",
+    "element": "闪电",
+    "level": 9,
+    "mpCost": 55,
+    "cooldown": 14,
+    "damage": "290%",
+    "rarity": "魔法",
+    "description": "释放一个缓慢移动的球形闪电，碰触到敌人时电爆并对附近敌人造成连锁伤害。",
+    "icon": "/icons/skillicon_28_20260302_151337_585348ee.png",
+    "tags": [
+      "投射物",
+      "范围"
+    ]
+  },
+  {
+    "id": "skill_059",
+    "name": "致命毒雾",
+    "type": "主动",
+    "element": "毒素",
+    "level": 18,
+    "mpCost": 100,
+    "cooldown": 35,
+    "damage": "700%",
+    "rarity": "史诗",
+    "description": "在目标区域释放致命毒雾，持续12秒，毒雾中的敌人无法回复生命并持续受到毒素伤害。",
+    "icon": "/icons/skillicon_29_20260302_151338_6839ff81.png",
+    "tags": [
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_060",
+    "name": "神光斩击",
+    "type": "主动",
+    "element": "神圣",
+    "level": 8,
+    "mpCost": 45,
+    "cooldown": 12,
+    "damage": "310%",
+    "rarity": "魔法",
+    "description": "以神圣之力注入武器挥斩，释放神光冲击波，对直线范围内所有敌人造成神圣伤害。",
+    "icon": "/icons/skillicon_30_20260302_151339_d1220185.png",
+    "tags": [
+      "近战",
+      "投射物"
+    ]
+  },
+  {
+    "id": "skill_061",
+    "name": "虚空破碎",
+    "type": "主动",
+    "element": "虚空",
+    "level": 24,
+    "mpCost": 155,
+    "cooldown": 50,
+    "damage": "1050%",
+    "rarity": "传奇",
+    "description": "破碎目标所在维度的空间，造成毁灭性虚空伤害，并有20%概率使目标消失于虚空中直接死亡。",
+    "icon": "/icons/skillicon_01_20260302_151309_95c73784.png",
+    "tags": [
+      "范围",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_062",
+    "name": "亡灵骑士",
+    "type": "主动",
+    "element": "死灵",
+    "level": 22,
+    "mpCost": 140,
+    "cooldown": 55,
+    "damage": "0%",
+    "rarity": "史诗",
+    "description": "召唤一位强大的亡灵死亡骑士，其攻防皆为施法者的200%，持续30秒，击杀敌人时恢复施法者生命。",
+    "icon": "/icons/skillicon_02_20260302_151310_877b6f04.png",
+    "tags": [
+      "召唤"
+    ]
+  },
+  {
+    "id": "skill_063",
+    "name": "十字斩",
+    "type": "主动",
+    "element": "物理",
+    "level": 7,
+    "mpCost": 35,
+    "cooldown": 9,
+    "damage": "260%",
+    "rarity": "魔法",
+    "description": "以十字形态同时斩击，对横向纵向的所有敌人造成物理伤害。",
+    "icon": "/icons/skillicon_03_20260302_151311_c6ad40c3.png",
+    "tags": [
+      "近战",
+      "范围"
+    ]
+  },
+  {
+    "id": "skill_064",
+    "name": "暗影步伐",
+    "type": "主动",
+    "element": "暗影",
+    "level": 3,
+    "mpCost": 20,
+    "cooldown": 6,
+    "damage": "0%",
+    "rarity": "普通",
+    "description": "瞬间消失于暗影中，传送至目标位置，解除受到的控制效果。",
+    "icon": "/icons/skillicon_04_20260302_151312_4bc6b307.png",
+    "tags": [
+      "移动",
+      "近战",
+      "单体"
+    ]
+  },
+  {
+    "id": "skill_065",
+    "name": "熔岩盾",
+    "type": "主动",
+    "element": "火焰",
+    "level": 11,
+    "mpCost": 60,
+    "cooldown": 28,
+    "damage": "200%",
+    "rarity": "稀有",
+    "description": "以熔岩为护盾，对近战攻击者造成火焰反弹伤害，盾牌承受伤害达到上限后消失。",
+    "icon": "/icons/skillicon_05_20260302_151313_467cbe69.png",
+    "tags": [
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_066",
+    "name": "冰锥术",
+    "type": "主动",
+    "element": "冰霜",
+    "level": 2,
+    "mpCost": 18,
+    "cooldown": 4,
+    "damage": "150%",
+    "rarity": "普通",
+    "description": "发射数根冰锥刺向目标，每根冰锥独立造成伤害，有30%概率使目标减速。",
+    "icon": "/icons/skillicon_06_20260302_151314_158a5ce8.png",
+    "tags": [
+      "投射物",
+      "单体"
+    ]
+  },
+  {
+    "id": "skill_067",
+    "name": "闪电护罩",
+    "type": "主动",
+    "element": "闪电",
+    "level": 6,
+    "mpCost": 38,
+    "cooldown": 22,
+    "damage": "0%",
+    "rarity": "魔法",
+    "description": "以闪电能量构建护罩，受击时自动反弹闪电伤害给攻击者，持续15秒。",
+    "icon": "/icons/skillicon_07_20260302_151315_52d296eb.png",
+    "tags": [
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_068",
+    "name": "荆棘毒液",
+    "type": "主动",
+    "element": "毒素",
+    "level": 10,
+    "mpCost": 55,
+    "cooldown": 16,
+    "damage": "220%",
+    "rarity": "稀有",
+    "description": "向目标投掷带刺毒液，刺穿目标造成物理伤害并附加强力毒素效果，毒素伤害随时间加速增强。",
+    "icon": "/icons/skillicon_08_20260302_151316_634e08d4.png",
+    "tags": [
+      "近战",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_069",
+    "name": "神圣天使",
+    "type": "主动",
+    "element": "神圣",
+    "level": 25,
+    "mpCost": 170,
+    "cooldown": 60,
+    "damage": "1300%",
+    "rarity": "传奇",
+    "description": "召唤神圣天使降临，对所有敌人造成神圣伤害，并为所有队友施加神圣祝福，使队友伤害提升30%并持续15秒。",
+    "icon": "/icons/skillicon_09_20260302_151317_e2bf7f9b.png",
+    "tags": [
+      "召唤"
+    ]
+  },
+  {
+    "id": "skill_070",
+    "name": "虚空风暴",
+    "type": "主动",
+    "element": "虚空",
+    "level": 20,
+    "mpCost": 120,
+    "cooldown": 42,
+    "damage": "850%",
+    "rarity": "史诗",
+    "description": "在目标区域制造虚空风暴，将范围内所有敌人不断向中心拉拽并造成虚空伤害，持续6秒。",
+    "icon": "/icons/skillicon_10_20260302_151318_8f5d5b8c.png",
+    "tags": [
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_071",
+    "name": "死灵共鸣",
+    "type": "被动",
+    "element": "死灵",
+    "level": 12,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "稀有",
+    "description": "附近有亡灵随从时，施法者的攻击力和法术强度各提升10%，每只随从独立计算叠加。",
+    "icon": "/icons/skillicon_11_20260302_151319_f64b9b5e.png",
+    "tags": [
+      "被动",
+      "召唤"
+    ]
+  },
+  {
+    "id": "skill_072",
+    "name": "铁皮之盾",
+    "type": "被动",
+    "element": "物理",
+    "level": 5,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "魔法",
+    "description": "提升护甲穿透抵抗，使敌人穿透护甲的效果降低25%。",
+    "icon": "/icons/skillicon_12_20260302_151320_38b6c8db.png",
+    "tags": [
+      "被动"
+    ]
+  },
+  {
+    "id": "skill_073",
+    "name": "暗影潜行",
+    "type": "被动",
+    "element": "暗影",
+    "level": 8,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "魔法",
+    "description": "移动时积累暗影能量，每秒增加1%暗影技能伤害加成，最高叠加30%，受到伤害后重置。",
+    "icon": "/icons/skillicon_13_20260302_151321_fd6870ec.png",
+    "tags": [
+      "被动",
+      "移动"
+    ]
+  },
+  {
+    "id": "skill_074",
+    "name": "鲜血渴望",
+    "type": "被动",
+    "element": "物理",
+    "level": 15,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "稀有",
+    "description": "每次命中敌人回复自身0.5%最大生命值，暴击时回复量翻倍。",
+    "icon": "/icons/skillicon_14_20260302_151322_d58e08ce.png",
+    "tags": [
+      "被动"
+    ]
+  },
+  {
+    "id": "skill_075",
+    "name": "魔法汲取",
+    "type": "被动",
+    "element": "虚空",
+    "level": 10,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "稀有",
+    "description": "击杀敌人时回复5%最大魔法值，对精英敌人效果翻倍。",
+    "icon": "/icons/skillicon_15_20260302_151323_8266e385.png",
+    "tags": [
+      "被动"
+    ]
+  },
+  {
+    "id": "skill_076",
+    "name": "圣光庇护",
+    "type": "光环",
+    "element": "神圣",
+    "level": 15,
+    "mpCost": 20,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "史诗",
+    "description": "散发圣光庇护光环，减少队友所受伤害15%，范围8米。",
+    "icon": "/icons/skillicon_16_20260302_151324_4573634c.png",
+    "tags": [
+      "光环"
+    ]
+  },
+  {
+    "id": "skill_077",
+    "name": "毒素光环",
+    "type": "光环",
+    "element": "毒素",
+    "level": 8,
+    "mpCost": 12,
+    "cooldown": 0,
+    "damage": "100%",
+    "rarity": "魔法",
+    "description": "散发毒素气息，每2秒对周围敌人施加毒素效果，毒素持续5秒，范围6米。",
+    "icon": "/icons/skillicon_17_20260302_151326_3ae65c43.png",
+    "tags": [
+      "光环",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_078",
+    "name": "火焰光环",
+    "type": "光环",
+    "element": "火焰",
+    "level": 10,
+    "mpCost": 15,
+    "cooldown": 0,
+    "damage": "90%",
+    "rarity": "稀有",
+    "description": "燃烧自身散发火焰光环，对周围敌人持续造成火焰伤害，并提升自身攻击力10%。",
+    "icon": "/icons/skillicon_18_20260302_151327_854c6ac9.png",
+    "tags": [
+      "光环"
+    ]
+  },
+  {
+    "id": "skill_079",
+    "name": "闪电光环",
+    "type": "光环",
+    "element": "闪电",
+    "level": 18,
+    "mpCost": 22,
+    "cooldown": 0,
+    "damage": "130%",
+    "rarity": "史诗",
+    "description": "以闪电包裹全身，对靠近的敌人造成闪电伤害，使周围队友的攻击速度提升15%。",
+    "icon": "/icons/skillicon_19_20260302_151328_50740bae.png",
+    "tags": [
+      "光环"
+    ]
+  },
+  {
+    "id": "skill_080",
+    "name": "虚空光环",
+    "type": "光环",
+    "element": "虚空",
+    "level": 25,
+    "mpCost": 30,
+    "cooldown": 0,
+    "damage": "200%",
+    "rarity": "传奇",
+    "description": "散发虚空能量光环，使周围敌人的所有属性降低10%，并对敌人造成持续虚空伤害，范围10米。",
+    "icon": "/icons/skillicon_20_20260302_151329_8d500f8b.png",
+    "tags": [
+      "光环"
+    ]
+  },
+  {
+    "id": "skill_081",
+    "name": "骨爆术",
+    "type": "主动",
+    "element": "死灵",
+    "level": 7,
+    "mpCost": 42,
+    "cooldown": 11,
+    "damage": "270%",
+    "rarity": "魔法",
+    "description": "引爆目标身上的骨骼，对目标及周围敌人造成死灵伤害，可对已死亡的骷髅引爆。",
+    "icon": "/icons/skillicon_21_20260302_151330_88617e4a.png",
+    "tags": [
+      "范围",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_082",
+    "name": "炸裂拳",
+    "type": "主动",
+    "element": "物理",
+    "level": 3,
+    "mpCost": 22,
+    "cooldown": 6,
+    "damage": "190%",
+    "rarity": "普通",
+    "description": "以巨大力量爆击目标，造成物理伤害并击退目标，击退距离内撞到其他敌人时造成额外碰撞伤害。",
+    "icon": "/icons/skillicon_22_20260302_151331_0fae0bf1.png",
+    "tags": [
+      "近战",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_083",
+    "name": "暗影牢笼",
+    "type": "主动",
+    "element": "暗影",
+    "level": 13,
+    "mpCost": 72,
+    "cooldown": 24,
+    "damage": "180%",
+    "rarity": "稀有",
+    "description": "以暗影能量束缚目标，使其完全无法移动5秒，期间每秒造成暗影伤害。",
+    "icon": "/icons/skillicon_23_20260302_151332_0bd195e8.png",
+    "tags": [
+      "单体",
+      "持续",
+      "诅咒"
+    ]
+  },
+  {
+    "id": "skill_084",
+    "name": "地狱火雨",
+    "type": "主动",
+    "element": "火焰",
+    "level": 14,
+    "mpCost": 80,
+    "cooldown": 26,
+    "damage": "520%",
+    "rarity": "史诗",
+    "description": "召唤地狱火雨轰炸目标区域，持续4秒，每秒降落5颗火球各自造成独立伤害。",
+    "icon": "/icons/skillicon_24_20260302_151333_0d97c3f7.png",
+    "tags": [
+      "范围",
+      "投射物",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_085",
+    "name": "极寒领域",
+    "type": "主动",
+    "element": "冰霜",
+    "level": 22,
+    "mpCost": 138,
+    "cooldown": 48,
+    "damage": "960%",
+    "rarity": "传奇",
+    "description": "展开极寒领域覆盖大范围区域，领域内所有敌人持续受到冰霜伤害并被极度减速，持续10秒。",
+    "icon": "/icons/skillicon_25_20260302_151334_0848f70d.png",
+    "tags": [
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_086",
+    "name": "天神降临",
+    "type": "主动",
+    "element": "闪电",
+    "level": 35,
+    "mpCost": 230,
+    "cooldown": 80,
+    "damage": "2000%",
+    "rarity": "传奇",
+    "description": "以神之力降临大地，以巨大闪电轰击目标，爆炸波及整片战场对所有敌人造成闪电伤害，留下持续10秒的电磁风暴。",
+    "icon": "/icons/skillicon_26_20260302_151335_0492b2c3.png",
+    "tags": [
+      "范围",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_087",
+    "name": "腐烂气息",
+    "type": "主动",
+    "element": "毒素",
+    "level": 12,
+    "mpCost": 68,
+    "cooldown": 20,
+    "damage": "290%",
+    "rarity": "稀有",
+    "description": "喷出腐烂气息，覆盖扇形区域，使敌人中毒并降低其防御力25%，持续8秒。",
+    "icon": "/icons/skillicon_27_20260302_151336_e65fd8ce.png",
+    "tags": [
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_088",
+    "name": "神圣之剑",
+    "type": "主动",
+    "element": "神圣",
+    "level": 20,
+    "mpCost": 115,
+    "cooldown": 38,
+    "damage": "780%",
+    "rarity": "史诗",
+    "description": "召唤神圣之剑从天而降斩击目标，造成神圣伤害并驱逐目标身上一切黑暗效果，对恶魔和不死生物伤害翻倍。",
+    "icon": "/icons/skillicon_28_20260302_151337_585348ee.png",
+    "tags": [
+      "近战",
+      "单体"
+    ]
+  },
+  {
+    "id": "skill_089",
+    "name": "虚空转移",
+    "type": "主动",
+    "element": "虚空",
+    "level": 10,
+    "mpCost": 55,
+    "cooldown": 20,
+    "damage": "0%",
+    "rarity": "稀有",
+    "description": "瞬间将自身与目标敌人的位置互换，利用虚空能量传送，并对目标造成虚空伤害。",
+    "icon": "/icons/skillicon_29_20260302_151338_6839ff81.png",
+    "tags": [
+      "移动",
+      "瞬发"
+    ]
+  },
+  {
+    "id": "skill_090",
+    "name": "骨墙召唤",
+    "type": "主动",
+    "element": "死灵",
+    "level": 9,
+    "mpCost": 52,
+    "cooldown": 20,
+    "damage": "0%",
+    "rarity": "魔法",
+    "description": "在目标位置召唤骨墙阻挡敌人通路，骨墙持续15秒，承受足够伤害后崩塌，碎骨对周围敌人造成死灵伤害。",
+    "icon": "/icons/skillicon_30_20260302_151339_d1220185.png",
+    "tags": [
+      "召唤",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_091",
+    "name": "战吼",
+    "type": "主动",
+    "element": "物理",
+    "level": 6,
+    "mpCost": 35,
+    "cooldown": 30,
+    "damage": "0%",
+    "rarity": "魔法",
+    "description": "发出震天战吼，提升自身和队友攻击力25%，持续15秒，同时对附近敌人造成恐惧效果使其逃跑2秒。",
+    "icon": "/icons/skillicon_01_20260302_151309_95c73784.png",
+    "tags": [
+      "范围"
+    ]
+  },
+  {
+    "id": "skill_092",
+    "name": "暗影洪流",
+    "type": "主动",
+    "element": "暗影",
+    "level": 26,
+    "mpCost": 165,
+    "cooldown": 58,
+    "damage": "1350%",
+    "rarity": "传奇",
+    "description": "释放黑暗能量洪流，从施法者身前向前延伸造成毁灭性暗影伤害，洪流长度达到全屏范围。",
+    "icon": "/icons/skillicon_02_20260302_151310_877b6f04.png",
+    "tags": [
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_093",
+    "name": "不死之身",
+    "type": "被动",
+    "element": "死灵",
+    "level": 25,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "史诗",
+    "description": "死亡时有20%概率以1%生命值复活，复活后5秒内免疫所有伤害，每次战斗只能触发一次。",
+    "icon": "/icons/skillicon_03_20260302_151311_c6ad40c3.png",
+    "tags": [
+      "被动",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_094",
+    "name": "魔力汲取",
+    "type": "被动",
+    "element": "暗影",
+    "level": 15,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "稀有",
+    "description": "每次使用技能后根据消耗魔法值的10%回复生命值，使用消耗魔法值越高的技能回复越多。",
+    "icon": "/icons/skillicon_04_20260302_151312_4bc6b307.png",
+    "tags": [
+      "被动"
+    ]
+  },
+  {
+    "id": "skill_095",
+    "name": "冰火不容",
+    "type": "被动",
+    "element": "火焰",
+    "level": 20,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "史诗",
+    "description": "同时装备火焰和冰霜技能时激活，两种元素技能伤害各提升20%，并解锁特殊连携技能爆发效果。",
+    "icon": "/icons/skillicon_05_20260302_151313_467cbe69.png",
+    "tags": [
+      "被动"
+    ]
+  },
+  {
+    "id": "skill_096",
+    "name": "圣战精神",
+    "type": "被动",
+    "element": "神圣",
+    "level": 22,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "史诗",
+    "description": "连续击杀敌人时积累圣战之力，每次击杀增加2%神圣伤害，最高叠加50%，20秒未击杀则重置。",
+    "icon": "/icons/skillicon_06_20260302_151314_158a5ce8.png",
+    "tags": [
+      "被动"
+    ]
+  },
+  {
+    "id": "skill_097",
+    "name": "虚空领悟",
+    "type": "被动",
+    "element": "虚空",
+    "level": 28,
+    "mpCost": 0,
+    "cooldown": 0,
+    "damage": "0%",
+    "rarity": "传奇",
+    "description": "对受到虚空减益效果的敌人造成额外40%伤害，并使虚空效果持续时间延长30%。",
+    "icon": "/icons/skillicon_07_20260302_151315_52d296eb.png",
+    "tags": [
+      "被动"
+    ]
+  },
+  {
+    "id": "skill_098",
+    "name": "黑暗洗礼",
+    "type": "光环",
+    "element": "暗影",
+    "level": 30,
+    "mpCost": 35,
+    "cooldown": 0,
+    "damage": "250%",
+    "rarity": "传奇",
+    "description": "散发极强暗影光环，每秒对周围所有敌人造成暗影伤害，并将造成伤害的15%转化为自身生命值，范围12米。",
+    "icon": "/icons/skillicon_08_20260302_151316_634e08d4.png",
+    "tags": [
+      "光环"
+    ]
+  },
+  {
+    "id": "skill_099",
+    "name": "诸神黄昏",
+    "type": "主动",
+    "element": "虚空",
+    "level": 40,
+    "mpCost": 300,
+    "cooldown": 120,
+    "damage": "3000%",
+    "rarity": "传奇",
+    "description": "终极毁灭技能，引发诸神黄昏，短暂开启虚空之门吞噬战场上所有敌人，对所有敌人造成毁灭性虚空伤害，并有10%概率直接消灭低于50%生命值的敌人。",
+    "icon": "/icons/skillicon_09_20260302_151317_e2bf7f9b.png",
+    "tags": [
+      "范围",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_100",
+    "name": "万古长夜",
+    "type": "主动",
+    "element": "暗影",
+    "level": 40,
+    "mpCost": 280,
+    "cooldown": 100,
+    "damage": "2500%",
+    "rarity": "传奇",
+    "description": "以古老黑暗之力覆盖整个战场，使所有敌人陷入永恒黑暗，造成极大暗影伤害，并在接下来30秒内使敌人的所有属性降低40%。",
+    "icon": "/icons/skillicon_10_20260302_151318_8f5d5b8c.png",
+    "tags": [
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_101",
+    "name": "熔岩爆裂",
+    "type": "主动",
+    "element": "火焰",
+    "level": 3,
+    "mpCost": 45,
+    "cooldown": 8,
+    "damage": "280%",
+    "rarity": "普通",
+    "description": "召唤熔岩从地面爆发，对范围内敌人造成火焰伤害并留下持续燃烧地面。",
+    "icon": "/icons/skillicon_101_20260314_124654_0d68fecb.png",
+    "tags": [
+      "范围",
+      "爆炸",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_102",
+    "name": "冰霜新星",
+    "type": "主动",
+    "element": "冰霜",
+    "level": 2,
+    "mpCost": 35,
+    "cooldown": 6,
+    "damage": "220%",
+    "rarity": "普通",
+    "description": "以自身为中心爆发冰霜能量，冻结周围所有敌人2秒。",
+    "icon": "/icons/skillicon_102_20260314_124701_3ec40d30.png",
+    "tags": [
+      "范围",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_103",
+    "name": "闪电锁链",
+    "type": "主动",
+    "element": "闪电",
+    "level": 4,
+    "mpCost": 50,
+    "cooldown": 10,
+    "damage": "240%",
+    "rarity": "稀有",
+    "description": "释放闪电在最多5个敌人之间跳跃，每次跳跃伤害降低15%。",
+    "icon": "/icons/skillicon_103_20260314_124705_f3f189a8.png",
+    "tags": [
+      "链接",
+      "单体"
+    ]
+  },
+  {
+    "id": "skill_104",
+    "name": "暗影跳跃",
+    "type": "主动",
+    "element": "暗影",
+    "level": 2,
+    "mpCost": 25,
+    "cooldown": 4,
+    "damage": "150%",
+    "rarity": "普通",
+    "description": "瞬间穿越至目标位置并造成暗影冲击伤害。",
+    "icon": "/icons/skillicon_104_20260314_124708_f8fae314.png",
+    "tags": [
+      "移动",
+      "单体",
+      "瞬发"
+    ]
+  },
+  {
+    "id": "skill_105",
+    "name": "神圣审判",
+    "type": "主动",
+    "element": "神圣",
+    "level": 5,
+    "mpCost": 65,
+    "cooldown": 15,
+    "damage": "350%",
+    "rarity": "稀有",
+    "description": "召唤神圣之光从天而降，对目标区域造成神圣伤害并净化所有负面效果。",
+    "icon": "/icons/skillicon_105_20260314_124712_9ecd334a.png",
+    "tags": [
+      "范围",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_106",
+    "name": "毒雾蔓延",
+    "type": "主动",
+    "element": "自然",
+    "level": 3,
+    "mpCost": 40,
+    "cooldown": 12,
+    "damage": "180%",
+    "rarity": "普通",
+    "description": "释放有毒雾气覆盖大片区域，持续10秒对范围内敌人造成中毒伤害。",
+    "icon": "/icons/skillicon_106_20260314_124715_7d65fe1f.png",
+    "tags": [
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_107",
+    "name": "虚空撕裂",
+    "type": "主动",
+    "element": "虚空",
+    "level": 6,
+    "mpCost": 80,
+    "cooldown": 20,
+    "damage": "420%",
+    "rarity": "史诗",
+    "description": "在目标位置撕裂虚空，造成巨大范围伤害并产生吸引漩涡持续3秒。",
+    "icon": "/icons/skillicon_107_20260314_124717_8599c762.png",
+    "tags": [
+      "范围",
+      "爆炸",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_108",
+    "name": "火焰箭雨",
+    "type": "主动",
+    "element": "火焰",
+    "level": 4,
+    "mpCost": 55,
+    "cooldown": 12,
+    "damage": "200%",
+    "rarity": "稀有",
+    "description": "呼唤数百支燃烧的箭矢从天而降，覆盖大范围区域。",
+    "icon": "/icons/skillicon_108_20260314_124721_3ab56736.png",
+    "tags": [
+      "范围",
+      "投射物",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_109",
+    "name": "冰矛穿刺",
+    "type": "主动",
+    "element": "冰霜",
+    "level": 3,
+    "mpCost": 38,
+    "cooldown": 7,
+    "damage": "260%",
+    "rarity": "普通",
+    "description": "凝聚冰霜能量形成锋利冰矛并投掷，穿透所有敌人。",
+    "icon": "/icons/skillicon_109_20260314_124724_8cb624b0.png",
+    "tags": [
+      "投射物",
+      "单体"
+    ]
+  },
+  {
+    "id": "skill_110",
+    "name": "球雷轰炸",
+    "type": "主动",
+    "element": "闪电",
+    "level": 5,
+    "mpCost": 70,
+    "cooldown": 15,
+    "damage": "380%",
+    "rarity": "史诗",
+    "description": "召唤巨大球形闪电缓慢滚动，接触敌人时爆炸造成大范围伤害。",
+    "icon": "/icons/skillicon_110_20260314_124727_a5736b14.png",
+    "tags": [
+      "投射物",
+      "范围",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_111",
+    "name": "噬魂凝视",
+    "type": "主动",
+    "element": "暗影",
+    "level": 4,
+    "mpCost": 55,
+    "cooldown": 14,
+    "damage": "300%",
+    "rarity": "稀有",
+    "description": "凝聚暗影能量对目标进行精神攻击，使其恐惧并持续造成暗影伤害。",
+    "icon": "/icons/skillicon_111_20260314_124730_88ca6894.png",
+    "tags": [
+      "单体",
+      "持续",
+      "诅咒"
+    ]
+  },
+  {
+    "id": "skill_112",
+    "name": "神罚天降",
+    "type": "主动",
+    "element": "神圣",
+    "level": 7,
+    "mpCost": 90,
+    "cooldown": 25,
+    "damage": "500%",
+    "rarity": "传说",
+    "description": "呼唤神圣力量形成巨大光柱从天而降，对范围内所有敌人造成极大伤害。",
+    "icon": "/icons/skillicon_112_20260314_124733_37ee20aa.png",
+    "tags": [
+      "范围",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_113",
+    "name": "荆棘困缚",
+    "type": "主动",
+    "element": "自然",
+    "level": 2,
+    "mpCost": 30,
+    "cooldown": 8,
+    "damage": "120%",
+    "rarity": "普通",
+    "description": "召唤荆棘藤蔓缠绕目标，造成伤害并固定敌人3秒。",
+    "icon": "/icons/skillicon_113_20260314_124736_add7dc94.png",
+    "tags": [
+      "单体",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_114",
+    "name": "虚空侵蚀",
+    "type": "主动",
+    "element": "虚空",
+    "level": 5,
+    "mpCost": 65,
+    "cooldown": 16,
+    "damage": "320%",
+    "rarity": "稀有",
+    "description": "用虚空能量侵蚀目标，持续消耗其生命并降低所有抗性30%。",
+    "icon": "/icons/skillicon_114_20260314_124739_3270a34b.png",
+    "tags": [
+      "单体",
+      "持续",
+      "诅咒"
+    ]
+  },
+  {
+    "id": "skill_115",
+    "name": "炎爆冲锋",
+    "type": "主动",
+    "element": "火焰",
+    "level": 3,
+    "mpCost": 42,
+    "cooldown": 9,
+    "damage": "240%",
+    "rarity": "普通",
+    "description": "以火焰包裹自身向前冲锋，对路径上所有敌人造成灼烧伤害。",
+    "icon": "/icons/skillicon_115_20260314_124745_e5d67bfe.png",
+    "tags": [
+      "移动",
+      "近战",
+      "范围"
+    ]
+  },
+  {
+    "id": "skill_116",
+    "name": "极寒领域",
+    "type": "主动",
+    "element": "冰霜",
+    "level": 5,
+    "mpCost": 70,
+    "cooldown": 18,
+    "damage": "200%",
+    "rarity": "稀有",
+    "description": "在周围建立极寒领域，持续8秒减速范围内所有敌人并造成冰霜伤害。",
+    "icon": "/icons/skillicon_116_20260314_124748_4351b566.png",
+    "tags": [
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_117",
+    "name": "雷霆落地",
+    "type": "主动",
+    "element": "闪电",
+    "level": 4,
+    "mpCost": 52,
+    "cooldown": 11,
+    "damage": "310%",
+    "rarity": "稀有",
+    "description": "跃起并以雷霆之力落地，对落点周围造成大范围闪电爆炸。",
+    "icon": "/icons/skillicon_117_20260314_124751_7999b5e0.png",
+    "tags": [
+      "移动",
+      "范围",
+      "爆炸",
+      "近战"
+    ]
+  },
+  {
+    "id": "skill_118",
+    "name": "影分身",
+    "type": "主动",
+    "element": "暗影",
+    "level": 4,
+    "mpCost": 60,
+    "cooldown": 20,
+    "damage": "180%",
+    "rarity": "稀有",
+    "description": "创造3个暗影分身协同攻击敌人，持续8秒。",
+    "icon": "/icons/skillicon_118_20260314_124755_e5ed6e8d.png",
+    "tags": [
+      "召唤",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_119",
+    "name": "圣光冲击波",
+    "type": "主动",
+    "element": "神圣",
+    "level": 3,
+    "mpCost": 45,
+    "cooldown": 10,
+    "damage": "260%",
+    "rarity": "普通",
+    "description": "释放半月形圣光冲击波，对前方扇形区域造成神圣伤害。",
+    "icon": "/icons/skillicon_119_20260314_124758_5f55f862.png",
+    "tags": [
+      "范围",
+      "近战"
+    ]
+  },
+  {
+    "id": "skill_120",
+    "name": "孢子爆发",
+    "type": "主动",
+    "element": "自然",
+    "level": 2,
+    "mpCost": 32,
+    "cooldown": 7,
+    "damage": "190%",
+    "rarity": "普通",
+    "description": "抛出爆炸性孢子球，落地后爆裂释放有毒孢子云。",
+    "icon": "/icons/skillicon_120_20260314_124800_34f37221.png",
+    "tags": [
+      "投射物",
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_121",
+    "name": "星体撞击",
+    "type": "主动",
+    "element": "虚空",
+    "level": 6,
+    "mpCost": 85,
+    "cooldown": 22,
+    "damage": "450%",
+    "rarity": "史诗",
+    "description": "从虚空召唤一块陨石砸向目标区域，造成巨大伤害并形成陨石坑持续伤害。",
+    "icon": "/icons/skillicon_121_20260314_124803_ab223cb6.png",
+    "tags": [
+      "范围",
+      "爆炸",
+      "投射物"
+    ]
+  },
+  {
+    "id": "skill_122",
+    "name": "烈焰旋风",
+    "type": "主动",
+    "element": "火焰",
+    "level": 4,
+    "mpCost": 58,
+    "cooldown": 13,
+    "damage": "230%",
+    "rarity": "稀有",
+    "description": "以自身为轴心旋转，持续对周围敌人造成火焰旋风伤害，可移动。",
+    "icon": "/icons/skillicon_122_20260314_124806_e8e94b78.png",
+    "tags": [
+      "范围",
+      "持续",
+      "近战"
+    ]
+  },
+  {
+    "id": "skill_123",
+    "name": "冰河时代",
+    "type": "主动",
+    "element": "冰霜",
+    "level": 7,
+    "mpCost": 95,
+    "cooldown": 30,
+    "damage": "480%",
+    "rarity": "传说",
+    "description": "使整个区域陷入极寒，冻结所有敌人5秒并造成持续冰霜伤害。",
+    "icon": "/icons/skillicon_123_20260314_124808_86a2511e.png",
+    "tags": [
+      "范围",
+      "持续",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_124",
+    "name": "电磁脉冲",
+    "type": "主动",
+    "element": "闪电",
+    "level": 3,
+    "mpCost": 40,
+    "cooldown": 8,
+    "damage": "200%",
+    "rarity": "普通",
+    "description": "释放电磁脉冲波，对范围内所有敌人造成伤害并眩晕1.5秒。",
+    "icon": "/icons/skillicon_124_20260314_124811_7213af99.png",
+    "tags": [
+      "范围",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_125",
+    "name": "灵魂收割",
+    "type": "主动",
+    "element": "暗影",
+    "level": 5,
+    "mpCost": 65,
+    "cooldown": 18,
+    "damage": "350%",
+    "rarity": "史诗",
+    "description": "对目标释放灵魂收割，造成伤害并吸取其生命值的10%恢复自身。",
+    "icon": "/icons/skillicon_125_20260314_124814_1f2be464.png",
+    "tags": [
+      "单体",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_126",
+    "name": "神圣风暴",
+    "type": "主动",
+    "element": "神圣",
+    "level": 6,
+    "mpCost": 78,
+    "cooldown": 20,
+    "damage": "380%",
+    "rarity": "史诗",
+    "description": "召唤圣光风暴在区域内肆虐，持续6秒造成神圣伤害。",
+    "icon": "/icons/skillicon_126_20260314_124817_8957e67e.png",
+    "tags": [
+      "范围",
+      "持续",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_127",
+    "name": "藤蔓连枝",
+    "type": "主动",
+    "element": "自然",
+    "level": 3,
+    "mpCost": 38,
+    "cooldown": 9,
+    "damage": "160%",
+    "rarity": "普通",
+    "description": "向多个目标伸出荆棘藤蔓，最多可连接5个敌人并造成伤害。",
+    "icon": "/icons/skillicon_127_20260314_124820_3041fd0b.png",
+    "tags": [
+      "链接",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_128",
+    "name": "次元裂缝",
+    "type": "主动",
+    "element": "虚空",
+    "level": 4,
+    "mpCost": 60,
+    "cooldown": 14,
+    "damage": "280%",
+    "rarity": "稀有",
+    "description": "在目标位置制造次元裂缝，吸引周围敌人并造成持续虚空伤害。",
+    "icon": "/icons/skillicon_128_20260314_124822_35056a91.png",
+    "tags": [
+      "范围",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_129",
+    "name": "火球投掷",
+    "type": "主动",
+    "element": "火焰",
+    "level": 1,
+    "mpCost": 20,
+    "cooldown": 3,
+    "damage": "130%",
+    "rarity": "普通",
+    "description": "投掷一枚火球，命中目标后爆炸造成小范围伤害。",
+    "icon": "/icons/skillicon_129_20260314_124825_5f282579.png",
+    "tags": [
+      "投射物",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_130",
+    "name": "冰刺阵",
+    "type": "主动",
+    "element": "冰霜",
+    "level": 2,
+    "mpCost": 28,
+    "cooldown": 5,
+    "damage": "170%",
+    "rarity": "普通",
+    "description": "从地面召唤一排冰刺向前推进，穿透敌人并减速。",
+    "icon": "/icons/skillicon_130_20260314_124827_0d353a23.png",
+    "tags": [
+      "范围",
+      "投射物"
+    ]
+  },
+  {
+    "id": "skill_131",
+    "name": "雷击标记",
+    "type": "主动",
+    "element": "闪电",
+    "level": 2,
+    "mpCost": 30,
+    "cooldown": 6,
+    "damage": "160%",
+    "rarity": "普通",
+    "description": "给目标施加闪电标记，之后的攻击对其造成额外闪电伤害。",
+    "icon": "/icons/skillicon_131_20260314_124830_1dd70a61.png",
+    "tags": [
+      "单体",
+      "诅咒"
+    ]
+  },
+  {
+    "id": "skill_132",
+    "name": "暗刃连斩",
+    "type": "主动",
+    "element": "暗影",
+    "level": 3,
+    "mpCost": 35,
+    "cooldown": 5,
+    "damage": "180%",
+    "rarity": "普通",
+    "description": "快速对目标挥出三刀，每刀都有机会触发暗影爆发。",
+    "icon": "/icons/skillicon_132_20260314_124833_9ed170c7.png",
+    "tags": [
+      "单体",
+      "近战"
+    ]
+  },
+  {
+    "id": "skill_133",
+    "name": "圣盾爆破",
+    "type": "主动",
+    "element": "神圣",
+    "level": 4,
+    "mpCost": 50,
+    "cooldown": 12,
+    "damage": "290%",
+    "rarity": "稀有",
+    "description": "将防护圣盾引爆，对周围敌人造成神圣爆炸伤害，盾值越高伤害越强。",
+    "icon": "/icons/skillicon_133_20260314_124836_cb6c4888.png",
+    "tags": [
+      "范围",
+      "爆炸",
+      "近战"
+    ]
+  },
+  {
+    "id": "skill_134",
+    "name": "自然之怒",
+    "type": "主动",
+    "element": "自然",
+    "level": 6,
+    "mpCost": 80,
+    "cooldown": 20,
+    "damage": "400%",
+    "rarity": "史诗",
+    "description": "呼唤自然之力猛烈冲击敌人，在目标区域形成强力自然风暴。",
+    "icon": "/icons/skillicon_134_20260314_124839_1acf4efa.png",
+    "tags": [
+      "范围",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_135",
+    "name": "虚空凝聚",
+    "type": "主动",
+    "element": "虚空",
+    "level": 3,
+    "mpCost": 42,
+    "cooldown": 10,
+    "damage": "220%",
+    "rarity": "普通",
+    "description": "将虚空能量凝聚成球并投掷，命中后释放虚空爆炸。",
+    "icon": "/icons/skillicon_135_20260314_124842_1c06d8eb.png",
+    "tags": [
+      "投射物",
+      "爆炸"
+    ]
+  },
+  {
+    "id": "skill_136",
+    "name": "岩浆喷射",
+    "type": "主动",
+    "element": "火焰",
+    "level": 3,
+    "mpCost": 44,
+    "cooldown": 9,
+    "damage": "210%",
+    "rarity": "普通",
+    "description": "从口中喷出持续的岩浆射线，对路径上敌人造成持续灼烧伤害。",
+    "icon": "/icons/skillicon_136_20260314_124845_0a737af8.png",
+    "tags": [
+      "投射物",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_137",
+    "name": "极冻光线",
+    "type": "主动",
+    "element": "冰霜",
+    "level": 4,
+    "mpCost": 50,
+    "cooldown": 11,
+    "damage": "240%",
+    "rarity": "稀有",
+    "description": "发射持续冰霜光线，冻伤目标并最终将其完全冻结。",
+    "icon": "/icons/skillicon_137_20260314_124847_2f962062.png",
+    "tags": [
+      "投射物",
+      "单体",
+      "持续"
+    ]
+  },
+  {
+    "id": "skill_138",
+    "name": "闪电冲刺",
+    "type": "主动",
+    "element": "闪电",
+    "level": 2,
+    "mpCost": 25,
+    "cooldown": 5,
+    "damage": "140%",
+    "rarity": "普通",
+    "description": "化为闪电高速冲刺，经过路径上所有敌人并造成伤害。",
+    "icon": "/icons/skillicon_138_20260314_124850_21988450.png",
+    "tags": [
+      "移动",
+      "近战",
+      "范围"
+    ]
+  },
+  {
+    "id": "skill_139",
+    "name": "影魂绑缚",
+    "type": "主动",
+    "element": "暗影",
+    "level": 3,
+    "mpCost": 40,
+    "cooldown": 10,
+    "damage": "170%",
+    "rarity": "普通",
+    "description": "用影魂之绳捆缚目标，使其无法移动并持续造成伤害。",
+    "icon": "/icons/skillicon_139_20260314_124853_388897f8.png",
+    "tags": [
+      "单体",
+      "持续",
+      "诅咒"
+    ]
+  },
+  {
+    "id": "skill_140",
+    "name": "圣光洗礼",
+    "type": "主动",
+    "element": "神圣",
+    "level": 2,
+    "mpCost": 35,
+    "cooldown": 8,
+    "damage": "190%",
+    "rarity": "普通",
+    "description": "以圣光洗礼目标区域，净化敌人负面效果抵抗并造成神圣伤害。",
+    "icon": "/icons/skillicon_140_20260314_124856_db5e9b13.png",
+    "tags": [
+      "范围",
+      "诅咒"
+    ]
+  }
+]
