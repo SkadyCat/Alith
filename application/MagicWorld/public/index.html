@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌍 MagicWorld</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d1a;--bg2:#13132a;--bg3:#1a1a35;--bg4:#212142;
+  --border:#2a2a4a;--accent:#7c5cfc;--accent2:#a78bfa;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --success:#22c55e;--warn:#f59e0b;--danger:#ef4444;
+  --rare-c:#3b82f6;--rare-u:#8b5cf6;--rare-r:#f59e0b;--rare-e:#ef4444;--rare-l:#ec4899;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── TOP MENU ── */
+#top-menu{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;height:48px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.logo{font-size:18px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-right:8px}
+.top-tabs{display:flex;gap:4px}
+.top-tab{padding:6px 14px;border-radius:6px;background:transparent;color:var(--text2);border:none;cursor:pointer;font-size:13px;font-weight:500;transition:.15s}
+.top-tab:hover{background:var(--bg3);color:var(--text)}
+.top-tab.active{background:var(--accent);color:#fff}
+.top-spacer{flex:1}
+.top-link{color:var(--text2);text-decoration:none;font-size:12px;padding:5px 10px;border-radius:5px;border:1px solid var(--border);transition:.15s}
+.top-link:hover{border-color:var(--accent);color:var(--accent)}
+#cos-status{font-size:11px;padding:3px 8px;border-radius:4px;background:var(--bg3)}
+
+/* ── MAIN LAYOUT ── */
+#main{display:flex;flex:1;min-height:0}
+
+/* ── LEFT MENU ── */
+#left-menu{width:200px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.left-section{padding:12px}
+.left-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:8px}
+.left-btn{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;background:transparent;color:var(--text2);border:none;cursor:pointer;font-size:13px;width:100%;text-align:left;transition:.15s;margin-bottom:2px}
+.left-btn:hover{background:var(--bg3);color:var(--text)}
+.left-btn.active{background:var(--accent);color:#fff}
+.left-btn .icon{font-size:15px;width:20px;text-align:center}
+#filter-box{padding:8px 12px;border-top:1px solid var(--border)}
+#search-input{width:100%;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;outline:none;transition:.15s}
+#search-input:focus{border-color:var(--accent)}
+.filter-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.filter-chip{padding:2px 8px;border-radius:12px;font-size:11px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;transition:.15s}
+.filter-chip:hover,.filter-chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ── CENTER AREA ── */
+#center{flex:1;overflow-y:auto;padding:16px;min-width:0}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.section-title{font-size:16px;font-weight:600}
+.count-badge{font-size:11px;background:var(--bg3);border:1px solid var(--border);padding:2px 8px;border-radius:10px;color:var(--text2)}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:8px}
+.card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 20px rgba(124,92,252,.2)}
+.card.selected{border-color:var(--accent);background:var(--bg3)}
+.card-icon{width:56px;height:56px;object-fit:contain;border-radius:8px;background:var(--bg3)}
+.card-icon-placeholder{width:56px;height:56px;border-radius:8px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:24px}
+.card-name{font-size:12px;font-weight:600;text-align:center;line-height:1.3}
+.card-sub{font-size:10px;color:var(--text2);text-align:center}
+.rarity-badge{font-size:10px;padding:1px 6px;border-radius:8px;font-weight:600}
+.r-普通{background:#374151;color:#9ca3af}.r-稀有{background:#1e3a5f;color:var(--rare-c)}
+.r-精英{background:#2e1065;color:var(--rare-u)}.r-传说{background:#451a03;color:var(--rare-r)}
+.r-史诗{background:#450a0a;color:var(--rare-e)}.r-神话{background:#4a044e;color:var(--rare-l)}
+
+/* ── RIGHT PANEL ── */
+#right-panel{width:280px;background:var(--bg2);border-left:1px solid var(--border);overflow-y:auto;flex-shrink:0}
+#detail-content{padding:16px}
+.detail-empty{color:var(--text3);font-size:13px;text-align:center;margin-top:40px}
+.detail-icon{width:80px;height:80px;object-fit:contain;border-radius:12px;background:var(--bg3);display:block;margin:0 auto 12px}
+.detail-icon-ph{width:80px;height:80px;border-radius:12px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto 12px}
+.detail-name{font-size:17px;font-weight:700;text-align:center;margin-bottom:4px}
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.detail-row:last-child{border-bottom:none}
+.detail-label{color:var(--text2)}
+.detail-val{font-weight:600;text-align:right;max-width:160px}
+.detail-desc{font-size:12px;color:var(--text2);line-height:1.6;margin-top:10px;padding:10px;background:var(--bg3);border-radius:7px}
+.detail-section{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin:12px 0 6px}
+.stat-list{display:flex;flex-wrap:wrap;gap:4px}
+.stat-tag{font-size:11px;padding:2px 8px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);color:var(--accent2)}
+.effect-list{list-style:none}
+.effect-list li{font-size:11px;color:var(--text2);padding:3px 0;border-bottom:1px solid var(--border)}
+.effect-list li:last-child{border-bottom:none}
+.effect-list li::before{content:"✦ ";color:var(--accent)}
+
+/* ── MAGIC SYSTEM ── */
+#magic-view{display:none;flex:1;overflow:hidden;flex-direction:column}
+#magic-view.active{display:flex}
+.magic-layout{display:flex;flex:1;min-height:0;gap:0}
+.magic-sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0;padding:12px}
+.magic-main{flex:1;overflow-y:auto;padding:16px}
+.magic-detail{width:300px;background:var(--bg2);border-left:1px solid var(--border);overflow-y:auto;flex-shrink:0;padding:16px}
+.spell-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.spell-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:.15s}
+.spell-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.spell-card.selected{border-color:var(--accent);background:var(--bg4)}
+.spell-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.spell-emoji{font-size:22px}
+.spell-name{font-size:13px;font-weight:700}
+.spell-el{font-size:10px;padding:1px 6px;border-radius:8px;background:var(--bg2);border:1px solid var(--border)}
+.spell-delivery{font-size:11px;color:var(--text2);margin-bottom:6px}
+.mod-chips{display:flex;flex-wrap:wrap;gap:3px}
+.mod-chip{font-size:10px;padding:1px 7px;border-radius:8px;background:var(--accent);color:#fff;opacity:.85}
+.mod-chip.category-trajectory{background:#2563eb}
+.mod-chip.category-area{background:#16a34a}
+.mod-chip.category-persistent{background:#7c3aed}
+.mod-chip.category-trigger{background:#d97706}
+.mod-chip.category-amplifier{background:#dc2626}
+.mod-chip.category-tempo{background:#0891b2}
+.spell-desc{font-size:11px;color:var(--text2);margin-top:6px;line-height:1.5}
+.elem-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px}
+.elem-card{padding:12px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);cursor:pointer;transition:.15s}
+.elem-card:hover{border-color:var(--accent)}
+.elem-icon{font-size:24px;margin-bottom:4px}
+.elem-name{font-size:13px;font-weight:600}
+.elem-desc{font-size:11px;color:var(--text2);margin-top:3px}
+.delivery-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.dt-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;cursor:pointer;transition:.15s}
+.dt-card:hover{border-color:var(--accent)}
+.dt-header{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.dt-icon{font-size:18px}
+.dt-name{font-size:13px;font-weight:600}
+.dt-desc{font-size:11px;color:var(--text2)}
+.compat-mods{font-size:10px;color:var(--accent2);margin-top:4px}
+.section-h2{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.detail-field{margin-bottom:10px}
+.detail-field-label{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:3px}
+.detail-field-val{font-size:12px;color:var(--text)}
+.param-table{width:100%;border-collapse:collapse;font-size:11px}
+.param-table th{text-align:left;color:var(--text3);padding:3px 6px;border-bottom:1px solid var(--border)}
+.param-table td{padding:3px 6px;border-bottom:1px solid var(--border);color:var(--text2)}
+.param-table td:first-child{color:var(--accent2);font-weight:600}
+.cost-row{display:flex;gap:12px;margin-bottom:10px}
+.cost-item{background:var(--bg3);border-radius:6px;padding:6px 10px;text-align:center;flex:1}
+.cost-val{font-size:16px;font-weight:700;color:var(--accent2)}
+.cost-label{font-size:10px;color:var(--text3)}
+.on-hit-block{background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:8px}
+.on-hit-title{font-size:11px;font-weight:700;color:var(--warn);margin-bottom:6px}
+.effect-row{font-size:11px;display:flex;gap:6px;padding:3px 0;border-bottom:1px solid var(--border)}
+.effect-row:last-child{border-bottom:none}
+.effect-name{color:var(--accent2);font-weight:600;min-width:60px}
+.magic-filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+
+/* ── BOTTOM BAR ── */
+#bottom-bar{background:var(--bg2);border-top:1px solid var(--border);padding:8px 16px;font-size:11px;color:var(--text3);flex-shrink:0;display:flex;align-items:center;gap:12px}
+#status-msg{flex:1}
+
+/* ── LOADING ── */
+.loading{display:flex;align-items:center;justify-content:center;gap:8px;padding:40px;color:var(--text2);font-size:14px}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- TOP MENU -->
+<div id="top-menu">
+  <div class="logo">🌍 MagicWorld</div>
+  <div class="top-tabs">
+    <button class="top-tab active" onclick="switchSection('skills')" id="tab-skills">⚡ 技能</button>
+    <button class="top-tab" onclick="switchSection('equipment')" id="tab-equipment">⚔️ 装备</button>
+    <button class="top-tab" onclick="switchSection('items')" id="tab-items">🎒 道具</button>
+    <button class="top-tab" onclick="switchMagic()" id="tab-magic">🔮 魔法系统</button>
+  </div>
+  <div class="top-spacer"></div>
+  <div id="cos-status">COS 检测中…</div>
+  <a href="http://localhost:7439" target="_blank" class="top-link">📚 DocSpace</a>
+  <a href="http://localhost:7439/gallery.html" target="_blank" class="top-link">🎨 画廊</a>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- LEFT MENU -->
+  <div id="left-menu">
+    <div class="left-section">
+      <div class="left-label">类别</div>
+      <div id="type-filters"></div>
+    </div>
+    <div class="left-section" style="margin-top:0">
+      <div class="left-label">稀有度</div>
+      <div id="rarity-filters" class="filter-row"></div>
+    </div>
+    <div class="top-spacer"></div>
+    <div id="filter-box">
+      <input id="search-input" type="text" placeholder="搜索…" oninput="applyFilters()">
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div id="center">
+    <div class="section-header">
+      <div class="section-title" id="section-title">技能</div>
+      <div class="count-badge" id="count-badge">0 项</div>
+    </div>
+    <div id="card-grid" class="card-grid">
+      <div class="loading"><div class="spinner"></div>加载中…</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="right-panel">
+    <div id="detail-content">
+      <div class="detail-empty">👈 点击卡片查看详情</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAGIC SYSTEM VIEW -->
+<div id="magic-view">
+  <div class="magic-layout">
+    <div class="magic-sidebar">
+      <div class="left-label">查看模式</div>
+      <button class="left-btn active" id="ms-spells"    onclick="magicTab('spells')"   >🔮 技能列表</button>
+      <button class="left-btn"        id="ms-elements"  onclick="magicTab('elements')" >🌈 元素</button>
+      <button class="left-btn"        id="ms-delivery"  onclick="magicTab('delivery')" >🎯 投射类型</button>
+      <button class="left-btn"        id="ms-modifiers" onclick="magicTab('modifiers')">🔧 修饰符</button>
+      <button class="left-btn"        id="ms-effects"   onclick="magicTab('effects')"  >💥 效果</button>
+      <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+        <div class="left-label">元素筛选</div>
+        <div id="magic-elem-filter"></div>
+        <div class="left-label" style="margin-top:10px">投射类型筛选</div>
+        <div id="magic-dt-filter"></div>
+      </div>
+    </div>
+    <div class="magic-main">
+      <div class="section-header">
+        <div class="section-title" id="magic-section-title">技能列表</div>
+        <div class="count-badge" id="magic-count-badge">-</div>
+      </div>
+      <div id="magic-content"><div class="loading"><div class="spinner"></div>加载魔法数据…</div></div>
+    </div>
+    <div class="magic-detail">
+      <div id="magic-detail-content"><div class="detail-empty">👈 点击卡片查看详情</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div id="bottom-bar">
+  <div id="status-msg">就绪</div>
+  <div id="item-count-bar"></div>
+</div>
+
+<script>
+const API = '';  // same origin (port 8033)
+let allData = { skills: [], equipment: [], items: [] };
+let currentSection = 'skills';
+let selectedCard = null;
+let activeTypeFilter = null;
+let activeRarityFilter = null;
+
+const SECTION_META = {
+  skills:    { title: '技能', emoji: '⚡', typeKey: 'type', nameKey: 'name' },
+  equipment: { title: '装备', emoji: '⚔️', typeKey: 'type', nameKey: 'name' },
+  items:     { title: '道具', emoji: '🎒', typeKey: 'type', nameKey: 'name' },
+};
+const RARITY_ORDER = ['普通','稀有','精英','传说','史诗','神话'];
+
+async function init() {
+  // Check COS status
+  try {
+    const r = await fetch('/api/cos/status').then(x=>x.json());
+    const el = document.getElementById('cos-status');
+    el.textContent = r.configured ? `✅ COS 已连接` : `⚠️ COS 未配置`;
+    el.style.color = r.configured ? 'var(--success)' : 'var(--warn)';
+  } catch {}
+
+  // Load all data
+  await Promise.all(['skills','equipment','items'].map(loadSection));
+  renderSection('skills');
+}
+
+async function loadSection(name) {
+  try {
+    const r = await fetch(`/api/dict/${name}`).then(x=>x.json());
+    if (r.success) allData[name] = r.data || [];
+  } catch (e) {
+    setStatus(`加载 ${name} 失败: ${e.message}`, 'error');
+  }
+}
+
+function switchSection_OLD_REMOVED() { /* merged into magic section below */ }
+
+function renderSection(name) {
+  const meta = SECTION_META[name];
+  document.getElementById('section-title').textContent = meta.title;
+
+  const data = allData[name];
+  // Build type filters
+  const types = [...new Set(data.map(d => d[meta.typeKey]).filter(Boolean))].sort();
+  const typeEl = document.getElementById('type-filters');
+  typeEl.innerHTML = '';
+  types.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'left-btn' + (t === activeTypeFilter ? ' active' : '');
+    btn.innerHTML = `<span class="icon">•</span>${t}`;
+    btn.onclick = () => { activeTypeFilter = activeTypeFilter === t ? null : t; renderSection(name); };
+    typeEl.appendChild(btn);
+  });
+
+  // Build rarity filters
+  const rarities = [...new Set(data.map(d => d.rarity).filter(Boolean))];
+  const sortedRarities = RARITY_ORDER.filter(r => rarities.includes(r));
+  const rarityEl = document.getElementById('rarity-filters');
+  rarityEl.innerHTML = '';
+  sortedRarities.forEach(r => {
+    const chip = document.createElement('button');
+    chip.className = 'filter-chip r-' + r + (r === activeRarityFilter ? ' active' : '');
+    chip.textContent = r;
+    chip.onclick = () => { activeRarityFilter = activeRarityFilter === r ? null : r; renderSection(name); };
+    rarityEl.appendChild(chip);
+  });
+
+  applyFilters();
+}
+
+function applyFilters() {
+  const name = currentSection;
+  const meta = SECTION_META[name];
+  const q = document.getElementById('search-input').value.toLowerCase().trim();
+  let data = allData[name];
+
+  if (activeTypeFilter) data = data.filter(d => d[meta.typeKey] === activeTypeFilter);
+  if (activeRarityFilter) data = data.filter(d => d.rarity === activeRarityFilter);
+  if (q) data = data.filter(d =>
+    (d.name||'').toLowerCase().includes(q) ||
+    (d.description||'').toLowerCase().includes(q) ||
+    (d.lore||'').toLowerCase().includes(q)
+  );
+
+  document.getElementById('count-badge').textContent = `${data.length} 项`;
+  document.getElementById('item-count-bar').textContent = `共 ${allData[name].length} 项，显示 ${data.length} 项`;
+  renderCards(data, name);
+}
+
+function renderCards(data, name) {
+  const grid = document.getElementById('card-grid');
+  if (data.length === 0) {
+    grid.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:40px;text-align:center">无结果</div>';
+    return;
+  }
+  grid.innerHTML = data.map(item => {
+    const isSelected = selectedCard && selectedCard.id === item.id;
+    const icon = item.icon
+      ? `<img class="card-icon" src="${item.icon}" alt="${item.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+        + `<div class="card-icon-placeholder" style="display:none">${iconEmoji(name)}</div>`
+      : `<div class="card-icon-placeholder">${iconEmoji(name)}</div>`;
+    const rarity = item.rarity ? `<span class="rarity-badge r-${item.rarity}">${item.rarity}</span>` : '';
+    const sub = name === 'skills' ? `${item.element||''} ${item.type||''}`.trim()
+              : name === 'equipment' ? `${item.slot||''} Lv${item.level||1}`
+              : `Lv${item.level||1}`;
+    return `<div class="card${isSelected?' selected':''}" onclick="selectCard(${JSON.stringify(JSON.stringify(item))}, '${name}')" data-id="${item.id}">
+      ${icon}
+      <div class="card-name">${item.name}</div>
+      <div class="card-sub">${sub}</div>
+      ${rarity}
+    </div>`;
+  }).join('');
+}
+
+function iconEmoji(section) {
+  return {skills:'⚡',equipment:'⚔️',items:'🎒'}[section]||'📦';
+}
+
+function selectCard(jsonStr, section) {
+  const item = JSON.parse(jsonStr);
+  selectedCard = item;
+  // Update selected style
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+  document.querySelector(`.card[data-id="${item.id}"]`)?.classList.add('selected');
+  renderDetail(item, section);
+}
+
+function renderDetail(item, section) {
+  const iconHtml = item.icon
+    ? `<img class="detail-icon" src="${item.icon}" alt="${item.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+       <div class="detail-icon-ph" style="display:none">${iconEmoji(section)}</div>`
+    : `<div class="detail-icon-ph">${iconEmoji(section)}</div>`;
+
+  const rarity = item.rarity ? `<span class="rarity-badge r-${item.rarity}" style="margin:0 auto 8px;display:block;width:fit-content">${item.rarity}</span>` : '';
+
+  let rows = '';
+  if (section === 'skills') {
+    rows = [
+      ['类型', item.type], ['元素', item.element], ['等级', item.level],
+      ['法力消耗', item.mpCost], ['冷却', item.cooldown ? `${item.cooldown}s` : '—'],
+      ['伤害', item.damage],
+    ].filter(([,v])=>v!=null).map(([l,v])=>`<div class="detail-row"><span class="detail-label">${l}</span><span class="detail-val">${v}</span></div>`).join('');
+    if (item.tags?.length) {
+      const tagChips = item.tags.map(t=>`<span class="stat-tag" style="background:rgba(100,200,255,0.15);color:#7dd3fc;border:1px solid rgba(100,200,255,0.3)">${t}</span>`).join('');
+      rows += `<div class="detail-section">特性标签</div><div class="stat-list">${tagChips}</div>`;
+      rows += `<div id="skill-supports-area" style="margin-top:8px"><span style="opacity:0.5;font-size:12px">加载辅助宝石…</span></div>`;
+      fetchSkillSupports(item.id);
+    }
+  } else if (section === 'equipment') {
+    rows = [
+      ['部位', item.slot], ['类型', item.type], ['等级', item.level],
+    ].filter(([,v])=>v!=null).map(([l,v])=>`<div class="detail-row"><span class="detail-label">${l}</span><span class="detail-val">${v}</span></div>`).join('');
+    if (item.stats) {
+      const statTags = Object.entries(item.stats).map(([k,v])=>`<span class="stat-tag">${k}: ${v}</span>`).join('');
+      rows += `<div class="detail-section">属性</div><div class="stat-list">${statTags}</div>`;
+    }
+    if (item.effects?.length) {
+      const efx = item.effects.map(e=>`<li>${e}</li>`).join('');
+      rows += `<div class="detail-section">效果</div><ul class="effect-list">${efx}</ul>`;
+    }
+  } else {
+    rows = [
+      ['类型', item.type], ['稀有度', item.rarity], ['等级', item.level],
+    ].filter(([,v])=>v!=null).map(([l,v])=>`<div class="detail-row"><span class="detail-label">${l}</span><span class="detail-val">${v}</span></div>`).join('');
+    if (item.effect) rows += `<div class="detail-row"><span class="detail-label">效果</span><span class="detail-val" style="color:var(--accent2)">${item.effect}</span></div>`;
+    if (item.stats) {
+      const statTags = Object.entries(item.stats).map(([k,v])=>`<span class="stat-tag">${k}: ${v}</span>`).join('');
+      rows += `<div class="detail-section">属性</div><div class="stat-list">${statTags}</div>`;
+    }
+  }
+
+  const desc = item.description ? `<div class="detail-desc">${item.description}</div>` : '';
+  const lore = item.lore ? `<div class="detail-section">传说</div><div class="detail-desc" style="font-style:italic">${item.lore}</div>` : '';
+
+  document.getElementById('detail-content').innerHTML = `
+    ${iconHtml}
+    ${rarity}
+    <div class="detail-name">${item.name}</div>
+    <div style="margin-top:12px">${rows}</div>
+    ${desc}
+    ${lore}
+  `;
+}
+
+function clearDetail() {
+  selectedCard = null;
+  document.getElementById('detail-content').innerHTML = '<div class="detail-empty">👈 点击卡片查看详情</div>';
+}
+
+async function fetchSkillSupports(skillId) {
+  try {
+    const r = await fetch(`/api/dict/skills/${encodeURIComponent(skillId)}/supports`).then(x=>x.json());
+    const area = document.getElementById('skill-supports-area');
+    if (!area) return;
+    if (!r.success || !r.data.length) {
+      area.innerHTML = `<span style="opacity:0.4;font-size:12px">无匹配辅助宝石</span>`;
+      return;
+    }
+    const chips = r.data.map(s=>`<span class="stat-tag" title="${s.desc||''}" style="cursor:default;background:rgba(255,180,80,0.12);color:#fcd34d;border:1px solid rgba(255,180,80,0.3)">${s.name}</span>`).join('');
+    area.innerHTML = `<div class="detail-section">可用辅助宝石 (${r.data.length})</div><div class="stat-list">${chips}</div>`;
+  } catch(e) { /* ignore */ }
+}
+
+function setStatus(msg) {
+  document.getElementById('status-msg').textContent = msg;
+}
+
+// ═══ MAGIC SYSTEM ═══════════════════════════════════════════════════
+let magicData = { spells:[], elements:[], delivery:[], modifiers:[], effects:[] };
+let magicLoaded = false;
+let currentMagicTab = 'spells';
+let magicElemFilter = null;
+let magicDtFilter   = null;
+
+async function switchMagic() {
+  currentSection = 'magic';
+  document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-magic').classList.add('active');
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('magic-view').classList.add('active');
+  if (!magicLoaded) { await loadMagicData(); magicLoaded = true; }
+  magicTab('spells');
+}
+
+function switchSection(name) {
+  currentSection = name;
+  document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  document.getElementById('main').style.display = 'flex';
+  document.getElementById('magic-view').classList.remove('active');
+  activeTypeFilter = null; activeRarityFilter = null;
+  document.getElementById('search-input').value = '';
+  clearDetail(); renderSection(name);
+}
+
+async function loadMagicData() {
+  const [spells, elements, delivery, modifiers, effects] = await Promise.all([
+    fetch('/api/magic/spells').then(r=>r.json()),
+    fetch('/api/magic/elements').then(r=>r.json()),
+    fetch('/api/magic/delivery-types').then(r=>r.json()),
+    fetch('/api/magic/modifiers').then(r=>r.json()),
+    fetch('/api/magic/effects').then(r=>r.json()),
+  ]);
+  magicData = {
+    spells:    spells.data    || [],
+    elements:  elements.data  || [],
+    delivery:  delivery.data  || [],
+    modifiers: modifiers.data || [],
+    effects:   effects.data   || [],
+  };
+  // Build filter sidebars
+  buildMagicFilters();
+}
+
+function buildMagicFilters() {
+  const ef = document.getElementById('magic-elem-filter');
+  ef.innerHTML = magicData.elements.map(e =>
+    `<button class="left-btn" id="mef-${e.id}" onclick="setMagicElem('${e.id}')">${e.icon} ${e.name}</button>`
+  ).join('');
+  const df = document.getElementById('magic-dt-filter');
+  df.innerHTML = magicData.delivery.map(d =>
+    `<button class="left-btn" id="mdf-${d.id}" onclick="setMagicDt('${d.id}')">${d.icon} ${d.name}</button>`
+  ).join('');
+}
+
+function setMagicElem(id) {
+  magicElemFilter = magicElemFilter === id ? null : id;
+  document.querySelectorAll('[id^=mef-]').forEach(b => b.classList.remove('active'));
+  if (magicElemFilter) document.getElementById(`mef-${id}`)?.classList.add('active');
+  magicTab(currentMagicTab);
+}
+
+function setMagicDt(id) {
+  magicDtFilter = magicDtFilter === id ? null : id;
+  document.querySelectorAll('[id^=mdf-]').forEach(b => b.classList.remove('active'));
+  if (magicDtFilter) document.getElementById(`mdf-${id}`)?.classList.add('active');
+  magicTab(currentMagicTab);
+}
+
+function iconHtml(icon, size) {
+  const s = size || 32;
+  if (icon && icon.startsWith('/')) {
+    return `<img src="${icon}" style="width:${s}px;height:${s}px;object-fit:contain;image-rendering:auto" onerror="this.outerHTML='🔧'">`;
+  }
+  return icon || '🔧';
+}
+
+function magicTab(tab) {
+  currentMagicTab = tab;
+  document.querySelectorAll('[id^=ms-]').forEach(b => b.classList.remove('active'));
+  document.getElementById(`ms-${tab}`)?.classList.add('active');
+  document.getElementById('magic-detail-content').innerHTML = '<div class="detail-empty">👈 点击卡片查看详情</div>';
+  const titles = { spells:'技能列表', elements:'元素系统', delivery:'投射类型', modifiers:'修饰符库', effects:'效果系统' };
+  document.getElementById('magic-section-title').textContent = titles[tab] || tab;
+
+  const mc = document.getElementById('magic-content');
+  const modMap = Object.fromEntries(magicData.modifiers.map(m => [m.id, m]));
+
+  if (tab === 'spells') {
+    let spells = magicData.spells;
+    if (magicElemFilter) spells = spells.filter(s => s.element === magicElemFilter);
+    if (magicDtFilter)   spells = spells.filter(s => s.delivery?.type === magicDtFilter);
+    document.getElementById('magic-count-badge').textContent = `${spells.length} 个技能`;
+    mc.innerHTML = `<div class="spell-grid">${spells.map(s => renderSpellCard(s, modMap)).join('')}</div>`;
+  } else if (tab === 'elements') {
+    document.getElementById('magic-count-badge').textContent = `${magicData.elements.length} 种元素`;
+    mc.innerHTML = `<div class="section-h2">元素克制关系</div>
+    <div class="elem-grid">${magicData.elements.map(e => `
+      <div class="elem-card" onclick="showElemDetail(${JSON.stringify(JSON.stringify(e))})">
+        <div class="elem-icon">${e.icon}</div>
+        <div class="elem-name" style="color:${e.color}">${e.name}</div>
+        <div class="elem-desc">${e.desc}</div>
+        ${e.weakness.length ? `<div style="font-size:10px;margin-top:4px;color:var(--danger)">弱点：${e.weakness.join('、')}</div>` : ''}
+      </div>`).join('')}</div>`;
+  } else if (tab === 'delivery') {
+    document.getElementById('magic-count-badge').textContent = `${magicData.delivery.length} 种类型`;
+    mc.innerHTML = `<div class="delivery-list">${magicData.delivery.map(d => `
+      <div class="dt-card" onclick="showDeliveryDetail(${JSON.stringify(JSON.stringify(d))})">
+        <div class="dt-header"><span class="dt-icon">${d.icon}</span><span class="dt-name">${d.name}</span></div>
+        <div class="dt-desc">${d.desc}</div>
+        <div class="compat-mods">支持修饰符：${(d.compatible_modifiers||[]).slice(0,5).join('、')}${d.compatible_modifiers?.length>5?'…':''}</div>
+      </div>`).join('')}</div>`;
+  } else if (tab === 'modifiers') {
+    const cats = [...new Set(magicData.modifiers.map(m => m.category))];
+    document.getElementById('magic-count-badge').textContent = `${magicData.modifiers.length} 个修饰符`;
+    mc.innerHTML = cats.map(cat => {
+      const mods = magicData.modifiers.filter(m => m.category === cat);
+      const catNames = {trajectory:'轨迹',area:'范围',persistent:'持续',trigger:'触发',amplifier:'强化',tempo:'节奏'};
+      return `<div class="section-h2">${catNames[cat]||cat} <span style="font-weight:400;font-size:11px;color:var(--text3)">(${mods.length})</span></div>
+        <div class="spell-grid" style="margin-bottom:20px">${mods.map(m => `
+        <div class="spell-card" onclick="showModDetail(${JSON.stringify(JSON.stringify(m))})">
+          <div class="spell-header">
+            <span class="spell-emoji">${iconHtml(m.icon, 36)}</span>
+            <span class="spell-name">${m.name}</span>
+            <span class="mod-chip category-${m.category}">${catNames[cat]||cat}</span>
+          </div>
+          <div class="spell-desc">${m.desc}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:6px">适用：${(m.applies_to||[]).join('、')}</div>
+        </div>`).join('')}</div>`;
+    }).join('');
+  } else if (tab === 'effects') {
+    document.getElementById('magic-count-badge').textContent = `${magicData.effects.length} 种效果`;
+    mc.innerHTML = `<div class="spell-grid">${magicData.effects.map(e => `
+      <div class="spell-card" onclick="showEffectDetail(${JSON.stringify(JSON.stringify(e))})">
+        <div class="spell-header"><span class="spell-emoji">${e.icon}</span><span class="spell-name">${e.name}</span></div>
+        <div class="spell-desc">${e.desc}</div>
+      </div>`).join('')}</div>`;
+  }
+}
+
+function renderSpellCard(s, modMap) {
+  const mods = (s.delivery?.modifiers || []).map(m => {
+    const def = modMap[m.id] || {};
+    return `<span class="mod-chip category-${def.category||'amplifier'}">${iconHtml(def.icon,14)}${def.name||m.id}</span>`;
+  }).join('');
+  const el = magicData.elements.find(e => e.id === s.element) || {};
+  const dt = magicData.delivery.find(d => d.id === s.delivery?.type) || {};
+  const iconHtmlStr = s.icon && (s.icon.startsWith('/') || s.icon.startsWith('http'))
+    ? `<img src="${s.icon}" style="width:28px;height:28px;border-radius:4px;object-fit:cover;flex-shrink:0">`
+    : `<span style="font-size:22px">${s.icon || '⚡'}</span>`;
+  const deliveryLine = s.delivery?.type
+    ? `${dt.icon||''} ${dt.name||s.delivery.type} · Lv${s.level} · ⚡${s.cooldown}s`
+    : `${s.tags?.slice(0,2).join('·') || s.type || '技能'} · Lv${s.level} · ⚡${s.cooldown}s`;
+  return `<div class="spell-card" onclick="showSpellDetail(${JSON.stringify(JSON.stringify(s))})">
+    <div class="spell-header">
+      <span class="spell-emoji">${iconHtmlStr}</span>
+      <div><div class="spell-name">${s.name}</div>
+        <div style="display:flex;gap:4px;margin-top:2px">
+          <span class="rarity-badge r-${s.rarity}">${s.rarity}</span>
+          <span class="spell-el" style="color:${el.color||'#fff'}">${el.icon||''} ${el.name||s.element}</span>
+        </div>
+      </div>
+    </div>
+    <div class="spell-delivery">${deliveryLine}</div>
+    <div class="mod-chips">${mods}</div>
+    <div class="spell-desc">${s.description}</div>
+  </div>`;
+}
+
+function showSpellDetail(jsonStr) {
+  const s = JSON.parse(jsonStr);
+  const modMap = Object.fromEntries(magicData.modifiers.map(m => [m.id, m]));
+  const el = magicData.elements.find(e => e.id === s.element) || {};
+  const dt = magicData.delivery.find(d => d.id === s.delivery?.type) || {};
+  const mods = (s.delivery?.modifiers || []).map(m => {
+    const def = modMap[m.id] || { name: m.id, icon: '?', category: '' };
+    const pStr = Object.entries(m.params||{}).map(([k,v])=>`${k}=${v}`).join(', ');
+    return `<div class="on-hit-block">
+      <div class="on-hit-title">${def.icon} ${def.name} <span style="font-weight:400;color:var(--text3)">${pStr}</span></div>
+      <div style="font-size:11px;color:var(--text2)">${def.desc||''}</div>
+    </div>`;
+  }).join('');
+  const onHit = (s.on_hit||[]).map(h => `
+    <div class="effect-row">
+      <span class="effect-name">${h.effect}</span>
+      <span>${Object.entries(h.params||{}).map(([k,v])=>`${k}=${v}`).join(' · ')}</span>
+    </div>`).join('');
+  document.getElementById('magic-detail-content').innerHTML = `
+    <div style="font-size:28px;text-align:center">${s.icon}</div>
+    <div class="detail-name" style="text-align:center">${s.name}</div>
+    <div style="display:flex;gap:6px;justify-content:center;margin:6px 0">
+      <span class="rarity-badge r-${s.rarity}">${s.rarity}</span>
+      <span style="font-size:12px;color:${el.color}">${el.icon} ${el.name}</span>
+    </div>
+    <div class="cost-row">
+      <div class="cost-item"><div class="cost-val">${s.mana_cost}</div><div class="cost-label">法力</div></div>
+      <div class="cost-item"><div class="cost-val">${s.cast_time}s</div><div class="cost-label">施法</div></div>
+      <div class="cost-item"><div class="cost-val">${s.cooldown}s</div><div class="cost-label">冷却</div></div>
+      <div class="cost-item"><div class="cost-val">Lv${s.level}</div><div class="cost-label">等级</div></div>
+    </div>
+    <div class="detail-desc" style="margin-bottom:12px">${s.description}</div>
+    <div class="detail-field-label">投射方式</div>
+    <div style="font-size:12px;color:var(--accent2);margin-bottom:10px">${dt.icon} ${dt.name}</div>
+    ${mods ? `<div class="detail-field-label">修饰符</div>${mods}` : ''}
+    <div class="detail-field-label" style="margin-top:8px">命中效果</div>
+    <div class="on-hit-block">${onHit}</div>
+    ${s.on_tick_ally ? `<div class="detail-field-label">友军光环</div><div class="on-hit-block">${(s.on_tick_ally||[]).map(h=>`<div class="effect-row"><span class="effect-name">${h.effect}</span><span>${Object.entries(h.params||{}).map(([k,v])=>`${k}=${v}`).join(' · ')}</span></div>`).join('')}</div>` : ''}
+  `;
+}
+
+function showElemDetail(jsonStr) {
+  const e = JSON.parse(jsonStr);
+  document.getElementById('magic-detail-content').innerHTML = `
+    <div style="font-size:40px;text-align:center">${e.icon}</div>
+    <div class="detail-name" style="text-align:center;color:${e.color}">${e.name}</div>
+    <div class="detail-desc" style="margin:10px 0">${e.desc}</div>
+    <div class="detail-field-label">弱点</div><div style="font-size:12px;color:var(--danger);margin-bottom:8px">${e.weakness.join('、')||'无'}</div>
+    <div class="detail-field-label">抗性</div><div style="font-size:12px;color:var(--success);margin-bottom:8px">${e.resistance.join('、')||'无'}</div>
+    <div class="detail-field-label">持续效果</div><div style="font-size:12px;color:var(--accent2)">${e.dot_type}</div>
+  `;
+}
+
+function showDeliveryDetail(jsonStr) {
+  const d = JSON.parse(jsonStr);
+  const params = Object.entries(d.params||{}).map(([k,v])=>`<tr><td>${k}</td><td>${v.default??'-'}</td><td>${v.desc||''}</td></tr>`).join('');
+  document.getElementById('magic-detail-content').innerHTML = `
+    <div style="font-size:36px;text-align:center">${d.icon}</div>
+    <div class="detail-name" style="text-align:center">${d.name}</div>
+    <div class="detail-desc" style="margin:10px 0">${d.desc}</div>
+    <div class="detail-field-label">参数</div>
+    <table class="param-table"><thead><tr><th>参数</th><th>默认值</th><th>说明</th></tr></thead><tbody>${params}</tbody></table>
+    <div class="detail-field-label" style="margin-top:12px">支持修饰符</div>
+    <div class="mod-chips" style="margin-top:4px">${(d.compatible_modifiers||[]).map(id=>{
+      const m = magicData.modifiers.find(x=>x.id===id)||{name:id,icon:'?',category:''};
+      return `<span class="mod-chip category-${m.category}">${m.icon} ${m.name}</span>`;
+    }).join('')}</div>
+  `;
+}
+
+function showModDetail(jsonStr) {
+  const m = JSON.parse(jsonStr);
+  const params = Object.entries(m.params||{}).map(([k,v])=>`<tr><td>${k}</td><td>${v.default??'-'}</td><td>${v.desc||''}</td></tr>`).join('');
+  const catNames = {trajectory:'轨迹',area:'范围',persistent:'持续',trigger:'触发',amplifier:'强化',tempo:'节奏'};
+  document.getElementById('magic-detail-content').innerHTML = `
+    <div style="text-align:center;margin-bottom:8px">${m.icon && m.icon.startsWith('/') ? `<img src="${m.icon}" style="width:80px;height:80px;object-fit:contain" onerror="this.outerHTML='🔧'">` : `<span style="font-size:64px">${m.icon||'🔧'}</span>`}</div>
+    <div class="detail-name" style="text-align:center">${m.name}</div>
+    <div style="text-align:center;margin-bottom:8px"><span class="mod-chip category-${m.category}">${catNames[m.category]||m.category}</span></div>
+    <div class="detail-desc" style="margin-bottom:10px">${m.desc}</div>
+    <div class="detail-field-label">适用投射类型</div>
+    <div style="font-size:12px;color:var(--accent2);margin-bottom:8px">${(m.applies_to||[]).join('、')}</div>
+    ${m.conflicts?.length ? `<div class="detail-field-label">冲突修饰符</div><div style="font-size:12px;color:var(--danger);margin-bottom:8px">${m.conflicts.join('、')}</div>` : ''}
+    <div class="detail-field-label">参数</div>
+    <table class="param-table"><thead><tr><th>参数</th><th>默认值</th><th>说明</th></tr></thead><tbody>${params}</tbody></table>
+    ${m.tags?.length ? `<div class="detail-field-label" style="margin-top:10px">标签</div><div class="mod-chips">${m.tags.map(t=>`<span class="stat-tag">${t}</span>`).join('')}</div>` : ''}
+  `;
+}
+
+function showEffectDetail(jsonStr) {
+  const e = JSON.parse(jsonStr);
+  const params = Object.entries(e.params||{}).map(([k,v])=>`<tr><td>${k}</td><td>${v.default??'-'}</td><td>${v.desc||''}</td></tr>`).join('');
+  document.getElementById('magic-detail-content').innerHTML = `
+    <div style="font-size:36px;text-align:center">${e.icon}</div>
+    <div class="detail-name" style="text-align:center">${e.name}</div>
+    <div class="detail-desc" style="margin:10px 0">${e.desc}</div>
+    <div class="detail-field-label">参数</div>
+    <table class="param-table"><thead><tr><th>参数</th><th>默认值</th><th>说明</th></tr></thead><tbody>${params}</tbody></table>
+  `;
+}
+
+init();
+</script>
+</body>
+</html>

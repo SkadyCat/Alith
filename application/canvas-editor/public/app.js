@@ -1,4 +1,4 @@
-/* ===================== Canvas Editor App ===================== */
+﻿/* ===================== Canvas Editor App ===================== */
 
 const GRID_SIZE = 20;
 const SNAP_SIZE = 10;
@@ -12,6 +12,8 @@ let selectedId   = null;
 let nextId       = 1;
 let mode         = 'select';   // 'select' | 'draw'
 let zoom         = 1.0;
+let panX         = 0;
+let panY         = 0;
 let gridVisible  = true;
 let snapEnabled  = true;
 let currentWidgetType = 'CanvasPanel'; // default: CanvasPanel
@@ -19,12 +21,56 @@ let currentWidgetType = 'CanvasPanel'; // default: CanvasPanel
 let undoStack    = [];
 let redoStack    = [];
 
+let _rafRenderPending = false; // rAF debounce flag for renderAll()
+
 let _globalLoadTree = null; // set by sidebar init, used by context menu
 
 /* ───── Widget Type Definitions (loaded from /api/elements) ───── */
 let WIDGET_CONTROLS = [];
 let WIDGET_CONTAINERS = [];
 let ALL_WIDGET_TYPES = [];
+
+/* ───── Widget Theme (loaded from /api/theme, never stored in session) ───── */
+let widgetTheme = { types: {} };
+
+async function loadTheme(name = 'default') {
+  try {
+    const res = await fetch(`/api/theme?name=${encodeURIComponent(name)}`);
+    const data = await res.json();
+    if (data.success && data.theme) {
+      widgetTheme = data.theme;
+      renderAll();
+    }
+  } catch (_) {}
+}
+
+/** Apply theme overlay div to a box element — purely visual, never written to session JSON */
+function applyThemeOverlay(el, box) {
+  let ov = el.querySelector('.theme-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.className = 'theme-overlay';
+    ov.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden;border-radius:inherit;';
+    el.insertBefore(ov, el.firstChild);
+  }
+  // In preview mode, invisible containers go transparent — hide overlay so the effect is visible
+  const isInvisibleCtx = INVISIBLE_CONTAINER_TYPES && INVISIBLE_CONTAINER_TYPES.has(box.widgetType);
+  const hideForPreview = _previewMode && isInvisibleCtx && box.id !== selectedId;
+  if (hideForPreview) {
+    ov.style.display = 'none';
+  } else {
+    ov.style.display = '';
+    const t = (widgetTheme.types || {})[box.widgetType] || {};
+    // Combine pattern + overlay as layered backgrounds
+    const bgParts = [t.pattern, t.overlay].filter(Boolean);
+    ov.style.background = bgParts.join(',');
+    ov.style.boxShadow = t.innerShadow || '';
+    ov.style.opacity = t.opacity != null ? String(t.opacity) : '1';
+  }
+  // wtype CSS class for CSS-override hooks
+  Array.from(el.classList).forEach(c => { if (c.startsWith('wtype-')) el.classList.remove(c); });
+  if (box.widgetType) el.classList.add('wtype-' + box.widgetType.toLowerCase().replace(/\s+/g, '-'));
+}
 
 /* Group mapping: type → category name */
 const WIDGET_GROUPS = {
@@ -96,6 +142,7 @@ const zoomLabel  = document.getElementById('zoom-label');
 })();
 const toggleGrid = document.getElementById('toggle-grid');
 const toggleSnap = document.getElementById('toggle-snap');
+// Labels are always hidden on canvas; shown in right panel when selected
 
 /* ───── Logging ───── */
 function log(msg, type = 'info') {
@@ -384,6 +431,33 @@ function snap(v) {
   return Math.round(v / SNAP_SIZE) * SNAP_SIZE;
 }
 
+/* ───── Edge-snap (align to sibling box edges while dragging) ───── */
+const EDGE_SNAP_THRESHOLD = 12; // canvas units
+function edgeSnap(box, dx_hint, dy_hint) {
+  const siblings = boxes.filter(b => b.id !== box.id && b.parentId === box.parentId);
+  let snapX = null, snapY = null;
+  const boxL = box.x, boxR = box.x + box.w;
+  const boxT = box.y, boxB = box.y + box.h;
+  for (const sib of siblings) {
+    const sL = sib.x, sR = sib.x + sib.w;
+    const sT = sib.y, sB = sib.y + sib.h;
+    if (snapX === null) {
+      if (Math.abs(boxL - sL) <= EDGE_SNAP_THRESHOLD) snapX = sL;
+      else if (Math.abs(boxL - sR) <= EDGE_SNAP_THRESHOLD) snapX = sR;
+      else if (Math.abs(boxR - sL) <= EDGE_SNAP_THRESHOLD) snapX = sL - box.w;
+      else if (Math.abs(boxR - sR) <= EDGE_SNAP_THRESHOLD) snapX = sR - box.w;
+    }
+    if (snapY === null) {
+      if (Math.abs(boxT - sT) <= EDGE_SNAP_THRESHOLD) snapY = sT;
+      else if (Math.abs(boxT - sB) <= EDGE_SNAP_THRESHOLD) snapY = sB;
+      else if (Math.abs(boxB - sT) <= EDGE_SNAP_THRESHOLD) snapY = sT - box.h;
+      else if (Math.abs(boxB - sB) <= EDGE_SNAP_THRESHOLD) snapY = sB - box.h;
+    }
+  }
+  if (snapX !== null) box.x = snapX;
+  if (snapY !== null) box.y = snapY;
+}
+
 /* ───── Undo / Redo ───── */
 function saveState() {
   undoStack.push(JSON.stringify(boxes));
@@ -461,6 +535,39 @@ function refreshAnchorPicker(current) {
   });
 }
 
+// Apply anchor preset: physically reposition (and optionally resize) the box relative to its parent.
+// Point anchor: aligns the corresponding edge of the box to the anchor% of the parent.
+//   minX=0 → left edge of box at left of parent
+//   minX=0.5 → center of box at center of parent (horizontally)
+//   minX=1 → right edge of box at right of parent
+// Stretch anchor (minX≠maxX or minY≠maxY): resizes box to span that fraction of the parent.
+function applyAnchorPreset(box, a) {
+  const parent = box.parentId != null ? boxes.find(b => b.id === box.parentId) : null;
+  const pw = parent ? parent.w : (canvasViewport.offsetWidth  || 800);
+  const ph = parent ? parent.h : (canvasViewport.offsetHeight || 600);
+  const px = parent ? parent.x : 0;
+  const py = parent ? parent.y : 0;
+
+  const hStretch = a.minX !== a.maxX;
+  const vStretch = a.minY !== a.maxY;
+
+  if (hStretch) {
+    box.x = snap(px + a.minX * pw);
+    box.w = Math.max(20, snap((a.maxX - a.minX) * pw));
+  } else {
+    // minX fraction: which edge of the box aligns to anchor% of parent width
+    // box.x + a.minX * box.w = px + a.minX * pw
+    box.x = snap(px + a.minX * pw - a.minX * box.w);
+  }
+
+  if (vStretch) {
+    box.y = snap(py + a.minY * ph);
+    box.h = Math.max(20, snap((a.maxY - a.minY) * ph));
+  } else {
+    box.y = snap(py + a.minY * ph - a.minY * box.h);
+  }
+}
+
 /* ───── Box Model ───── */
 function initWidgetProps(def) {
   if (!def || !def.props) return {};
@@ -471,15 +578,31 @@ function initWidgetProps(def) {
 
 function createBox(x, y, w, h, label, widgetType) {
   const def = widgetType ? getWidgetDef(widgetType) : null;
+  // Use short human-readable prefix for auto-generated labels
+  const SHORT = {
+    CanvasPanel:'Canvas', Border:'Border', HorizontalBox:'HBox', VerticalBox:'VBox',
+    GridPanel:'Grid', ScrollBox:'Scroll', SizeBox:'SizeBox', Overlay:'Overlay',
+    TileView:'TileView', ListView:'ListView', TreeView:'TreeView',
+    UniformGridPanel:'UniformGrid', WrapBox:'WrapBox', ScaleBox:'ScaleBox',
+    TextBlock:'TextBlock', Button:'Button', Image:'Image', ProgressBar:'ProgressBar',
+    Slider:'Slider', EditableText:'EditText', EditableTextBox:'EditTextBox',
+    CheckBox:'CheckBox', SpinBox:'SpinBox', ComboBox:'ComboBox', TextBox:'TextBox',
+  };
+  const typeName = widgetType ? (SHORT[widgetType] || def.label) : 'Box';
+  // Per-type sequential label: count existing boxes of same type
+  const sameTypeCount = boxes.filter(b => b.widgetType === (widgetType || null)).length;
+  const autoLabel = `${typeName}_${sameTypeCount + 1}`;
   return {
     id: nextId++,
     x: snap(x), y: snap(y),
     w: Math.max(snap(w), 20),
     h: Math.max(snap(h), 20),
-    label: label || `${def ? def.label : 'Box'}${nextId - 1}`,
+    label: label || autoLabel,
     borderColor: def ? def.color : '#7c6af7',
     bgColor: def ? def.bg : 'rgba(124,106,247,0.06)',
-    borderWidth: 2,
+    borderWidth: 1,
+    borderRadius: 0,
+    boxShadow: '',
     opacity: 1.0,
     widgetType: widgetType || null,
     anchor: { minX: 0, minY: 0, maxX: 0, maxY: 0 },
@@ -491,18 +614,505 @@ function createBox(x, y, w, h, label, widgetType) {
 /* TileView EntryClass: 当框类型设为 TileView/ListView/TreeView 时，自动在内部创建 EntryClass 子框 */
 const ENTRY_CLASS_TYPES = ['TileView', 'ListView', 'TreeView'];
 
-// Returns true if this box is an auto-created EntryClass child inside a container type
+// O(1) lookup cache: rebuilt at the start of every renderAll()
+let _boxById = {};
+// Widget types that are invisible containers in UE4 UMG (no visual border/background by default)
+const INVISIBLE_CONTAINER_TYPES = new Set([
+  'CanvasPanel','HorizontalBox','VerticalBox','GridPanel','UniformGridPanel',
+  'WrapBox','Overlay','SizeBox','ScaleBox'
+]);
+// Preview mode: hide layout container borders/backgrounds to simulate UE4 appearance
+let _previewMode = false;
+function togglePreviewMode() {
+  _previewMode = !_previewMode;
+  const btn = document.getElementById('btn-preview-mode');
+  if (btn) {
+    btn.innerHTML = _previewMode ? '<span class="icon">🎮</span> 预览模式' : '<span class="icon">👁</span> 布局视图';
+    btn.classList.toggle('active', _previewMode);
+  }
+
+  // Preview mode banner on canvas
+  const existingBanner = document.getElementById('_preview-banner');
+  if (existingBanner) existingBanner.remove();
+  if (_previewMode) {
+    const banner = document.createElement('div');
+    banner.id = '_preview-banner';
+    banner.textContent = '🎮 预览模式 — 按 P 返回布局视图';
+    banner.style.cssText = 'position:fixed;top:88px;left:50%;transform:translateX(-50%);background:rgba(10,6,2,0.88);color:#f5c542;border:1px solid #f5c542;border-radius:4px;padding:4px 14px;font-size:12px;z-index:9999;pointer-events:none;letter-spacing:0.5px;';
+    document.body.appendChild(banner);
+  }
+
+  // Hide/show editor chrome: labels, resize handles, selection indicators
+  const styleId = '_preview-style';
+  let styleEl = document.getElementById(styleId);
+  if (_previewMode) {
+    if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = styleId; document.head.appendChild(styleEl); }
+    styleEl.textContent = `.box-label { display: none !important; } .resize-handle { display: none !important; } #sel-overlay { display: none !important; }`;
+  } else {
+    if (styleEl) styleEl.remove();
+  }
+
+  renderAll();
+  // Inline toast (showToast is in a closure, use inline implementation here)
+  const _t = document.createElement('div');
+  _t.textContent = _previewMode ? '🎮 预览模式已开启' : '👁 布局视图已恢复';
+  _t.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#1e2028;color:#e8eaf0;padding:8px 18px;border-radius:8px;font-size:13px;z-index:9999;border:1px solid rgba(255,255,255,0.12);box-shadow:0 4px 16px rgba(0,0,0,0.4);pointer-events:none;transition:opacity 0.4s;white-space:nowrap';
+  document.body.appendChild(_t);
+  setTimeout(() => { _t.style.opacity = '0'; setTimeout(() => _t.remove(), 400); }, 2200);
+}
+
+// ─────────────── Icon Picker ───────────────
+const ICON_LIST = [
+  // ── 状态属性 ──
+  { name: 'health', label: '生命', path: '/assets/icons/colored/health.svg', group: '属性' },
+  { name: 'mana', label: '魔力', path: '/assets/icons/colored/mana.svg', group: '属性' },
+  { name: 'stamina', label: '耐力', path: '/assets/icons/colored/stamina.svg', group: '属性' },
+  { name: 'str', label: '力量', path: '/assets/icons/colored/str.svg', group: '属性' },
+  { name: 'dex', label: '敏捷', path: '/assets/icons/colored/dex.svg', group: '属性' },
+  { name: 'int', label: '智力', path: '/assets/icons/colored/int.svg', group: '属性' },
+  { name: 'vit', label: '体力', path: '/assets/icons/colored/vit.svg', group: '属性' },
+  { name: 'atk', label: '攻击', path: '/assets/icons/colored/atk.svg', group: '属性' },
+  { name: 'def2', label: '防御', path: '/assets/icons/colored/def2.svg', group: '属性' },
+  // ── 元素 ──
+  { name: 'fire', label: '火焰', path: '/assets/icons/colored/fire.svg', group: '元素' },
+  { name: 'ice', label: '冰霜', path: '/assets/icons/colored/ice.svg', group: '元素' },
+  { name: 'lightning', label: '闪电', path: '/assets/icons/colored/lightning.svg', group: '元素' },
+  { name: 'poison', label: '毒素', path: '/assets/icons/colored/poison.svg', group: '元素' },
+  // ── 物品 ──
+  { name: 'arrow', label: '箭矢', path: '/assets/icons/colored/arrow.svg', group: '物品' },
+  { name: 'bag', label: '背包', path: '/assets/icons/colored/bag.svg', group: '物品' },
+  { name: 'coin', label: '金币', path: '/assets/icons/colored/coin.svg', group: '物品' },
+  { name: 'gear', label: '齿轮', path: '/assets/icons/colored/gear.svg', group: '物品' },
+  { name: 'gold', label: '黄金', path: '/assets/icons/colored/gold.svg', group: '物品' },
+  { name: 'potion', label: '药水', path: '/assets/icons/colored/potion.svg', group: '物品' },
+  { name: 'scroll', label: '卷轴', path: '/assets/icons/colored/scroll.svg', group: '物品' },
+  { name: 'skull', label: '骷髅', path: '/assets/icons/colored/skull.svg', group: '物品' },
+  // ── 装备 ──
+  { name: 'boots', label: '靴子', path: '/assets/icons/colored/boots.svg', group: '装备' },
+  { name: 'gloves', label: '手套', path: '/assets/icons/colored/gloves.svg', group: '装备' },
+  { name: 'helmet', label: '头盔', path: '/assets/icons/colored/helmet.svg', group: '装备' },
+  { name: 'ring', label: '戒指', path: '/assets/icons/colored/ring.svg', group: '装备' },
+  { name: 'shield', label: '护盾', path: '/assets/icons/colored/shield.svg', group: '装备' },
+  { name: 'sword', label: '剑', path: '/assets/icons/colored/sword.svg', group: '装备' },
+  // ── 装备槽（深色风格）──
+  { name: 'slot_weapon', label: '武器槽', path: '/assets/icons/slots/weapon.svg', group: '槽位' },
+  { name: 'slot_shield', label: '副手槽', path: '/assets/icons/slots/shield.svg', group: '槽位' },
+  { name: 'slot_head', label: '头盔槽', path: '/assets/icons/slots/head.svg', group: '槽位' },
+  { name: 'slot_chest', label: '胸甲槽', path: '/assets/icons/slots/chest.svg', group: '槽位' },
+  { name: 'slot_legs', label: '腿甲槽', path: '/assets/icons/slots/legs.svg', group: '槽位' },
+  { name: 'slot_gloves', label: '手套槽', path: '/assets/icons/slots/gloves.svg', group: '槽位' },
+  { name: 'slot_boots', label: '靴子槽', path: '/assets/icons/slots/boots.svg', group: '槽位' },
+  { name: 'slot_belt', label: '腰带槽', path: '/assets/icons/slots/belt.svg', group: '槽位' },
+  { name: 'slot_ring', label: '戒指槽', path: '/assets/icons/slots/ring.svg', group: '槽位' },
+  { name: 'slot_amulet', label: '项链槽', path: '/assets/icons/slots/amulet.svg', group: '槽位' },
+];
+
+// Dynamic group filter for icon picker
+let _iconPickerGroup = 'all';
+let _iconPickerBox = null;
+
+function openIconPicker(box) {
+  _iconPickerBox = box;
+  const overlay = document.getElementById('icon-picker-overlay');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+  _iconPickerGroup = 'all';
+  // Render group tabs
+  const tabContainer = document.getElementById('icon-picker-tabs');
+  if (tabContainer) {
+    const groups = ['all', ...new Set(ICON_LIST.map(i => i.group).filter(Boolean))];
+    const labels = { all: '全部' };
+    tabContainer.innerHTML = groups.map(g => 
+      `<button onclick="setIconGroup('${g}')" id="igtab_${g}" style="padding:3px 10px;font-size:11px;cursor:pointer;border-radius:3px;border:1px solid var(--border,#3a3a5c);background:${g==='all'?'#9b8af7':'var(--bg-dark,#12121a)'};color:${g==='all'?'#fff':'var(--text,#ccc)'};transition:all 0.15s">${labels[g]||g}</button>`
+    ).join('');
+  }
+  renderIconGrid('');
+  const search = document.getElementById('icon-picker-search');
+  if (search) { search.value = ''; search.focus(); }
+}
+
+function closeIconPicker() {
+  const overlay = document.getElementById('icon-picker-overlay');
+  if (overlay) overlay.style.display = 'none';
+  _iconPickerBox = null;
+}
+
+function setIconGroup(g) {
+  _iconPickerGroup = g;
+  // Update tab styles
+  const groups = ['all', ...new Set(ICON_LIST.map(i => i.group).filter(Boolean))];
+  groups.forEach(group => {
+    const btn = document.getElementById(`igtab_${group}`);
+    if (btn) {
+      btn.style.background = group === g ? '#9b8af7' : 'var(--bg-dark,#12121a)';
+      btn.style.color = group === g ? '#fff' : 'var(--text,#ccc)';
+    }
+  });
+  const search = document.getElementById('icon-picker-search');
+  renderIconGrid(search ? search.value.toLowerCase() : '');
+}
+
+function filterIconPicker(q) {
+  renderIconGrid(q.toLowerCase());
+}
+
+// ─────────────── Image Browser ───────────────
+let _imgBrowserBox = null;
+let _imgBrowserProp = 'bgImage';
+let _imgBrowserAllImages = [];
+let _imgBrowserFolder = 'all';
+
+async function openImgBrowser(box, prop) {
+  _imgBrowserBox = box || null;
+  _imgBrowserProp = prop || 'bgImage';
+  const overlay = document.getElementById('img-browser-overlay');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+  document.getElementById('img-browser-grid').innerHTML = '<div style="color:#666;font-size:12px;padding:20px;grid-column:1/-1;text-align:center">加载中…</div>';
+  try {
+    const r = await fetch('/api/images');
+    const data = await r.json();
+    _imgBrowserAllImages = data.images || [];
+  } catch (e) {
+    _imgBrowserAllImages = [];
+  }
+  _imgBrowserFolder = 'all';
+  renderImgBrowserFolders();
+  renderImgBrowserGrid('');
+  const search = document.getElementById('img-browser-search');
+  if (search) { search.value = ''; search.focus(); }
+}
+
+function closeImgBrowser() {
+  const overlay = document.getElementById('img-browser-overlay');
+  if (overlay) overlay.style.display = 'none';
+  _imgBrowserBox = null;
+}
+
+function renderImgBrowserFolders() {
+  const container = document.getElementById('img-browser-folders');
+  if (!container) return;
+  const dirs = ['all', ...new Set(_imgBrowserAllImages.map(i => i.dir))].sort();
+  container.innerHTML = dirs.map(d => {
+    const label = d === 'all' ? '全部' : d.replace(/^\//, '');
+    const active = d === _imgBrowserFolder;
+    return `<button onclick="setImgBrowserFolder('${d}')" style="padding:3px 10px;font-size:11px;cursor:pointer;border-radius:3px;border:1px solid var(--border,#3a3a5c);background:${active?'#56cfba':'var(--bg-dark,#12121a)'};color:${active?'#000':'var(--text,#ccc)'};transition:all 0.15s">${label}</button>`;
+  }).join('');
+}
+
+function setImgBrowserFolder(dir) {
+  _imgBrowserFolder = dir;
+  renderImgBrowserFolders();
+  const search = document.getElementById('img-browser-search');
+  renderImgBrowserGrid(search ? search.value.toLowerCase() : '');
+}
+
+function filterImgBrowser(q) {
+  renderImgBrowserGrid(q.toLowerCase());
+}
+
+function renderImgBrowserGrid(q) {
+  const grid = document.getElementById('img-browser-grid');
+  const status = document.getElementById('img-browser-status');
+  if (!grid) return;
+  let images = _imgBrowserAllImages;
+  if (_imgBrowserFolder !== 'all') images = images.filter(i => i.dir === _imgBrowserFolder);
+  if (q) images = images.filter(i => i.name.toLowerCase().includes(q));
+  if (status) status.textContent = `共 ${_imgBrowserAllImages.length} 张 · 显示 ${images.length} 张 · 点击应用到选中框`;
+  grid.innerHTML = images.map(img => {
+    const ep = img.path.replace(/'/g, "\\'");
+    return `<div onclick="applyImgBrowser('${ep}')" title="${img.path}" style="cursor:pointer;border:1px solid var(--border,#3a3a5c);border-radius:6px;overflow:hidden;background:var(--bg-dark,#12121a);transition:border-color 0.15s" onmouseover="this.style.borderColor='#56cfba'" onmouseout="this.style.borderColor='var(--border,#3a3a5c)'">
+      <img src="${img.path}" style="width:100%;aspect-ratio:1;object-fit:contain;display:block;background:#0a0a14" onerror="this.style.opacity='0.2';this.style.minHeight='60px'"/>
+      <div style="padding:4px 6px;font-size:9px;color:#888;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="${img.name}">${img.name}</div>
+    </div>`;
+  }).join('') || '<div style="color:#666;font-size:12px;padding:20px;grid-column:1/-1;text-align:center">没有找到图片</div>';
+}
+
+function applyImgBrowser(path) {
+  if (_imgBrowserBox) {
+    saveState();
+    if (_imgBrowserProp === 'bgImage') {
+      _imgBrowserBox.bgImage = path;
+      const el = document.getElementById('p-bgimg');
+      if (el) el.value = path;
+    } else {
+      if (!_imgBrowserBox.widgetProps) _imgBrowserBox.widgetProps = {};
+      _imgBrowserBox.widgetProps[_imgBrowserProp] = path;
+    }
+    renderAll();
+    autoSave();
+  } else {
+    navigator.clipboard.writeText(path).then(() => showToast('✓ 已复制路径: ' + path));
+  }
+  closeImgBrowser();
+}
+
+function renderIconGrid(q) {
+  const grid = document.getElementById('icon-picker-grid');
+  if (!grid) return;
+  let filtered = ICON_LIST;
+  if (_iconPickerGroup && _iconPickerGroup !== 'all') filtered = filtered.filter(i => i.group === _iconPickerGroup);
+  if (q) filtered = filtered.filter(i => i.name.includes(q) || i.label.includes(q));
+  grid.innerHTML = filtered.map(icon => {
+    const escapedPath = icon.path.replace(/'/g, "\\'");
+    return `<div onclick="applyIcon('${escapedPath}')" title="${icon.path}" style="cursor:pointer;text-align:center;border:1px solid var(--border,#3a3a5c);border-radius:6px;padding:8px 4px;background:var(--bg-dark,#12121a);transition:border-color 0.15s" onmouseover="this.style.borderColor='#9b8af7'" onmouseout="this.style.borderColor='var(--border,#3a3a5c)'">
+      <img src="${icon.path}" style="width:36px;height:36px;display:block;margin:0 auto 4px;object-fit:contain" onerror="this.style.opacity='0.3'"/>
+      <span style="font-size:10px;color:var(--text-dim,#888)">${icon.label}</span>
+    </div>`;
+  }).join('') || `<div style="color:#666;font-size:12px;padding:20px;grid-column:1/-1;text-align:center">没有找到图标</div>`;
+}
+
+function applyIcon(path) {
+  if (!_iconPickerBox) return;
+  saveState();
+  _iconPickerBox.bgImage = path;
+  const el = document.getElementById('p-bgimg');
+  if (el) el.value = path;
+  renderAll();
+  autoSave();
+  closeIconPicker();
+}
+// ─────────────── Image Background Removal (扣图) ───────────────
+/**
+ * 前端扣图：用 canvas 采样四角颜色，进行洪泛填充删除背景
+ * @param {string} url - 图片 URL
+ * @param {number} tolerance - 容差 (0-255), 默认 30
+ * @returns {Promise<string>} - 返回 data URL (PNG, 带透明通道)
+ */
+function removeImageBackground(url, tolerance = 30) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const w = img.naturalWidth, h = img.naturalHeight;
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const data = ctx.getImageData(0, 0, w, h);
+      const px = data.data;
+
+      // 采集四角颜色，取平均作为背景色
+      function getPixel(x, y) {
+        const i = (y * w + x) * 4;
+        return [px[i], px[i+1], px[i+2], px[i+3]];
+      }
+      function colorDist(a, b) {
+        return Math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2);
+      }
+
+      const corners = [
+        getPixel(0, 0), getPixel(w-1, 0),
+        getPixel(0, h-1), getPixel(w-1, h-1)
+      ];
+      const bgColor = corners.reduce((acc, c) => [acc[0]+c[0]/4, acc[1]+c[1]/4, acc[2]+c[2]/4, 255], [0,0,0,255]);
+
+      // BFS 洪泛：从四角开始，把相似颜色变透明
+      const visited = new Uint8Array(w * h);
+      const queue = [];
+      [[0,0],[w-1,0],[0,h-1],[w-1,h-1]].forEach(([x,y]) => queue.push(y*w+x));
+
+      while (queue.length > 0) {
+        const idx = queue.pop();
+        if (visited[idx]) continue;
+        visited[idx] = 1;
+        const pi = idx * 4;
+        const c = [px[pi], px[pi+1], px[pi+2], px[pi+3]];
+        if (c[3] < 10 || colorDist(c, bgColor) <= tolerance) {
+          px[pi+3] = 0; // 设为透明
+          const x = idx % w, y = Math.floor(idx / w);
+          if (x > 0)   queue.push(idx - 1);
+          if (x < w-1) queue.push(idx + 1);
+          if (y > 0)   queue.push(idx - w);
+          if (y < h-1) queue.push(idx + w);
+        }
+      }
+
+      ctx.putImageData(data, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+/**
+ * 对当前选中框的 bgImage 进行扣图，替换为透明 PNG
+ */
+async function applyBgImageRemoveBg(box, tolerance) {
+  if (!box || !box.bgImage) { showToast('请先设置背景图'); return; }
+  showToast('扣图中…');
+  try {
+    const result = await removeImageBackground(box.bgImage, tolerance);
+    saveState();
+    box.bgImage = result;
+    const el = document.getElementById('p-bgimg');
+    if (el) el.value = '(data:image/png base64)';
+    renderAll();
+    autoSave();
+    showToast('扣图完成 ✓');
+  } catch(e) {
+    showToast('扣图失败：' + e.message);
+  }
+}
+
+function openAssetsPanel() {
+  const overlay = document.getElementById('assets-modal-overlay');
+  const body = document.getElementById('assets-modal-body');
+  if (!overlay || !body) return;
+
+  overlay.style.display = 'flex';
+  overlay.onclick = e => { if (e.target === overlay) closeAssetsPanel(); };
+
+  // ── Collect session-referenced resources ──────────────────
+  const URL_RE = /^(https?:\/\/|data:image|\/|\.\/|\.\.\/)/i;
+  const EXT_RE = /\.(png|jpg|jpeg|gif|webp|svg|ico|bmp|ttf|woff2?|otf|mp4|mp3|json)(\?.*)?$/i;
+  function looksLikeResource(v) {
+    if (typeof v !== 'string' || v.trim().length < 3) return false;
+    return URL_RE.test(v.trim()) || EXT_RE.test(v.trim());
+  }
+  const PROP_TYPE = { src: '图片 src', imagePath: '图片路径', bgImage: '背景图', content: '内容 URL', href: '链接' };
+  const refs = [];
+  for (const b of boxes) {
+    if (b.entryClassRef)
+      refs.push({ type: 'EntryClass模板', url: b.entryClassRef.trim(), label: b.label, id: b.id, widget: b.widgetType });
+    if (b.bgImage && looksLikeResource(b.bgImage))
+      refs.push({ type: 'bgImage', url: b.bgImage.trim(), label: b.label, id: b.id, widget: b.widgetType });
+    if (b.widgetProps) {
+      for (const [key, val] of Object.entries(b.widgetProps)) {
+        if (looksLikeResource(val))
+          refs.push({ type: PROP_TYPE[key] || key, url: val.trim(), label: b.label, id: b.id, widget: b.widgetType });
+      }
+    }
+  }
+  const seen = new Set();
+  const deduped = refs.filter(r => {
+    const k = r.url + '|' + r.id + '|' + r.type;
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+  const byUrl = {};
+  for (const r of deduped) {
+    if (!byUrl[r.url]) byUrl[r.url] = [];
+    byUrl[r.url].push(r);
+  }
+  const isImg = url => /\.(png|jpg|jpeg|gif|webp|svg|ico|bmp)(\?.*)?$/i.test(url) || url.startsWith('data:image');
+  const urls = Object.keys(byUrl).sort((a, b) => isImg(b) - isImg(a) || a.localeCompare(b));
+
+  // ── Tabs UI ──────────────────────────────────────────────
+  const TAB_STYLE_ACT = 'padding:5px 14px;border-radius:5px 5px 0 0;border:1px solid var(--border,#3a3a5c);border-bottom:none;background:var(--bg-dark,#1e1e2e);color:var(--text,#cdd6f4);font-size:12px;cursor:pointer;font-family:inherit;';
+  const TAB_STYLE_INV = 'padding:5px 14px;border-radius:5px 5px 0 0;border:1px solid transparent;background:transparent;color:var(--text-dim,#6e7891);font-size:12px;cursor:pointer;font-family:inherit;';
+
+  function renderRefsTab() {
+    if (urls.length === 0) {
+      body.innerHTML = `<div style="color:#888;font-size:13px;padding:32px 0;text-align:center">
+        当前界面没有引用任何外部资源。<br>
+        <small style="color:#555;margin-top:6px;display:block">扫描：bgImage / widgetProps.src、imagePath 等 URL 值</small>
+      </div>`;
+      return;
+    }
+    body.innerHTML = `<div style="font-size:11px;color:#666;margin-bottom:10px">共 <b style="color:#9b8af7">${urls.length}</b> 个唯一资源，<b style="color:#56cfba">${deduped.length}</b> 处引用</div>
+    ${urls.map(url => {
+      const users = byUrl[url];
+      const shortUrl = url.length > 72 ? url.slice(0, 69) + '…' : url;
+      const preview = isImg(url)
+        ? `<img src="${url}" loading="lazy" style="width:72px;height:72px;object-fit:contain;border:1px solid #333;border-radius:4px;background:#111;flex-shrink:0;cursor:zoom-in" onclick="window.open('${url.replace(/'/g,"\\'")}','_blank')" onerror="this.style.opacity=0.15;this.title='加载失败'" />`
+        : `<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;border:1px solid #2a2a3e;border-radius:4px;background:#111;flex-shrink:0;font-size:20px">${url.endsWith('.json') ? '📄' : '🔗'}</div>`;
+      const typeTag = [...new Set(users.map(u => u.type))].map(t => `<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#1a2a3a;color:#56cfba">${t}</span>`).join(' ');
+      const userList = users.map(u => `<span style="font-size:10px;padding:1px 6px;border-radius:3px;background:#2a2a3e;color:#9b8af7">#${u.id} ${u.label}</span>`).join(' ');
+      return `<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border:1px solid #2a2a3e;border-radius:6px;margin-bottom:8px;background:#18182a">
+        ${preview}
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">${typeTag}
+            <button onclick="navigator.clipboard.writeText('${url.replace(/'/g,"\\'")}').then(()=>showToast('✓ 已复制'))" style="margin-left:auto;background:none;border:1px solid #333;border-radius:3px;color:#888;font-size:10px;padding:1px 6px;cursor:pointer">复制</button>
+          </div>
+          <div style="font-size:11px;font-family:monospace;color:#56cfba;word-break:break-all;margin-bottom:6px"><a href="${url}" target="_blank" style="color:#56cfba;text-decoration:none">${shortUrl}</a></div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">${userList}</div>
+        </div>
+      </div>`;
+    }).join('')}`;
+  }
+
+  function renderLibTab(filterQ) {
+    body.innerHTML = `<div style="color:#888;font-size:12px;padding:16px 0;text-align:center">正在加载图标库…</div>`;
+    fetch('/assets/icons/manifest.json').then(r => r.json()).then(manifest => {
+      const q = (filterQ || '').toLowerCase();
+      const list = (manifest.icons || []).filter(i => !q || i.name.toLowerCase().includes(q));
+      const pngs = list.filter(i => i.type === 'png');
+      const svgs = list.filter(i => i.type === 'svg');
+      function renderSection(title, items) {
+        if (!items.length) return '';
+        const cards = items.map(i => {
+          const url = '/' + i.file;
+          return `<div onclick="navigator.clipboard.writeText('${url}').then(()=>showToast('✓ 已复制路径'))" title="${url}\n点击复制路径" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 6px;border:1px solid #2a2a3e;border-radius:6px;background:#12121e;cursor:pointer;transition:border-color 0.15s;width:80px;flex-shrink:0" onmouseover="this.style.borderColor='#9b8af7'" onmouseout="this.style.borderColor='#2a2a3e'">
+            <img src="${url}" loading="lazy" style="width:52px;height:52px;object-fit:contain;background:${i.type==='png'?'#0a0a14':'transparent'};border-radius:3px" onerror="this.parentElement.style.opacity='0.3'" />
+            <span style="font-size:9px;color:#666;text-align:center;word-break:break-all;line-height:1.2;max-width:72px">${i.name}</span>
+          </div>`;
+        }).join('');
+        return `<div style="margin-bottom:14px"><div style="font-size:11px;color:#666;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #2a2a3e">${title} (${items.length})</div><div style="display:flex;flex-wrap:wrap;gap:8px">${cards}</div></div>`;
+      }
+      const searchBar = `<div style="margin-bottom:12px"><input id="asset-lib-search" type="text" placeholder="搜索图标…" value="${filterQ||''}" oninput="window._assetLibSearch(this.value)" style="width:100%;padding:5px 10px;background:#0d0d1a;border:1px solid #3a3a5c;border-radius:5px;color:#cdd6f4;font-size:12px;outline:none;box-sizing:border-box" /></div>`;
+      body.innerHTML = searchBar + (list.length === 0 ? '<div style="color:#666;text-align:center;padding:24px">无匹配图标</div>'
+        : renderSection('🎮 游戏图标 (PNG)', pngs) + renderSection('⚡ 矢量图标 (SVG)', svgs));
+      window._assetLibSearch = q => renderLibTab(q);
+      const s = document.getElementById('asset-lib-search');
+      if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+    }).catch(() => {
+      body.innerHTML = `<div style="color:#e05c6e;font-size:12px;padding:16px">无法加载图标库 (manifest.json 缺失)</div>`;
+    });
+  }
+
+  // ── Tab header ─────────────────────────────────────────────
+  const hdr = overlay.querySelector('[data-assets-tabs]') || (() => {
+    const el = document.createElement('div');
+    el.setAttribute('data-assets-tabs', '1');
+    el.style.cssText = 'display:flex;gap:0;padding:0 16px;border-bottom:1px solid var(--border,#3a3a5c);flex-shrink:0;margin-bottom:8px';
+    const modal = overlay.querySelector('#assets-modal');
+    if (modal) modal.insertBefore(el, modal.querySelector('#assets-modal-body'));
+    return el;
+  })();
+
+  let activeTab = 'refs';
+  function setTab(t) {
+    activeTab = t;
+    hdr.innerHTML = `
+      <button style="${t==='refs'?TAB_STYLE_ACT:TAB_STYLE_INV}" onclick="window._assetsTab('refs')">📌 引用资源 (${urls.length})</button>
+      <button style="${t==='lib'?TAB_STYLE_ACT:TAB_STYLE_INV}" onclick="window._assetsTab('lib')">🖼 图标库</button>`;
+    body.style.padding = '8px 16px';
+    if (t === 'refs') renderRefsTab();
+    else renderLibTab('');
+  }
+  window._assetsTab = t => setTab(t);
+  setTab(urls.length > 0 ? 'refs' : 'lib');
+}
+
+function closeAssetsPanel() {
+  const overlay = document.getElementById('assets-modal-overlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+    // Remove tab header so it's rebuilt fresh next open
+    const tabs = overlay.querySelector('[data-assets-tabs]');
+    if (tabs) tabs.remove();
+  }
+}
+
+
+// Returns true if this box is an EntryClass child inside a container type
+// Matches both boxes labeled 'EntryClass' and boxes with isEntryClass:true
 function isLockedEntryClass(box) {
-  if (box.label !== 'EntryClass') return false;
-  const parent = boxes.find(b => b.id === box.parentId);
+  if (box.label !== 'EntryClass' && !box.isEntryClass) return false;
+  const parent = _boxById[box.parentId] || boxes.find(b => b.id === box.parentId);
   return parent && ENTRY_CLASS_TYPES.includes(parent.widgetType);
 }
 
 // Returns the locked EntryClass ancestor of this box (if it's inside one), or null
 function getLockedEntryClassAncestor(box) {
+  const visited = new Set();
   let current = box;
   while (current && current.parentId != null) {
-    const parent = boxes.find(b => b.id === current.parentId);
+    if (visited.has(current.id)) break; // cycle guard
+    visited.add(current.id);
+    const parent = _boxById[current.parentId] || boxes.find(b => b.id === current.parentId);
     if (!parent) break;
     if (isLockedEntryClass(parent)) return parent;
     current = parent;
@@ -512,12 +1122,19 @@ function getLockedEntryClassAncestor(box) {
 
 // Returns the isEntryClass-marked ancestor of this box (if it's inside one), or null
 // Used to prevent dragging controls inside an entryclass box on the main canvas
+// Note: only counts as locking if the isEntryClass box itself is NOT the root (has a parentId),
+// i.e., it's embedded inside another container. Root-level isEntryClass boxes are standalone
+// session roots and should NOT lock their children.
 function getIsEntryClassAncestor(box) {
+  const visited = new Set();
   let current = box;
   while (current && current.parentId != null) {
-    const parent = boxes.find(b => b.id === current.parentId);
+    if (visited.has(current.id)) break; // cycle guard
+    visited.add(current.id);
+    const parent = _boxById[current.parentId] || boxes.find(b => b.id === current.parentId);
     if (!parent) break;
-    if (parent.isEntryClass) return parent;
+    // Only lock if the isEntryClass box is itself inside another box (not session root)
+    if (parent.isEntryClass && parent.parentId != null) return parent;
     current = parent;
   }
   return null;
@@ -525,8 +1142,8 @@ function getIsEntryClassAncestor(box) {
 
 function ensureTileViewEntry(box) {
   if (!box || !ENTRY_CLASS_TYPES.includes(box.widgetType)) return;
-  // 已存在 EntryClass 子框则跳过
-  const hasEntry = boxes.some(b => b.parentId === box.id && b.label === 'EntryClass');
+  // 已存在 EntryClass 子框则跳过（检查 label 或 isEntryClass 标记）
+  const hasEntry = boxes.some(b => b.parentId === box.id && (b.label === 'EntryClass' || b.isEntryClass));
   if (hasEntry) return;
   const pad = 12;
   const ew = Math.max(Math.round(box.w * 0.6), 80);
@@ -566,17 +1183,36 @@ function recomputeAllParents() {
   boxes.forEach(b => {
     b.parentId = findParentFor(b.x, b.y, b.w, b.h, b.id);
   });
+  // Break any circular parentId chains (can form when overlapping same-size boxes)
+  const byId = Object.fromEntries(boxes.map(b => [b.id, b]));
+  boxes.forEach(b => {
+    const visited = new Set();
+    let cur = b;
+    while (cur && cur.parentId != null) {
+      if (visited.has(cur.id)) { cur.parentId = null; break; } // break cycle
+      visited.add(cur.id);
+      cur = byId[cur.parentId];
+    }
+  });
 }
 
 /* ───── Widget Content Renderer (data-driven) ───── */
 function renderWidgetContent(box, el, def) {
-  // Remove old widget-render element
+  if (!def || !def.render) {
+    const old = el.querySelector('.widget-render');
+    if (old) old.remove();
+    return;
+  }
+  // Skip rebuild if nothing that affects rendering has changed
+  const wp = box.widgetProps || {};
+  const contentKey = `${box.widgetType}|${box.w}|${box.h}|${JSON.stringify(wp)}`;
+  if (el.dataset.widgetContentKey === contentKey) return;
+  el.dataset.widgetContentKey = contentKey;
+
   const old = el.querySelector('.widget-render');
   if (old) old.remove();
-  if (!def || !def.render) return;
 
   const r = def.render;
-  const wp = box.widgetProps || {};
   const wr = document.createElement('div');
   wr.className = 'widget-render';
   wr.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;display:flex;align-items:center;justify-content:center;box-sizing:border-box;';
@@ -760,61 +1396,95 @@ function renderBox(box) {
   el.style.top     = box.y + 'px';
   el.style.width   = box.w + 'px';
   el.style.height  = box.h + 'px';
-  el.style.border  = `${box.borderWidth}px solid ${box.borderColor}`;
-  el.style.background = box.bgColor;
+  // Declare isSelected early so preview-mode checks below can use it
+  const isSelected = box.id === selectedId;
+  // Preview mode: invisible containers show only a thin dashed guide (not selected)
+  const isInvisibleContainer = INVISIBLE_CONTAINER_TYPES.has(box.widgetType);
+  if (_previewMode && isInvisibleContainer && !isSelected) {
+    el.style.border = '1px dashed rgba(255,255,255,0.12)';
+    el.style.background = 'transparent';
+  } else {
+    el.style.border  = `${box.borderWidth}px solid ${box.borderColor}`;
+    if (box.bgImage) {
+      el.style.background = `url('${box.bgImage}') no-repeat center/${box.bgSize || 'cover'}, ${box.bgColor}`;
+    } else {
+      el.style.background = box.bgColor;
+    }
+  }
   el.style.opacity = box.opacity;
+  el.style.borderRadius = (box.borderRadius || 0) + 'px';
+  el.style.boxShadow = (_previewMode && isInvisibleContainer && !isSelected) ? '' : (box.boxShadow || '');
+  el.style.filter = box.filter || '';
+  el.style.backdropFilter = box.backdropFilter || '';
 
-  // Locked EntryClass (inside TileView/ListView/TreeView): gold dashed outline, selectable for scale editing
+  // Locked EntryClass (inside TileView/ListView/TreeView): selectable, pointer-events active
   const locked = isLockedEntryClass(box);
   const lockedByAncestor = !locked && !!getLockedEntryClassAncestor(box);
   const isEcAncestor = !locked && !lockedByAncestor && !!getIsEntryClassAncestor(box);
   if (locked) {
-    el.style.outline = '2px dashed #f5c542';
-    el.style.outlineOffset = '2px';
+    el.style.outline = '';
+    el.style.outlineOffset = '';
     el.style.cursor = '';  // allow normal interaction (select/drag for scale editing)
     el.style.pointerEvents = 'auto';
     el.title = 'EntryClass — 点击选中，拖拽边框调整尺寸，右键可编辑';
   } else if (lockedByAncestor) {
-    el.style.outline = '1px dashed rgba(245,197,66,0.4)';
-    el.style.outlineOffset = '1px';
+    el.style.outline = '';
+    el.style.outlineOffset = '';
     el.style.cursor = 'not-allowed';
     el.style.pointerEvents = 'none'; // clicks fall through to the EntryClass parent
     el.title = '此控件在 EntryClass 内部，不可单独操作';
   } else if (isEcAncestor) {
-    el.style.outline = '1px dashed rgba(245,197,66,0.35)';
-    el.style.outlineOffset = '1px';
+    el.style.outline = '';
+    el.style.outlineOffset = '';
     el.style.cursor = 'not-allowed';
     el.style.pointerEvents = 'none'; // clicks fall through to the isEntryClass parent
     el.title = '此控件在 EntryClass 内部 — 右键 EntryClass 可单独打开编辑';
   } else {
-    el.style.outline = box.isEntryClass ? '2px solid #f5c542' : '';
-    el.style.outlineOffset = box.isEntryClass ? '2px' : '';
-    el.style.cursor = box.isEntryClass ? 'default' : '';
+    el.style.outline = '';
+    el.style.outlineOffset = '';
+    el.style.cursor = '';
     el.style.pointerEvents = '';
-    el.title = box.isEntryClass ? 'EntryClass — 右键可编辑' : (box.description || '');
+    el.title = box.description || '';
+  }
+  // Preview mode: hide CSS outline for invisible containers (don't override locked EntryClass outline)
+  if (_previewMode && isInvisibleContainer && !isSelected && !locked) {
+    el.style.outline = 'none';
+    el.style.outlineOffset = '';
   }
   // If description exists and title hasn't been set by the lock block, append it
-  if (!locked && !lockedByAncestor && !isEcAncestor && !box.isEntryClass && box.description) {
+  if (!locked && !lockedByAncestor && !isEcAncestor && box.description) {
     el.title = box.description;
   }
   // Children of locked EntryClass or isEntryClass boxes are truly locked (not the EntryClass itself)
   const isEffectivelyLocked = lockedByAncestor || isEcAncestor;
-  // Show "Name (Type)" when a widget type is set, otherwise just the name
-  const labelText = def ? `${box.label} (${def.label})` : box.label;
-  el.querySelector('.box-label').textContent = box.description ? `${labelText} 💬` : labelText;
-  if (box.description) {
-    el.querySelector('.box-label').title = `📝 ${box.description}`;
-  } else {
-    el.querySelector('.box-label').removeAttribute('title');
+  // Label is always hidden on canvas; visible in right panel when node is selected
+  const labelEl = el.querySelector('.box-label');
+  if (labelEl) {
+    labelEl.style.display = 'none';
+    if (box.description) labelEl.title = `📝 ${box.description}`;
+    else labelEl.removeAttribute('title');
   }
 
   const badge = el.querySelector('.box-type-badge');
   badge.style.display = 'none'; // type is now shown inline in the label
 
+  // Ensure widgetProps defaults are populated before rendering (session may lack new props)
+  if (def && def.props) {
+    if (!box.widgetProps) box.widgetProps = {};
+    def.props.forEach(p => {
+      if (box.widgetProps[p.key] === undefined) {
+        box.widgetProps[p.key] = p.default !== undefined ? p.default
+          : (p.type === 'checkbox' ? false : p.type === 'number' ? 0 : '');
+      }
+    });
+  }
+
   // Widget-specific content rendering (data-driven from elements.json)
   renderWidgetContent(box, el, def);
 
-  const isSelected = box.id === selectedId;
+  // Theme overlay — purely visual, never stored in session JSON
+  applyThemeOverlay(el, box);
+
   el.classList.toggle('selected', isSelected);
   // Show resize handles for selected boxes; locked EntryClass itself CAN be resized (it controls entry size),
   // but its children/descendants cannot.
@@ -880,12 +1550,14 @@ function renderBox(box) {
 
 /* ───── EntryClass Editor Modal ───── */
 function showEntryClassEditor(tileBox) {
-  const entryBox = boxes.find(b => b.parentId === tileBox.id && b.label === 'EntryClass');
-  if (!entryBox) { log('未找到 EntryClass', 'warn'); return; }
+  const entryBox = boxes.find(b => b.parentId === tileBox.id && (b.label === 'EntryClass' || b.isEntryClass));
+  if (!entryBox) { showToast('⚠ 未找到 EntryClass 子节点'); log('未找到 EntryClass', 'warn'); return; }
 
-  function getSubtree(pid) {
+  function getSubtree(pid, _seen = new Set()) {
+    if (_seen.has(pid)) return [];
+    _seen.add(pid);
     const ch = boxes.filter(b => b.parentId === pid);
-    return ch.reduce((acc, c) => acc.concat(c, getSubtree(c.id)), []);
+    return ch.reduce((acc, c) => acc.concat(c, getSubtree(c.id, _seen)), []);
   }
 
   const ox = entryBox.x, oy = entryBox.y;
@@ -930,9 +1602,9 @@ function showEntryClassEditor(tileBox) {
       const isEntry = b.id === entryId0;
       const el = document.createElement('div');
       const def = getWidgetDef(b.widgetType);
-      el.style.cssText = `position:absolute;left:${b.x}px;top:${b.y}px;width:${b.w}px;height:${b.h}px;border:${b.borderWidth||2}px solid ${b.borderColor||'#7c6af7'};background:${b.bgColor||'rgba(124,106,247,0.06)'};box-sizing:border-box;overflow:hidden;user-select:none;cursor:${isEntry?'se-resize':'move'};`;
+      el.style.cssText = `position:absolute;left:${b.x}px;top:${b.y}px;width:${b.w}px;height:${b.h}px;border:${b.borderWidth||1}px solid ${b.borderColor||'#7c6af7'};background:${b.bgColor||'rgba(124,106,247,0.06)'};box-sizing:border-box;overflow:hidden;user-select:none;cursor:${isEntry?'se-resize':'move'};`;
       if (isEntry) {
-        el.style.outline = '2px dashed #f5c542'; el.style.outlineOffset = '2px';
+        el.style.outline = ''; el.style.outlineOffset = '';
         el.title = 'EntryClass — 拖拽调整大小';
       } else if (b.id === _ecSelId) {
         el.style.outline = '2px solid #7c6af7';
@@ -1039,7 +1711,7 @@ function showEntryClassEditor(tileBox) {
       const l = Math.round(Math.min(sx, cx)), t = Math.round(Math.min(sy, cy));
       const w = Math.round(Math.abs(cx - sx)), h = Math.round(Math.abs(cy - sy));
       if (w < 8 || h < 8) return;
-      const nb = { id: _ecNextId++, x: l, y: t, w, h, label: `Box${_ecNextId-1}`, borderColor: '#7c6af7', bgColor: 'rgba(124,106,247,0.06)', borderWidth: 2, opacity: 1, widgetType: null, parentId: entryId0, anchor: {minX:0,minY:0,maxX:0,maxY:0}, widgetProps: {} };
+      const nb = { id: _ecNextId++, x: l, y: t, w, h, label: `Box${_ecNextId-1}`, borderColor: '#7c6af7', bgColor: 'rgba(124,106,247,0.06)', borderWidth: 1, opacity: 1, widgetType: null, parentId: entryId0, anchor: {minX:0,minY:0,maxX:0,maxY:0}, widgetProps: {} };
       _ecBoxes.push(nb); _ecSelId = nb.id; _ecRender();
     };
     document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
@@ -1058,9 +1730,11 @@ function showEntryClassEditor(tileBox) {
   // Save
   saveBtn.addEventListener('click', () => {
     saveState();
-    function allDesc(pid) {
+    function allDesc(pid, _seen = new Set()) {
+      if (_seen.has(pid)) return [];
+      _seen.add(pid);
       const ch = boxes.filter(b => b.parentId === pid);
-      return ch.reduce((a, c) => a.concat(c, allDesc(c.id)), []);
+      return ch.reduce((a, c) => a.concat(c, allDesc(c.id, _seen)), []);
     }
     const toRemove = new Set(allDesc(entryBox.id).map(b => b.id));
     const kept = boxes.filter(b => !toRemove.has(b.id));
@@ -1126,9 +1800,11 @@ function _returnToParentCanvas() {
       // Sync size changes
       origEc.w = editedEcBox.w; origEc.h = editedEcBox.h;
       // Remove all old descendants of EC from prev.boxes
-      function allDescIds(pid, arr) {
+      function allDescIds(pid, arr, _seen = new Set()) {
+        if (_seen.has(pid)) return [];
+        _seen.add(pid);
         const ch = arr.filter(b => b.parentId === pid);
-        return ch.reduce((acc, c) => acc.concat(c.id, allDescIds(c.id, arr)), []);
+        return ch.reduce((acc, c) => acc.concat(c.id, allDescIds(c.id, arr, _seen)), []);
       }
       const oldChildIds = new Set(allDescIds(origEc.id, prev.boxes));
       prev.boxes = prev.boxes.filter(b => !oldChildIds.has(b.id));
@@ -1154,18 +1830,21 @@ function _returnToParentCanvas() {
 
   saveState(); // saves to undo stack; autoSave() fires with correct _sessionPath
   renderAll();
+  requestAnimationFrame(() => zoomToFit()); // Re-fit viewport after returning to parent canvas
   if (_canvasStack.length === 0) _hideReturnBar();
   else _showReturnBar(_canvasStack[_canvasStack.length - 1].ecLabel);
   log('已返回主画布（EC 修改已同步）', 'ok');
 }
 
 async function openEntryClassInCanvas(tileBox, entryBox) {
-  const eb = entryBox || boxes.find(b => b.parentId === tileBox.id && b.label === 'EntryClass');
-  if (!eb) { log('未找到 EntryClass', 'warn'); return; }
+  const eb = entryBox || boxes.find(b => b.parentId === tileBox.id && (b.label === 'EntryClass' || b.isEntryClass));
+  if (!eb) { showToast('⚠ 未找到 EntryClass 子节点'); log('未找到 EntryClass', 'warn'); return; }
 
-  function getSubtree(pid) {
+  function getSubtree(pid, _seen = new Set()) {
+    if (_seen.has(pid)) return [];
+    _seen.add(pid);
     const ch = boxes.filter(b => b.parentId === pid);
-    return ch.reduce((acc, c) => acc.concat(c, getSubtree(c.id)), []);
+    return ch.reduce((acc, c) => acc.concat(c, getSubtree(c.id, _seen)), []);
   }
   const ecChildren = getSubtree(eb.id);
   const ox = eb.x, oy = eb.y;
@@ -1202,12 +1881,14 @@ async function openEntryClassInCanvas(tileBox, entryBox) {
 }
 
 async function openEntryClassInNewTab(tileBox, entryBox) {
-  const eb = entryBox || boxes.find(b => b.parentId === tileBox.id && b.label === 'EntryClass');
-  if (!eb) { log('未找到 EntryClass', 'warn'); return; }
+  const eb = entryBox || boxes.find(b => b.parentId === tileBox.id && (b.label === 'EntryClass' || b.isEntryClass));
+  if (!eb) { showToast('⚠ 未找到 EntryClass 子节点'); log('未找到 EntryClass', 'warn'); return; }
 
-  function getSubtree(pid) {
+  function getSubtree(pid, _seen = new Set()) {
+    if (_seen.has(pid)) return [];
+    _seen.add(pid);
     const ch = boxes.filter(b => b.parentId === pid);
-    return ch.reduce((acc, c) => acc.concat(c, getSubtree(c.id)), []);
+    return ch.reduce((acc, c) => acc.concat(c, getSubtree(c.id, _seen)), []);
   }
   const ecChildren = getSubtree(eb.id);
   const ox = eb.x, oy = eb.y;
@@ -1284,17 +1965,31 @@ async function renderEntryClassPreview(box, el) {
 
 /* ───── TileView Grid Preview ───── */
 function renderTileViewGrid(box, el) {
-  el.querySelectorAll('.tile-grid-item').forEach(x => x.remove());
   const wp = box.widgetProps || {};
   const count = Math.max(0, Math.floor(wp.gridPreviewNum || 0));
-  if (!count) return;
+  if (!count) {
+    el.querySelectorAll('.tile-grid-item').forEach(x => x.remove());
+    delete el.dataset.tileGridKey;
+    return;
+  }
 
-  const entry = boxes.find(b => b.parentId === box.id && b.label === 'EntryClass');
-  if (!entry || entry.w <= 0 || entry.h <= 0) return;
+  const entry = boxes.find(b => b.parentId === box.id && (b.label === 'EntryClass' || b.isEntryClass));
+  if (!entry || entry.w <= 0 || entry.h <= 0) {
+    el.querySelectorAll('.tile-grid-item').forEach(x => x.remove());
+    delete el.dataset.tileGridKey;
+    return;
+  }
 
   const ph = wp.placeHolder || {};
   const gapX = Math.max(0, ph.x || 0);
   const gapY = Math.max(0, ph.y || 0);
+
+  // Skip rebuild if nothing has changed
+  const tileKey = `${count}|${entry.w}|${entry.h}|${entry.x}|${entry.y}|${gapX}|${gapY}|${box.w}|${box.h}|${entry.borderColor}|${entry.bgColor}`;
+  if (el.dataset.tileGridKey === tileKey) return;
+  el.dataset.tileGridKey = tileKey;
+
+  el.querySelectorAll('.tile-grid-item').forEach(x => x.remove());
   const itemW = entry.w;
   const itemH = entry.h;
 
@@ -1312,6 +2007,7 @@ function renderTileViewGrid(box, el) {
     const tx = startX + col * cellW;
     const ty = startY + row * cellH;
     if (ty + itemH > box.h + 2) break;
+    if (tx < 0 || tx + itemW > box.w + 2) continue; // skip tiles that overflow left/right
 
     const tile = document.createElement('div');
     tile.className = 'tile-grid-item';
@@ -1373,13 +2069,30 @@ function renderWidgetProps(box) {
     } else {
       row.className = 'prop-row';
       const isNum = prop.type === 'number';
+      const isImgProp = !isNum && (prop.key === 'imagePath' || prop.key === 'src' || prop.key === 'bgImage');
       const extra = isNum ? `min="${prop.min!==undefined?prop.min:''}" max="${prop.max!==undefined?prop.max:''}" step="${prop.step||1}"` : '';
-      row.innerHTML = `<label>${prop.label}</label><input type="${isNum?'number':'text'}" id="${uid}" value="${val!==undefined?val:''}" ${extra} style="flex:1"/>`;
+      row.innerHTML = `<label>${prop.label}</label><input type="${isNum?'number':'text'}" id="${uid}" value="${val!==undefined?val:''}" ${extra} style="flex:1;min-width:0"/>` +
+        (isImgProp ? `<button onclick="openImgBrowser(window._rightPanelBox,'${prop.key}')" title="浏览图片" style="padding:2px 6px;font-size:11px;cursor:pointer;border-radius:3px;border:1px solid #56cfba;background:var(--bg-dark);color:#56cfba;flex-shrink:0">🖼️</button>` : '');
     }
     section.appendChild(row);
   });
 
   propPanel.appendChild(section);
+
+  // Show _da* / _ue* meta annotations in widgetProps as info badges
+  const metaKeys = Object.keys(box.widgetProps || {}).filter(k => k.startsWith('_'));
+  if (metaKeys.length > 0) {
+    const metaDiv = document.createElement('div');
+    metaDiv.innerHTML = `<div class="prop-section-title" style="color:#d4a84b">🔗 UE 纹理注解</div>` +
+      metaKeys.map(k => {
+        const v = box.widgetProps[k];
+        return `<div class="prop-row" style="flex-wrap:wrap;gap:2px">
+          <span style="font-size:10px;color:#888;width:100%">${k}</span>
+          <code style="font-size:10px;color:#d4a84b;word-break:break-all">${typeof v === 'string' ? v : JSON.stringify(v)}</code>
+        </div>`;
+      }).join('');
+    propPanel.appendChild(metaDiv);
+  }
 
   // Bind events
   def.props.forEach(prop => {
@@ -1422,7 +2135,7 @@ function renderWidgetProps(box) {
 
   // Special: TileView/ListView/TreeView — EntryClass size controls
   if (ENTRY_CLASS_TYPES.includes(def.type)) {
-    const entry = boxes.find(b => b.parentId === box.id && b.label === 'EntryClass');
+    const entry = boxes.find(b => b.parentId === box.id && (b.label === 'EntryClass' || b.isEntryClass));
     if (entry) {
       const sec2 = document.createElement('div');
       const t2 = document.createElement('div');
@@ -1441,9 +2154,11 @@ function renderWidgetProps(box) {
       const ecw = document.getElementById('ec-sz-w');
       const ech = document.getElementById('ec-sz-h');
       // Helper: get all descendants of a box
-      function _ecAllDesc(pid) {
+      function _ecAllDesc(pid, _seen = new Set()) {
+        if (_seen.has(pid)) return [];
+        _seen.add(pid);
         const ch = boxes.filter(b => b.parentId === pid);
-        return ch.reduce((a, c) => a.concat(c, _ecAllDesc(c.id)), []);
+        return ch.reduce((a, c) => a.concat(c, _ecAllDesc(c.id, _seen)), []);
       }
       if (ecw) ecw.addEventListener('input', () => {
         const newW = Math.max(10, +ecw.value || 10);
@@ -1605,8 +2320,8 @@ function showBoxCtxMenu(x, y, box) {
     menu.appendChild(ecOpenEdit);
   }
 
-  // EntryClass binding (for EntryClass boxes)
-  if (box.label === 'EntryClass') {
+  // EntryClass binding (for EntryClass boxes labeled as such, or flagged with isEntryClass)
+  if (box.label === 'EntryClass' || box.isEntryClass) {
     // 编辑EntryClass: 打开独立模态编辑器 (仅针对 TileView 内的锁定 EntryClass)
     if (isLockedEntryClass(box)) {
       const ecEdit = document.createElement('div');
@@ -1697,28 +2412,12 @@ function showBoxCtxMenu(x, y, box) {
   ren.innerHTML = '<span class="bctx-cat-icon">✏</span><span>重命名</span>';
   ren.addEventListener('click', () => {
     menu.remove(); _boxCtxMenu = null;
-    // Inline rename on the label element
-    const el = document.getElementById(`box-${box.id}`);
-    const lbl = el ? el.querySelector('.box-label') : null;
-    if (!lbl) return;
-    const inp = document.createElement('input');
-    inp.value = box.label;
-    inp.style.cssText = 'width:100%;background:rgba(0,0,0,0.75);color:#fff;border:1px solid var(--accent);border-radius:3px;font-size:inherit;padding:1px 4px;outline:none;box-sizing:border-box;';
-    lbl.textContent = '';
-    lbl.appendChild(inp);
-    inp.focus();
-    inp.select();
-    const commit = () => {
-      const v = inp.value.trim();
-      if (v && v !== box.label) { saveState(); box.label = v; log(`重命名 → ${v}`, 'ok'); }
-      renderAll(); // always re-render to restore "name (type)" display
-    };
-    inp.addEventListener('keydown', e2 => {
-      if (e2.key === 'Enter')  { e2.preventDefault(); inp.blur(); }
-      if (e2.key === 'Escape') { inp.value = box.label; inp.blur(); }
-      e2.stopPropagation();
+    // Focus the name input in right_info panel
+    renderProps();
+    requestAnimationFrame(() => {
+      const labelInput = document.getElementById('p-label');
+      if (labelInput) { labelInput.focus(); labelInput.select(); }
     });
-    inp.addEventListener('blur', commit, { once: true });
   });
   menu.appendChild(ren);
 
@@ -1873,6 +2572,18 @@ function syncZOrder() {
 }
 
 function renderAll() {
+  if (_rafRenderPending) return;
+  _rafRenderPending = true;
+  requestAnimationFrame(() => {
+    _rafRenderPending = false;
+    _renderAllNow();
+  });
+}
+
+function _renderAllNow() {
+  // Rebuild O(1) id→box lookup cache used by ancestor-query functions
+  _boxById = Object.fromEntries(boxes.map(b => [b.id, b]));
+
   // Remove deleted boxes from DOM
   const ids = new Set(boxes.map(b => b.id));
   boxLayer.querySelectorAll('.box-item').forEach(el => {
@@ -1880,26 +2591,69 @@ function renderAll() {
   });
 
   boxes.forEach(b => renderBox(b));
+  syncZOrder(); // ensure children always appear above parents in the DOM
   renderLayers();
   renderProps();
 }
 
+// Fast render during drag: only update CSS positions, skip DOM rebuild
+function renderPositionsOnly() {
+  boxes.forEach(b => {
+    const el = document.getElementById('box-' + b.id);
+    if (!el) { renderBox(b); return; } // new box: full render
+    el.style.left   = b.x + 'px';
+    el.style.top    = b.y + 'px';
+    el.style.width  = b.w + 'px';
+    el.style.height = b.h + 'px';
+    // Invalidate tile-grid cache so it rebuilds after drag ends (positions changed)
+    delete el.dataset.tileGridKey;
+  });
+}
+
 function renderLayers() {
-  // Left sidebar layer list
+  // Left sidebar layer list — event delegation (attach listener once)
   if (layerList) {
+    if (!layerList._delegated) {
+      layerList._delegated = true;
+      layerList.addEventListener('click', e => {
+        const li = e.target.closest('li[data-id]');
+        if (!li) return;
+        selectBox(+li.dataset.id); renderAll();
+      });
+    }
     layerList.innerHTML = '';
-    [...boxes].reverse().forEach(box => {
+    // Only show root-level boxes (no parent); nested items are visible in the hierarchy tree
+    [...boxes].filter(b => !b.parentId).reverse().forEach(box => {
+      const def = getWidgetDef(box.widgetType);
+      const icon = def ? def.icon : '⬜';
+      const typeStr = box.widgetType || 'Box';
+      const typeZh = def ? (def.label_zh || def.label || typeStr) : typeStr;
       const li = document.createElement('li');
-      li.textContent = `⬜ ${box.label}`;
+      li.title = `${box.label} · ${typeZh} #${box.id}`;
+      li.innerHTML = `<span style="color:${def ? def.color : 'var(--text-dim)'}">${icon}</span>`;
       li.dataset.id = box.id;
       if (box.id === selectedId) li.classList.add('selected');
-      li.addEventListener('click', () => { selectBox(box.id); renderAll(); });
       layerList.appendChild(li);
     });
   }
 
   // Right panel hierarchy list — tree view
   if (hierarchyList) {
+    if (!hierarchyList._delegated) {
+      hierarchyList._delegated = true;
+      hierarchyList.addEventListener('click', e => {
+        const li = e.target.closest('li[data-id]');
+        if (!li) return;
+        const clickedBox = _boxById[+li.dataset.id];
+        if (!clickedBox) return;
+        const lockedEc = getLockedEntryClassAncestor(clickedBox);
+        const target = lockedEc ? lockedEc : clickedBox;
+        selectBox(target.id);
+        renderAll();
+        const propsTab = document.querySelector('.right-tab[data-tab="props"]');
+        if (propsTab) propsTab.click();
+      });
+    }
     hierarchyList.innerHTML = '';
     if (!boxes.length) {
       const li = document.createElement('li');
@@ -1918,10 +2672,14 @@ function renderLayers() {
       childrenOf[pid].push(b);
     });
 
+    const renderedIds = new Set(); // cycle guard: each box rendered at most once
     function appendNodes(parentKey, depth) {
+      if (depth > 64) return; // hard cap to prevent infinite recursion
       const children = childrenOf[parentKey] || [];
       // Render in reverse order (top of stack first)
       [...children].reverse().forEach(box => {
+        if (renderedIds.has(box.id)) return; // cycle guard
+        renderedIds.add(box.id);
         const def = getWidgetDef(box.widgetType);
         const icon = def ? def.icon : '⬜';
         const typeLabel = def ? `<${def.label}>` : '';
@@ -1930,16 +2688,11 @@ function renderLayers() {
         li.dataset.id = box.id;
         li.style.paddingLeft = `${12 + depth * 14}px`;
         if (box.id === selectedId) li.classList.add('selected');
-        li.innerHTML = `<span style="color:var(--text-dim);margin-right:2px;font-size:10px">${hasChildren ? '▾' : '·'}</span><span style="color:${def ? def.color : 'var(--text-dim)'}">${icon}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:4px">${box.label}</span>${typeLabel ? `<span style="font-size:10px;opacity:0.4">${typeLabel}</span>` : ''}`;
-        li.addEventListener('click', () => {
-          // EntryClass selects itself; children of EntryClass redirect to EntryClass
-          const lockedEc = getLockedEntryClassAncestor(box);
-          const target = lockedEc ? lockedEc : box;
-          selectBox(target.id);
-          renderAll();
-          const propsTab = document.querySelector('.right-tab[data-tab="props"]');
-          if (propsTab) propsTab.click();
-        });
+        // Label hidden from tree; shown in right-info props panel on selection
+        const typeStr = box.widgetType || 'Box';
+        const typeZh = def ? (def.label_zh || def.label || typeStr) : typeStr;
+        li.title = `${box.label} · ${typeZh} #${box.id}`;
+        li.innerHTML = `<span style="color:var(--text-dim);margin-right:2px;font-size:10px">${hasChildren ? '▾' : '·'}</span><span style="color:${def ? def.color : 'var(--text-dim)'}">${icon}</span>`;
         hierarchyList.appendChild(li);
         appendNodes(box.id, depth + 1);
       });
@@ -1955,6 +2708,7 @@ function renderProps() {
   }
   const box = boxes.find(b => b.id === selectedId);
   if (!box) { propPanel.innerHTML = '<div class="empty-hint">未选中任何元素</div>'; return; }
+  window._rightPanelBox = box; // expose for inline onclick buttons (imagePath browser)
 
   // Locked EntryClass: show only position/size (scale editing only)
   if (isLockedEntryClass(box)) {
@@ -1967,9 +2721,11 @@ function renderProps() {
       <div class="prop-row"><label>H</label><input type="number" id="p-h" value="${box.h}" /></div>
     `;
     // Helper to collect all descendants of a box
-    function collectAllDesc(parentId) {
+    function collectAllDesc(parentId, _seen = new Set()) {
+      if (_seen.has(parentId)) return [];
+      _seen.add(parentId);
       return boxes.filter(b => b.parentId === parentId).reduce((acc, c) => {
-        return acc.concat({ id: c.id, x: c.x, y: c.y, w: c.w, h: c.h }, collectAllDesc(c.id));
+        return acc.concat({ id: c.id, x: c.x, y: c.y, w: c.w, h: c.h }, collectAllDesc(c.id, _seen));
       }, []);
     }
 
@@ -2020,6 +2776,9 @@ function renderProps() {
   }
 
   propPanel.innerHTML = `
+    <div style="padding:8px 10px 6px;border-bottom:1px solid var(--border);background:var(--bg-dark)">
+      <input type="text" id="p-label" value="${box.label.replace(/"/g,'&quot;')}" style="width:100%;background:transparent;color:var(--accent2);border:none;border-bottom:1px solid var(--border);font-size:14px;font-weight:600;padding:2px 0 4px;outline:none;box-sizing:border-box;" placeholder="节点名称" />
+    </div>
     <div class="prop-section-title">控件类型</div>
     <div class="prop-row">
       <label>类型</label>
@@ -2027,10 +2786,6 @@ function renderProps() {
         <option value="">— 无 —</option>
         ${ALL_WIDGET_TYPES.map(w => `<option value="${w.type}" ${box.widgetType === w.type ? 'selected' : ''}>${w.icon} &lt;${w.label}&gt;</option>`).join('')}
       </select>
-    </div>
-    <div class="prop-section-title">描述</div>
-    <div class="prop-row">
-      <textarea id="p-desc" rows="2" placeholder="描述这个控件的用途..." style="flex:1;resize:vertical;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 6px;font-size:12px;font-family:inherit;min-height:36px"></textarea>
     </div>
     <div class="prop-section-title">位置 & 尺寸</div>
     <div class="prop-row"><label>X</label><input type="number" id="p-x" value="${box.x}" /></div>
@@ -2054,52 +2809,186 @@ function renderProps() {
       <input type="number" id="p-anc-maxy" step="0.01" min="0" max="1" value="${(box.anchor||{}).maxY||0}" style="width:52px"/>
     </div>
     <div class="prop-section-title">样式</div>
-    <div class="prop-row"><label>名称</label><span style="flex:1;color:var(--text);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:0.8" title="${box.label}">${box.label}</span><span style="font-size:10px;color:var(--text-dim);flex-shrink:0;cursor:pointer" onclick="(()=>{const b=boxes.find(x=>x.id===selectedId);if(b){const el=document.getElementById('box-'+b.id);const lbl=el&&el.querySelector('.box-label');if(!lbl)return;const inp=document.createElement('input');inp.value=b.label;inp.style.cssText='width:100%;background:rgba(0,0,0,0.75);color:#fff;border:1px solid var(--accent);border-radius:3px;font-size:inherit;padding:1px 4px;outline:none;box-sizing:border-box;';lbl.textContent='';lbl.appendChild(inp);inp.focus();inp.select();const commit=()=>{const v=inp.value.trim();if(v&&v!==b.label){saveState();b.label=v;log('重命名 → '+v,'ok');}renderAll();};inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();inp.blur();}if(e.key==='Escape'){inp.value=b.label;inp.blur();}e.stopPropagation();});inp.addEventListener('blur',commit,{once:true});}})()">✏</span></div>
-    <div class="prop-row"><label>边框</label><input type="number" id="p-bw" value="${box.borderWidth}" min="1" max="10" /></div>
+    <div class="prop-row"><label>边框</label><input type="number" id="p-bw" value="${box.borderWidth}" min="0" max="10" /></div>
     <div class="color-row"><label>边框色</label><input type="color" id="p-bc" value="${box.borderColor}" /></div>
     <div class="color-row">
       <label>透明度</label>
       <input type="range" id="p-op" min="0.1" max="1" step="0.05" value="${box.opacity}" />
       <span id="p-op-val">${Math.round(box.opacity * 100)}%</span>
     </div>
+    <div class="prop-section-title">CSS 效果</div>
+    <div class="prop-row"><label>圆角 px</label><input type="number" id="p-br" value="${box.borderRadius || 0}" min="0" max="200" /></div>
+    <div class="prop-row" style="flex-wrap:wrap;gap:4px">
+      <label style="width:100%;margin-bottom:2px">阴影</label>
+      <input type="text" id="p-bs" placeholder="如 0 4px 12px rgba(0,0,0,0.5)" value="${(box.boxShadow || '').replace(/"/g,'&quot;')}" style="flex:1;min-width:0;font-size:11px;font-family:monospace" />
+    </div>
+    <div class="prop-row" style="gap:4px;flex-wrap:wrap">
+      <span style="font-size:10px;color:var(--text-dim);width:100%">快速阴影：</span>
+      <button class="shadow-preset" data-v="" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">无</button>
+      <button class="shadow-preset" data-v="0 2px 8px rgba(0,0,0,0.4)" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">小</button>
+      <button class="shadow-preset" data-v="0 4px 16px rgba(0,0,0,0.55)" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">中</button>
+      <button class="shadow-preset" data-v="0 8px 32px rgba(0,0,0,0.7)" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">大</button>
+      <button class="shadow-preset" data-v="0 0 12px 2px rgba(124,106,247,0.7)" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">紫光</button>
+      <button class="shadow-preset" data-v="0 0 12px 2px rgba(80,200,120,0.7)" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">绿光</button>
+    </div>
+    <div class="prop-row" style="flex-wrap:wrap;gap:4px">
+      <label style="width:100%;margin-bottom:2px">滤镜 (filter)</label>
+      <input type="text" id="p-filter" placeholder="如 blur(4px) brightness(1.2)" value="${(box.filter || '').replace(/"/g,'&quot;')}" style="flex:1;min-width:0;font-size:11px;font-family:monospace" />
+    </div>
+    <div class="prop-row" style="gap:4px;flex-wrap:wrap">
+      <span style="font-size:10px;color:var(--text-dim);width:100%">快速滤镜：</span>
+      <button class="filter-preset" data-v="" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">无</button>
+      <button class="filter-preset" data-v="blur(3px)" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">模糊</button>
+      <button class="filter-preset" data-v="brightness(1.5)" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">提亮</button>
+      <button class="filter-preset" data-v="grayscale(1)" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">灰度</button>
+      <button class="filter-preset" data-v="sepia(0.8)" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">复古</button>
+    </div>
+    <div class="prop-row" style="flex-wrap:wrap;gap:4px">
+      <label style="width:100%;margin-bottom:2px">背景虚化 (backdrop)</label>
+      <input type="text" id="p-backdrop" placeholder="如 blur(8px)" value="${(box.backdropFilter || '').replace(/"/g,'&quot;')}" style="flex:1;min-width:0;font-size:11px;font-family:monospace" />
+    </div>
+    <div class="prop-row" style="gap:4px;flex-wrap:wrap">
+      <span style="font-size:10px;color:var(--text-dim);width:100%">快速毛玻璃：</span>
+      <button class="backdrop-preset" data-v="" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">无</button>
+      <button class="backdrop-preset" data-v="blur(4px)" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">轻</button>
+      <button class="backdrop-preset" data-v="blur(10px)" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">中</button>
+      <button class="backdrop-preset" data-v="blur(20px)" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">强</button>
+      <button class="backdrop-preset" data-v="blur(12px) saturate(1.8)" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">玻璃</button>
+    </div>
+    <div class="prop-section-title">背景图片</div>
+    <div class="prop-row" style="flex-wrap:wrap;gap:4px">
+      <label style="width:100%;margin-bottom:2px">图片路径</label>
+      <input type="text" id="p-bgimg" placeholder="如 /assets/bag/bg_main.png" value="${(box.bgImage || '').replace(/"/g,'&quot;')}" style="flex:1;min-width:0;font-size:11px;font-family:monospace" />
+    </div>
+    <div class="prop-row" style="gap:4px;flex-wrap:wrap">
+      <span style="font-size:10px;color:var(--text-dim);width:100%">快速选择：</span>
+      <button class="bgimg-preset" data-v="/assets/bag/bg_main.png" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">主背景</button>
+      <button class="bgimg-preset" data-v="/assets/bag/bg_equip.png" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">装备栏</button>
+      <button class="bgimg-preset" data-v="/assets/bag/bg_stat.png" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">属性栏</button>
+      <button class="bgimg-preset" data-v="/assets/bag/slot_bg.png" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">物品槽</button>
+      <button class="bgimg-preset" data-v="/assets/bag/equip_slot.png" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">装备槽</button>
+      <button class="bgimg-preset" data-v="" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text)">清除</button></div>
+    <div class="prop-row" style="gap:4px;flex-wrap:wrap;margin-top:2px">
+      <span style="font-size:10px;color:var(--text-dim);width:100%">图片工具：</span>
+      <button id="btn-icon-picker" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid var(--accent2,#9b8af7);background:var(--bg-dark);color:var(--accent2,#9b8af7)">🎨 图标库</button>
+      <button id="btn-img-browser" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid #56cfba;background:var(--bg-dark);color:#56cfba">🖼️ 浏览</button>
+      <button id="btn-koutu" style="font-size:10px;padding:2px 6px;cursor:pointer;border-radius:3px;border:1px solid #e74c3c;background:var(--bg-dark);color:#e74c3c" title="从四角检测背景色并消除">✂ 扣图</button>
+    </div>
+    <div class="prop-row" style="gap:4px">
+      <label>填充方式</label>
+      <select id="p-bgsize" style="flex:1;background:var(--bg-dark);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:12px">
+        <option value="cover" ${(box.bgSize||'cover')==='cover'?'selected':''}>cover（铺满裁剪）</option>
+        <option value="contain" ${(box.bgSize||'')==='contain'?'selected':''}>contain（完整显示）</option>
+        <option value="100% 100%" ${(box.bgSize||'')==='100% 100%'?'selected':''}>100%×100%（拉伸）</option>
+        <option value="auto" ${(box.bgSize||'')==='auto'?'selected':''}>auto（原始大小）</option>
+      </select>
+    </div>
   `;
 
   const bind = (id, prop, parse) => {
     const el = document.getElementById(id);
     if (!el) return;
+    // `input`: live-update box property + visual refresh (RAF-debounced to avoid blocking on rapid keystrokes)
+    let _bindRaf = null;
     el.addEventListener('input', () => {
-      saveState();
       box[prop] = parse ? parse(el.value) : el.value;
       if (id === 'p-op') document.getElementById('p-op-val').textContent = Math.round(box.opacity * 100) + '%';
-      renderAll();
+      if (_bindRaf === null) { _bindRaf = requestAnimationFrame(() => { _bindRaf = null; renderAll(); }); }
     });
+    // `change`: commit to undo history when user finishes (releases slider, tabs out, etc.)
+    el.addEventListener('change', () => { saveState(); });
   };
+  bind('p-label', 'label');
+  const labelEl2 = document.getElementById('p-label');
+  if (labelEl2) {
+    labelEl2.addEventListener('change', () => log(`重命名 → ${box.label}`, 'ok'));
+    labelEl2.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); labelEl2.blur(); } });
+  }
   bind('p-x', 'x', v => snap(+v));
   bind('p-y', 'y', v => snap(+v));
   bind('p-w', 'w', v => Math.max(snap(+v), 20));
   bind('p-h', 'h', v => Math.max(snap(+v), 20));
-  bind('p-bw', 'borderWidth', v => Math.max(+v, 1));
+  bind('p-bw', 'borderWidth', v => Math.max(+v, 0));
   bind('p-bc', 'borderColor');
   bind('p-op', 'opacity', parseFloat);
+  bind('p-br', 'borderRadius', v => Math.max(+v, 0));
+  bind('p-bs', 'boxShadow');
+  bind('p-filter', 'filter');
+  bind('p-backdrop', 'backdropFilter');
+  bind('p-bgimg', 'bgImage');
+  bind('p-bgsize', 'bgSize');
 
-  // Description textarea — set value safely via JS (avoids HTML injection issues)
-  const descEl = document.getElementById('p-desc');
-  if (descEl) {
-    descEl.value = box.description || '';
-    descEl.addEventListener('input', () => {
-      box.description = descEl.value || undefined;
-      if (!box.description) delete box.description;
-      // Update label tooltip on canvas
-      const boxEl = document.getElementById('box-' + box.id);
-      const lbl = boxEl && boxEl.querySelector('.box-label');
-      if (lbl) {
-        if (box.description) lbl.title = '📝 ' + box.description;
-        else lbl.removeAttribute('title');
-      }
+  // Shadow preset buttons
+  document.querySelectorAll('.shadow-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = btn.dataset.v;
+      saveState();
+      box.boxShadow = v;
+      const bsEl = document.getElementById('p-bs');
+      if (bsEl) bsEl.value = v;
+      renderAll();
+      autoSave();
     });
-    descEl.addEventListener('change', () => { saveState(); renderAll(); });
+  });
+
+  // Filter preset buttons
+  document.querySelectorAll('.filter-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = btn.dataset.v;
+      saveState();
+      box.filter = v;
+      const el = document.getElementById('p-filter');
+      if (el) el.value = v;
+      renderAll();
+      autoSave();
+    });
+  });
+
+  // Backdrop-filter preset buttons
+  document.querySelectorAll('.backdrop-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = btn.dataset.v;
+      saveState();
+      box.backdropFilter = v;
+      const el = document.getElementById('p-backdrop');
+      if (el) el.value = v;
+      renderAll();
+      autoSave();
+    });
+  });
+
+  // Background image preset buttons
+  document.querySelectorAll('.bgimg-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = btn.dataset.v;
+      saveState();
+      box.bgImage = v || undefined;
+      if (!box.bgImage) delete box.bgImage;
+      const el = document.getElementById('p-bgimg');
+      if (el) el.value = v;
+      renderAll();
+      autoSave();
+    });
+  });
+
+  const iconPickerBtn = document.getElementById('btn-icon-picker');
+  if (iconPickerBtn) {
+    iconPickerBtn.addEventListener('click', () => openIconPicker(box));
+  }
+  const imgBrowserBtn = document.getElementById('btn-img-browser');
+  if (imgBrowserBtn) {
+    imgBrowserBtn.addEventListener('click', () => openImgBrowser(box, 'bgImage'));
+  }
+  
+  const koutuBtn = document.getElementById('btn-koutu');
+  if (koutuBtn) {
+    koutuBtn.addEventListener('click', () => {
+      const tol = parseInt(prompt('容差 (0-255, 默认30)', '30') || '30', 10);
+      applyBgImageRemoveBg(box, isNaN(tol) ? 30 : tol);
+    });
   }
 
+  // Description textarea — set value safely via JS (avoids HTML injection issues)
   // Widget type change
   const widgetSel = document.getElementById('p-widget');
   if (widgetSel) {
@@ -2131,22 +3020,43 @@ function renderProps() {
   bindAnc('p-anc-minx', 'minX'); bindAnc('p-anc-miny', 'minY');
   bindAnc('p-anc-maxx', 'maxX'); bindAnc('p-anc-maxy', 'maxY');
 
-  // Anchor picker click
+  // Anchor picker click — also physically repositions the box to match the anchor
   document.querySelectorAll('.anc-cell').forEach(cell => {
     cell.addEventListener('click', () => {
       const a = JSON.parse(cell.dataset.anchor);
+      saveState();
       box.anchor = a;
+      applyAnchorPreset(box, a);
       document.getElementById('p-anc-minx').value = a.minX;
       document.getElementById('p-anc-miny').value = a.minY;
       document.getElementById('p-anc-maxx').value = a.maxX;
       document.getElementById('p-anc-maxy').value = a.maxY;
+      // Sync position/size inputs if visible
+      const px = document.getElementById('p-x'); if (px) px.value = box.x;
+      const py = document.getElementById('p-y'); if (py) py.value = box.y;
+      const pw = document.getElementById('p-w'); if (pw) pw.value = box.w;
+      const ph = document.getElementById('p-h'); if (ph) ph.value = box.h;
       refreshAnchorPicker(a);
+      recomputeAllParents();
       renderAll();
+      autoSave();
     });
   });
 
   // Dynamic widget-specific properties from elements.json
   renderWidgetProps(box);
+
+  // DataAsset binding badge — show _daBinding / _daPath meta
+  if (box._daBinding || box._daRef) {
+    const daSection = document.createElement('div');
+    daSection.innerHTML = `
+      <div class="prop-section-title" style="color:#56cfba">📦 DataAsset 绑定</div>
+      ${box._daRef ? `<div class="prop-row" style="flex-wrap:wrap;gap:2px"><span style="font-size:10px;color:#888;width:100%">DA 引用</span><code style="font-size:10px;color:#56cfba;word-break:break-all">${box._daRef}</code></div>` : ''}
+      ${box._daBinding ? `<div class="prop-row" style="flex-wrap:wrap;gap:2px"><span style="font-size:10px;color:#888;width:100%">纹理绑定</span><code style="font-size:10px;color:#d4a84b;word-break:break-all">${box._daBinding}</code></div>` : ''}
+      ${box._daPath ? `<div class="prop-row" style="flex-wrap:wrap;gap:2px"><span style="font-size:10px;color:#888;width:100%">图片路径</span><code style="font-size:10px;color:#56cfba;word-break:break-all">${box._daPath}</code></div>` : ''}
+    `;
+    propPanel.appendChild(daSection);
+  }
 }
 
 /* ───── Selection ───── */
@@ -2160,12 +3070,15 @@ function deselectAll() {
 
 /* ───── Box: Move ───── */
 let dragState = null;
+let _dragRafId = null; // requestAnimationFrame handle for drag throttling
 
 function onBoxMouseDown(e) {
   if (mode !== 'select') return;
   if (e.target.classList.contains('resize-handle')) return;
   e.stopPropagation();
   e.preventDefault();
+  // Blur any focused input (e.g. p-label in right panel) so keyboard shortcuts work
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
 
   const el = e.currentTarget;
   const id = +el.id.replace('box-', '');
@@ -2204,10 +3117,20 @@ function onBoxMouseDown(e) {
 
   const rect = canvasRoot.getBoundingClientRect();
 
-  // Collect all recursive descendants so they move with the parent
-  function getDescendants(parentId) {
-    const children = boxes.filter(b => b.parentId === parentId);
-    return children.reduce((acc, c) => acc.concat(c, getDescendants(c.id)), []);
+  // Collect all recursive descendants so they move with the parent (iterative BFS, O(n))
+  function getDescendants(rootId) {
+    const childrenOf = {};
+    boxes.forEach(b => { if (b.parentId != null) { if (!childrenOf[b.parentId]) childrenOf[b.parentId] = []; childrenOf[b.parentId].push(b); } });
+    const result = [];
+    const visited = new Set([rootId]);
+    const queue = [rootId];
+    while (queue.length) {
+      const cur = queue.shift();
+      (childrenOf[cur] || []).forEach(c => {
+        if (!visited.has(c.id)) { visited.add(c.id); result.push(c); queue.push(c.id); }
+      });
+    }
+    return result;
   }
   const descendants = getDescendants(id);
 
@@ -2243,18 +3166,29 @@ function onResizeStart(e) {
 
   // Capture initial EntryClass state (and its children) for proportional scaling
   let origEntry = null;
+  let cachedEntryId = null;
   if (ENTRY_CLASS_TYPES.includes(box.widgetType)) {
-    const entry = boxes.find(b => b.parentId === box.id && b.label === 'EntryClass');
+    const entry = boxes.find(b => b.parentId === box.id && (b.label === 'EntryClass' || b.isEntryClass));
     if (entry) {
-      // Recursively collect all descendants of the EntryClass
-      function collectDesc(parentId) {
-        return boxes.filter(b => b.parentId === parentId).reduce((acc, c) => {
-          return acc.concat({ id: c.id, x: c.x, y: c.y, w: c.w, h: c.h }, collectDesc(c.id));
-        }, []);
+      cachedEntryId = entry.id;
+      // Iterative BFS to collect all descendants of the EntryClass
+      function collectDescIter(rootId) {
+        const childrenOf = {};
+        boxes.forEach(b => { if (b.parentId != null) { if (!childrenOf[b.parentId]) childrenOf[b.parentId] = []; childrenOf[b.parentId].push(b); } });
+        const result = [];
+        const visited = new Set([rootId]);
+        const queue = [rootId];
+        while (queue.length) {
+          const cur = queue.shift();
+          (childrenOf[cur] || []).forEach(c => {
+            if (!visited.has(c.id)) { visited.add(c.id); result.push({ id: c.id, x: c.x, y: c.y, w: c.w, h: c.h }); queue.push(c.id); }
+          });
+        }
+        return result;
       }
       origEntry = {
         x: entry.x, y: entry.y, w: entry.w, h: entry.h,
-        children: collectDesc(entry.id)
+        children: collectDescIter(entry.id)
       };
     }
   }
@@ -2262,9 +3196,11 @@ function onResizeStart(e) {
   // If box IS an EntryClass, capture its children for proportional scaling
   let origEcChildren = null;
   if (isLockedEntryClass(box)) {
-    function collectEcDesc(parentId) {
+    function collectEcDesc(parentId, _seen = new Set()) {
+      if (_seen.has(parentId)) return [];
+      _seen.add(parentId);
       return boxes.filter(b => b.parentId === parentId).reduce((acc, c) => {
-        return acc.concat({ id: c.id, x: c.x, y: c.y, w: c.w, h: c.h }, collectEcDesc(c.id));
+        return acc.concat({ id: c.id, x: c.x, y: c.y, w: c.w, h: c.h }, collectEcDesc(c.id, _seen));
       }, []);
     }
     origEcChildren = collectEcDesc(box.id);
@@ -2278,6 +3214,7 @@ function onResizeStart(e) {
     origX: box.x, origY: box.y,
     origW: box.w, origH: box.h,
     origEntry,
+    entryId: cachedEntryId,
     origEcChildren, origEcX: box.x, origEcY: box.y, origEcW: box.w, origEcH: box.h
   };
 }
@@ -2297,7 +3234,10 @@ function getCanvasPos(e) {
 selOverlay.addEventListener('mousedown', (e) => {
   if (mode !== 'draw') {
     // In select mode, clicking empty canvas deselects
-    if (e.target === selOverlay) { deselectAll(); renderAll(); }
+    if (e.target === selOverlay) {
+      deselectAll(); renderAll();
+      if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+    }
     return;
   }
   e.preventDefault();
@@ -2349,18 +3289,19 @@ document.addEventListener('mousemove', (e) => {
   if (dragState) {
     const dx = (e.clientX - dragState.startX) / zoom;
     const dy = (e.clientY - dragState.startY) / zoom;
-    const box = boxes.find(b => b.id === dragState.id);
+    const box = _boxById[dragState.id]; // O(1) lookup
     if (!box) return;
 
     if (dragState.type === 'move') {
       box.x = snap(dragState.origX + dx);
       box.y = snap(dragState.origY + dy);
+      edgeSnap(box);
       box.x = Math.max(0, Math.min(box.x, canvasW() - box.w));
       box.y = Math.max(0, Math.min(box.y, canvasH() - box.h));
       // Move all descendants by the same delta
       if (dragState.origChildren) {
         dragState.origChildren.forEach(orig => {
-          const child = boxes.find(b => b.id === orig.id);
+          const child = _boxById[orig.id]; // O(1) lookup
           if (child) {
             child.x = snap(orig.x + dx);
             child.y = snap(orig.y + dy);
@@ -2384,7 +3325,7 @@ document.addEventListener('mousemove', (e) => {
       }
       // Auto-scale EntryClass (and its children) when its TileView parent is resized
       if (ENTRY_CLASS_TYPES.includes(box.widgetType) && dragState.origEntry) {
-        const entry = boxes.find(b => b.parentId === box.id && b.label === 'EntryClass');
+        const entry = dragState.entryId ? _boxById[dragState.entryId] : null; // O(1) using cached id
         if (entry) {
           const oe = dragState.origEntry;
           const scaleX = box.w / dragState.origW;
@@ -2399,7 +3340,7 @@ document.addEventListener('mousemove', (e) => {
           box.widgetProps.entryHeight = entry.h;
           // Scale all descendant boxes inside the EntryClass proportionally
           (oe.children || []).forEach(orig => {
-            const child = boxes.find(b => b.id === orig.id);
+            const child = _boxById[orig.id]; // O(1) lookup
             if (!child) return;
             child.w = Math.max(Math.round(orig.w * scaleX), 10);
             child.h = Math.max(Math.round(orig.h * scaleY), 10);
@@ -2411,7 +3352,7 @@ document.addEventListener('mousemove', (e) => {
       // When the EntryClass box itself is resized, sync parent's widgetProps.entryWidth/entryHeight
       // and scale all children proportionally
       if (isLockedEntryClass(box)) {
-        const parent = boxes.find(b => b.id === box.parentId);
+        const parent = _boxById[box.parentId]; // O(1) lookup
         if (parent) {
           if (!parent.widgetProps) parent.widgetProps = {};
           parent.widgetProps.entryWidth  = box.w;
@@ -2422,7 +3363,7 @@ document.addEventListener('mousemove', (e) => {
           const scaleX = box.w / dragState.origEcW;
           const scaleY = box.h / dragState.origEcH;
           dragState.origEcChildren.forEach(orig => {
-            const child = boxes.find(b => b.id === orig.id);
+            const child = _boxById[orig.id]; // O(1) lookup
             if (!child) return;
             child.x = box.x + Math.round((orig.x - dragState.origEcX) * scaleX);
             child.y = box.y + Math.round((orig.y - dragState.origEcY) * scaleY);
@@ -2432,7 +3373,13 @@ document.addEventListener('mousemove', (e) => {
         }
       }
     }
-    renderAll();
+    // Throttle render to one frame — prevents 60 FPS × O(n) DOM writes
+    if (_dragRafId === null) {
+      _dragRafId = requestAnimationFrame(() => {
+        _dragRafId = null;
+        renderPositionsOnly();
+      });
+    }
   }
 });
 
@@ -2465,7 +3412,7 @@ document.addEventListener('mouseup', (e) => {
   }
 
   if (dragState) {
-    const box = boxes.find(b => b.id === dragState.id);
+    const box = _boxById[dragState.id]; // O(1) lookup
     if (box) {
       if (dragState.type === 'move') {
         recomputeAllParents(); // update parent for moved box AND any boxes now inside it
@@ -2476,16 +3423,23 @@ document.addEventListener('mouseup', (e) => {
       }
       autoSave();
     }
+    if (_dragRafId !== null) { cancelAnimationFrame(_dragRafId); _dragRafId = null; }
     dragState = null;
+    renderAll(); // full sync after drag ends
   }
 });
 
 /* ───── Keyboard ───── */
 document.addEventListener('keydown', (e) => {
+  // Global shortcuts: work even when inputs are focused
+  if (e.key === 'p' || e.key === 'P') { togglePreviewMode(); return; }
+  if (e.key === 'f' || e.key === 'F') { zoomToFit(); return; }
+  if ((e.key === 'r' || e.key === 'R') && e.shiftKey) { openAssetsPanel(); return; }
+  if (e.key === 'Escape') { const ip=document.getElementById('icon-picker-overlay'); if(ip&&ip.style.display==='flex'){closeIconPicker();return;} deselectAll(); renderAll(); return; }
+
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
 
   if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
-  if (e.key === 'Escape') { deselectAll(); renderAll(); }
   if (e.key === 'v' || e.key === 'V') {
     currentWidgetType = null;
     document.querySelectorAll('.palette-item').forEach(b => b.classList.remove('active'));
@@ -2668,6 +3622,153 @@ function showDescriptionModal(box) {
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
   setTimeout(() => textarea.focus(), 60);
+}
+
+/* ───── Resources Panel ───── */
+function showResourcesPanel() {
+  // Collect all resource references from ALL boxes (recursive)
+  const resources = [];
+  const IMG_EXT = /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico)(\?.*)?$/i;
+  const isUrl = v => typeof v === 'string' && v.trim().length > 3 &&
+    (v.startsWith('http://') || v.startsWith('https://') || v.startsWith('data:image') ||
+     /\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|mp4|mp3|ogg|wav|atlas|xml)(\?.*)?$/i.test(v));
+
+  function scanBox(box) {
+    const def = getWidgetDef(box.widgetType);
+    // Check render.src property (e.g. Image → imagePath)
+    if (def && def.render && def.render.src) {
+      const val = (box.widgetProps || {})[def.render.src];
+      if (val && typeof val === 'string' && val.trim()) {
+        resources.push({ boxId: box.id, label: box.label, widgetType: box.widgetType,
+          icon: def.icon || '🖼️', color: def.color, key: def.render.src, value: val.trim(),
+          isImage: IMG_EXT.test(val.trim()) || def.render.type === 'image' });
+      }
+    }
+    // Scan all widgetProps for URL-like values
+    if (box.widgetProps) {
+      Object.entries(box.widgetProps).forEach(([key, val]) => {
+        if (def && def.render && def.render.src === key) return; // already captured above
+        if (isUrl(val)) {
+          const alreadyAdded = resources.some(r => r.boxId === box.id && r.key === key);
+          if (!alreadyAdded) {
+            resources.push({ boxId: box.id, label: box.label, widgetType: box.widgetType,
+              icon: def ? (def.icon || '⬜') : '⬜', color: def ? def.color : '#888', key, value: val.trim(),
+              isImage: IMG_EXT.test(val.trim()) });
+          }
+        }
+      });
+    }
+    // Recurse into children
+    if (box.children && box.children.length) box.children.forEach(scanBox);
+  }
+  boxes.forEach(scanBox);
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200000;display:flex;align-items:center;justify-content:center';
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:#1a1a2e;border:1px solid #3a3a5c;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.7);width:620px;max-width:96vw;max-height:80vh;display:flex;flex-direction:column;overflow:hidden';
+
+  const header = document.createElement('div');
+  header.style.cssText = 'padding:12px 16px;border-bottom:1px solid #3a3a5c;display:flex;align-items:center;justify-content:space-between;flex-shrink:0';
+  header.innerHTML = `<span style="font-weight:600;font-size:14px;color:#ccc">📦 资源引用 — <em style="color:var(--accent);font-style:normal">${resources.length} 个</em></span>`;
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕';
+  closeBtn.style.cssText = 'background:none;border:none;color:#888;font-size:16px;cursor:pointer;padding:0 4px';
+  closeBtn.onclick = () => overlay.remove();
+  header.appendChild(closeBtn);
+  modal.appendChild(header);
+
+  const body = document.createElement('div');
+  body.style.cssText = 'overflow-y:auto;flex:1;padding:8px 0';
+
+  if (resources.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'padding:32px;text-align:center;color:#666;font-size:13px';
+    empty.textContent = '当前界面没有引用任何资源（图片路径、URL 等）';
+    body.appendChild(empty);
+  } else {
+    resources.forEach(r => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:8px 16px;border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.1s;cursor:default';
+      row.addEventListener('mouseenter', () => row.style.background = 'rgba(255,255,255,0.04)');
+      row.addEventListener('mouseleave', () => row.style.background = '');
+
+      // Left: thumb or icon
+      const thumb = document.createElement('div');
+      thumb.style.cssText = 'width:48px;height:48px;flex-shrink:0;border-radius:5px;border:1px solid #333;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#111;font-size:20px';
+      if (r.isImage) {
+        const img = document.createElement('img');
+        img.src = r.value;
+        img.style.cssText = 'width:100%;height:100%;object-fit:contain';
+        img.onerror = () => { img.remove(); thumb.textContent = r.icon || '🖼️'; };
+        thumb.appendChild(img);
+      } else {
+        thumb.textContent = r.icon || '📄';
+      }
+      row.appendChild(thumb);
+
+      // Middle: info
+      const info = document.createElement('div');
+      info.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;gap:2px';
+      const nameLine = document.createElement('div');
+      nameLine.style.cssText = 'display:flex;align-items:center;gap:6px';
+      nameLine.innerHTML = `<span style="color:${r.color||'#aaa'}">${r.icon}</span><span style="font-size:12px;font-weight:600;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px" title="${r.label}">${r.label}</span><span style="font-size:10px;color:#555;flex-shrink:0">#${r.boxId}</span>`;
+      info.appendChild(nameLine);
+      const keyLine = document.createElement('div');
+      keyLine.style.cssText = 'font-size:10px;color:#666';
+      keyLine.textContent = r.key;
+      info.appendChild(keyLine);
+      const valLine = document.createElement('div');
+      valLine.style.cssText = 'font-size:11px;color:#9b8af7;word-break:break-all;line-height:1.4;margin-top:2px';
+      valLine.textContent = r.value.length > 80 ? r.value.slice(0, 77) + '…' : r.value;
+      valLine.title = r.value;
+      info.appendChild(valLine);
+      row.appendChild(info);
+
+      // Right: copy button
+      const copyBtn = document.createElement('button');
+      copyBtn.textContent = '复制';
+      copyBtn.style.cssText = 'flex-shrink:0;padding:4px 10px;border-radius:5px;border:1px solid #3a3a5c;background:#222;color:#aaa;cursor:pointer;font-size:11px;align-self:center';
+      copyBtn.onclick = () => {
+        navigator.clipboard.writeText(r.value).then(() => {
+          copyBtn.textContent = '✓';
+          setTimeout(() => { copyBtn.textContent = '复制'; }, 1200);
+        }).catch(() => {
+          copyBtn.textContent = '✗';
+          setTimeout(() => { copyBtn.textContent = '复制'; }, 1000);
+        });
+      };
+      row.appendChild(copyBtn);
+
+      body.appendChild(row);
+    });
+  }
+
+  modal.appendChild(body);
+
+  // Footer: summary
+  const footer = document.createElement('div');
+  footer.style.cssText = 'padding:8px 16px;border-top:1px solid #3a3a5c;flex-shrink:0;display:flex;align-items:center;justify-content:space-between';
+  const summary = document.createElement('span');
+  summary.style.cssText = 'font-size:11px;color:#555';
+  const imgCount = resources.filter(r => r.isImage).length;
+  summary.textContent = `图片: ${imgCount}  其他: ${resources.length - imgCount}  节点总数: ${boxes.length}`;
+  footer.appendChild(summary);
+  const closeFooter = document.createElement('button');
+  closeFooter.textContent = '关闭';
+  closeFooter.style.cssText = 'padding:5px 16px;border-radius:6px;border:1px solid #3a3a5c;background:#222;color:#ccc;cursor:pointer;font-size:12px';
+  closeFooter.onclick = () => overlay.remove();
+  footer.appendChild(closeFooter);
+  modal.appendChild(footer);
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', esc); }
+  });
 }
 
 /* ───── Save EntryClass Modal (preview before saving) ───── */
@@ -3028,17 +4129,19 @@ async function showEntryClassPicker(targetBox, anchorX, anchorY) {
 
 /* ───── Delete / Clear ───── */
 function collectDescendants(id) {
+  // Build parent→children map once O(n), then BFS O(descendants) — total O(n)
+  const childrenOf = {};
+  boxes.forEach(b => {
+    if (b.parentId != null) {
+      if (!childrenOf[b.parentId]) childrenOf[b.parentId] = [];
+      childrenOf[b.parentId].push(b.id);
+    }
+  });
   const ids = [id];
-  const seen = new Set([id]);
   let i = 0;
   while (i < ids.length) {
     const cur = ids[i++];
-    boxes.forEach(b => {
-      if (b.parentId === cur && !seen.has(b.id)) {
-        seen.add(b.id);
-        ids.push(b.id);
-      }
-    });
+    (childrenOf[cur] || []).forEach(childId => ids.push(childId));
   }
   return ids;
 }
@@ -3081,17 +4184,31 @@ btnUndo.addEventListener('click', undo);
 btnRedo.addEventListener('click', redo);
 
 /* ───── Zoom ───── */
+function applyTransform() {
+  canvasRoot.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+}
+
 function setZoom(z) {
   zoom = Math.max(0.25, Math.min(3, z));
-  canvasRoot.style.transform = `scale(${zoom})`;
+  applyTransform();
   zoomLabel.textContent = Math.round(zoom * 100) + '%';
   // Redraw grid at viewport size so it always fills center-area regardless of zoom
   drawGrid();
 }
 
-// Zoom and scroll to fit all boxes in the viewport
+function zoomAroundPoint(newZ, screenX, screenY) {
+  const oldZoom = zoom;
+  zoom = Math.max(0.25, Math.min(3, newZ));
+  panX = screenX - (screenX - panX) * (zoom / oldZoom);
+  panY = screenY - (screenY - panY) * (zoom / oldZoom);
+  applyTransform();
+  zoomLabel.textContent = Math.round(zoom * 100) + '%';
+  drawGrid();
+}
+
+// Zoom and pan to fit all boxes in the viewport
 function zoomToFit(padding = 40) {
-  if (!boxes.length) { setZoom(1); return; }
+  if (!boxes.length) { panX = 0; panY = 0; setZoom(1); return; }
   const minX = Math.min(...boxes.map(b => b.x));
   const minY = Math.min(...boxes.map(b => b.y));
   const maxX = Math.max(...boxes.map(b => b.x + b.w));
@@ -3102,21 +4219,58 @@ function zoomToFit(padding = 40) {
   const vpH = canvasViewport.offsetHeight - padding * 2;
   const scaleX = vpW / contentW;
   const scaleY = vpH / contentH;
-  setZoom(Math.min(scaleX, scaleY, 2)); // cap at 2× to avoid over-zoom
-  // Scroll to content origin
-  canvasViewport.scrollLeft = (minX * zoom) - padding;
-  canvasViewport.scrollTop  = (minY * zoom) - padding;
+  zoom = Math.max(0.25, Math.min(Math.min(scaleX, scaleY), 2));
+  // Center content in viewport using pan
+  const contentCenterX = (minX + maxX) / 2;
+  const contentCenterY = (minY + maxY) / 2;
+  panX = canvasViewport.offsetWidth  / 2 - contentCenterX * zoom;
+  panY = canvasViewport.offsetHeight / 2 - contentCenterY * zoom;
+  applyTransform();
+  zoomLabel.textContent = Math.round(zoom * 100) + '%';
+  drawGrid();
 }
-btnZoomIn.addEventListener('click',    () => setZoom(zoom + 0.1));
-btnZoomOut.addEventListener('click',   () => setZoom(zoom - 0.1));
-btnZoomReset.addEventListener('click', () => setZoom(1));
+btnZoomIn.addEventListener('click',    () => zoomAroundPoint(zoom + 0.1, canvasViewport.offsetWidth / 2, canvasViewport.offsetHeight / 2));
+btnZoomOut.addEventListener('click',   () => zoomAroundPoint(zoom - 0.1, canvasViewport.offsetWidth / 2, canvasViewport.offsetHeight / 2));
+btnZoomReset.addEventListener('click', () => { panX = 0; panY = 0; setZoom(1); });
 
-// Ctrl+Wheel zoom
+// Ctrl+Wheel zoom (toward cursor)
 document.getElementById('canvas-viewport').addEventListener('wheel', (e) => {
   if (!e.ctrlKey) return;
   e.preventDefault();
-  setZoom(zoom + (e.deltaY < 0 ? 0.1 : -0.1));
+  const rect = canvasViewport.getBoundingClientRect();
+  const cursorX = e.clientX - rect.left;
+  const cursorY = e.clientY - rect.top;
+  zoomAroundPoint(zoom + (e.deltaY < 0 ? 0.1 : -0.1), cursorX, cursorY);
 }, { passive: false });
+
+// Middle-button / Space+drag pan on canvas
+(function() {
+  let isPanning = false, panStartX = 0, panStartY = 0, panStartPanX = 0, panStartPanY = 0;
+  let spaceHeld = false;
+  window.addEventListener('keydown', e => { if (e.code === 'Space' && !e.target.closest('input,textarea,select')) spaceHeld = true; }, true);
+  window.addEventListener('keyup',   e => { if (e.code === 'Space') { spaceHeld = false; canvasViewport.style.cursor = ''; } }, true);
+  canvasViewport.addEventListener('mousedown', e => {
+    if (e.button === 1 || (e.button === 0 && spaceHeld)) {
+      e.preventDefault();
+      isPanning = true;
+      panStartX = e.clientX; panStartY = e.clientY;
+      panStartPanX = panX; panStartPanY = panY;
+      canvasViewport.style.cursor = 'grabbing';
+    }
+  });
+  window.addEventListener('mousemove', e => {
+    if (!isPanning) return;
+    panX = panStartPanX + (e.clientX - panStartX);
+    panY = panStartPanY + (e.clientY - panStartY);
+    applyTransform();
+  });
+  window.addEventListener('mouseup', e => {
+    if (isPanning && (e.button === 1 || e.button === 0)) {
+      isPanning = false;
+      canvasViewport.style.cursor = spaceHeld ? 'grab' : '';
+    }
+  });
+})();
 
 /* ───── Grid & Snap ───── */
 toggleGrid.addEventListener('change', () => {
@@ -3171,6 +4325,8 @@ function buildPalette(containerId, items) {
             box.widgetType = def.type;
             box.borderColor = def.color;
             box.bgColor = def.bg;
+            box.widgetProps = initWidgetProps(def);
+            ensureTileViewEntry(box);
             renderAll();
             log(`设为 <${def.label}>: ${box.label}`, 'ok');
           }
@@ -3238,10 +4394,13 @@ function serializeBoxes(flatBoxes) {
       roots.push(map[b.id]);
     }
   });
-  // Remove empty children arrays to keep JSON clean
+  // Remove empty children arrays to keep JSON clean; guard against any circular node refs
+  const cleanSeen = new Set();
   function clean(node) {
+    if (cleanSeen.has(node)) { delete node.children; return node; }
+    cleanSeen.add(node);
     if (!node.children || !node.children.length) { delete node.children; }
-    else { node.children.forEach(clean); }
+    else { node.children.forEach(clean); if (!node.children.length) delete node.children; }
     return node;
   }
   return roots.map(clean);
@@ -3291,6 +4450,30 @@ function autoSave() {
     } catch (_) {}
   }, 1500);
 }
+
+// Detect and break parentId cycles in loaded session data to prevent infinite recursion
+function sanitizeParentIds(boxArr) {
+  const idSet = new Set(boxArr.map(b => b.id));
+  // Remove invalid parentIds (pointing to non-existent boxes)
+  boxArr.forEach(b => { if (b.parentId && !idSet.has(b.parentId)) b.parentId = null; });
+  // Detect cycles using DFS coloring: 0=unvisited, 1=in-stack, 2=done
+  const color = {};
+  boxArr.forEach(b => { color[b.id] = 0; });
+  function visit(id) {
+    if (!color[id] || color[id] === 2) return;
+    if (color[id] === 1) {
+      // Cycle detected: break by clearing this box's parentId
+      const b = boxArr.find(x => x.id === id);
+      if (b) { b.parentId = null; log(`sanitize: 清除循环引用 parentId on ${id}`, 'warn'); }
+      return;
+    }
+    color[id] = 1;
+    const b = boxArr.find(x => x.id === id);
+    if (b && b.parentId) visit(b.parentId);
+    color[id] = 2;
+  }
+  boxArr.forEach(b => visit(b.id));
+}
 
 async function loadSession() {
   try {
@@ -3307,10 +4490,12 @@ async function loadSession() {
         boxes = d.boxes;
         boxes.forEach(b => { if (!b.anchor) b.anchor = { minX:0, minY:0, maxX:0, maxY:0 }; });
       }
+      sanitizeParentIds(boxes);
     }
     renderAll();
     log(`会话已恢复 (${boxes.length} 个节点)`, 'ok');
     setActiveSession(_sessionName, _sessionPath);
+    if (boxes.length > 0) requestAnimationFrame(() => requestAnimationFrame(() => zoomToFit()));
     return true;
   } catch (_) { return false; }
 }
@@ -3325,6 +4510,7 @@ loadElements().then(async () => {
   const sel = document.getElementById('palette-group-select');
   if (sel) sel.addEventListener('change', () => applyPaletteFilter(sel.value));
   await loadSession();
+  await loadTheme('default');
   // Mark CanvasPanel as the active palette item (default widget type)
   const canvasBtn = document.querySelector('.palette-item[data-type="CanvasPanel"]');
   if (canvasBtn) canvasBtn.classList.add('active');
@@ -3608,7 +4794,9 @@ if (typeof ResizeObserver !== 'undefined') {
       const res = await fetch(API + '/get?name=' + encodeURIComponent(filePath));
       const data = await res.json();
       if (!data.success) { showToast('⚠ 无法读取存档：' + (data.error || '')); return; }
-      const parsed = JSON.parse(data.content);
+      // Strip UTF-8 BOM if present (0xFEFF) — can happen with Windows-encoded files
+      const rawContent = (data.content || '').replace(/^\uFEFF/, '');
+      const parsed = JSON.parse(rawContent);
       if (parsed.nextId) nextId = parsed.nextId;
       if (Array.isArray(parsed.boxes)) {
         if (parsed.version && parsed.version !== '1.0') {
@@ -3630,7 +4818,7 @@ if (typeof ResizeObserver !== 'undefined') {
       if (btnDocs) btnDocs.classList.remove('active');
       // Always zoom-to-fit so the user can clearly see the loaded content
       if (boxes.length > 0) {
-        requestAnimationFrame(() => zoomToFit());
+        requestAnimationFrame(() => requestAnimationFrame(() => zoomToFit()));
       }
     } catch (e) {
       showToast('⚠ 加载失败：' + e.message);
@@ -4332,3 +5520,153 @@ async function chatSend() {
     if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = '发送'; }
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   Assets Panel — 查看当前 session 引用的所有资源
+   ═══════════════════════════════════════════════════════ */
+(function initAssetsPanel() {
+  const panel    = document.getElementById('assets-panel');
+  const listEl   = document.getElementById('assets-list');
+  const countEl  = document.getElementById('assets-count');
+  const refreshBtn = document.getElementById('assets-refresh-btn');
+  const closeBtn   = document.getElementById('assets-close-btn');
+  const btnAssets  = document.getElementById('btn-assets');
+  if (!panel || !listEl) return;
+
+  // Resource type definitions — which widgetProps keys may contain asset paths/URLs
+  const RESOURCE_KEYS = [
+    { key: 'imagePath',  label: '图片',  icon: '🖼️',  type: 'image' },
+    { key: 'src',        label: '图片',  icon: '🖼️',  type: 'image' },
+    { key: 'bgImage',    label: '背景图',icon: '🖼️',  type: 'image' },
+    { key: 'fontPath',   label: '字体',  icon: '🔤',  type: 'font'  },
+    { key: 'soundPath',  label: '音效',  icon: '🔊',  type: 'audio' },
+    { key: 'videoPath',  label: '视频',  icon: '🎬',  type: 'video' },
+    { key: 'dataPath',   label: '数据',  icon: '📊',  type: 'data'  },
+  ];
+
+  function collectResources() {
+    const results = []; // { boxId, boxLabel, key, value, icon, label }
+    function scanBox(box) {
+      const props = box.widgetProps || {};
+      RESOURCE_KEYS.forEach(({ key, label, icon }) => {
+        const val = props[key];
+        if (val && typeof val === 'string' && val.trim()) {
+          results.push({ boxId: box.id, boxLabel: box.label || `#${box.id}`, widgetType: box.widgetType || '', key, value: val.trim(), icon, label });
+        }
+      });
+      // Also scan all string props for URL-like values (http/https/data:)
+      Object.entries(props).forEach(([k, v]) => {
+        if (typeof v === 'string' && v.trim() && (v.startsWith('http') || v.startsWith('data:') || v.match(/\.(png|jpg|jpeg|gif|svg|webp|mp3|wav|ogg|ttf|otf|woff)$/i))) {
+          if (!RESOURCE_KEYS.find(r => r.key === k)) {
+            results.push({ boxId: box.id, boxLabel: box.label || `#${box.id}`, widgetType: box.widgetType || '', key: k, value: v.trim(), icon: '📎', label: k });
+          }
+        }
+      });
+      if (box.children && box.children.length) box.children.forEach(scanBox);
+    }
+    boxes.forEach(scanBox);
+    return results;
+  }
+
+  function renderResources() {
+    const resources = collectResources();
+    countEl.textContent = resources.length ? `(${resources.length})` : '';
+    if (!resources.length) {
+      listEl.innerHTML = '<div class="assets-empty">当前 session 没有引用任何资源<br><span style="font-size:10px;opacity:0.5">使用 Image 控件并填写图片路径后，资源会显示在这里</span></div>';
+      return;
+    }
+    // Group by type (icon)
+    const groups = {};
+    resources.forEach(r => {
+      const g = r.label;
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(r);
+    });
+    listEl.innerHTML = '';
+    Object.entries(groups).forEach(([groupName, items]) => {
+      const header = document.createElement('div');
+      header.className = 'assets-group-header';
+      header.textContent = `${items[0].icon} ${groupName} (${items.length})`;
+      listEl.appendChild(header);
+      items.forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'asset-item';
+        const fileName = r.value.split(/[/\\]/).pop() || r.value;
+        const isImg = /\.(png|jpg|jpeg|gif|webp|svg|ico|bmp)(\?.*)?$/i.test(r.value) || r.value.startsWith('data:image');
+        const thumbHtml = isImg
+          ? `<img src="${r.value}" class="asset-thumb" title="${r.value}" style="width:48px;height:48px;object-fit:contain;border:1px solid #333;border-radius:4px;background:#111;flex-shrink:0" onerror="this.style.opacity='0.2'">`
+          : `<div class="asset-item-icon">${r.icon}</div>`;
+        row.innerHTML = `
+          ${thumbHtml}
+          <div class="asset-item-body">
+            <div class="asset-item-label" title="${r.boxLabel} (${r.widgetType})">${r.boxLabel}</div>
+            <div class="asset-item-path" title="${r.value}">${r.value}</div>
+          </div>
+          <button class="asset-copy-btn" data-val="${r.value.replace(/"/g,'&quot;')}">复制</button>
+        `;
+        // Click row → select the box
+        row.addEventListener('click', e => {
+          if (e.target.classList.contains('asset-copy-btn')) return;
+          selectBox(r.boxId);
+          renderAll();
+          const propsTab = document.querySelector('.right-tab[data-tab="props"]');
+          if (propsTab) propsTab.click();
+        });
+        // Copy button
+        const copyBtn = row.querySelector('.asset-copy-btn');
+        copyBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(r.value).then(() => {
+            copyBtn.classList.add('copied');
+            copyBtn.textContent = '✓';
+            setTimeout(() => { copyBtn.classList.remove('copied'); copyBtn.textContent = '复制'; }, 1500);
+          }).catch(() => {});
+        });
+        listEl.appendChild(row);
+      });
+    });
+  }
+
+  // Make panel draggable by header
+  const header = document.getElementById('assets-panel-header');
+  let _drag = null;
+  header.addEventListener('mousedown', e => {
+    if (e.target.tagName === 'BUTTON') return;
+    // Resolve centered position to absolute before dragging
+    const rect = panel.getBoundingClientRect();
+    panel.style.transform = 'none';
+    panel.style.left = rect.left + 'px';
+    panel.style.top  = rect.top  + 'px';
+    _drag = { startX: e.clientX, startY: e.clientY, origLeft: rect.left, origTop: rect.top };
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!_drag) return;
+    panel.style.left = (_drag.origLeft + e.clientX - _drag.startX) + 'px';
+    panel.style.top  = (_drag.origTop  + e.clientY - _drag.startY) + 'px';
+  });
+  document.addEventListener('mouseup', () => { _drag = null; });
+
+  function openPanel() {
+    // Reset to centered position each time it opens
+    panel.style.left = '50%';
+    panel.style.top = '50px';
+    panel.style.transform = 'translateX(-50%)';
+    panel.style.display = 'flex';
+    if (btnAssets) btnAssets.classList.add('active');
+    renderResources();
+  }
+  function closePanel() {
+    panel.style.display = 'none';
+    if (btnAssets) btnAssets.classList.remove('active');
+  }
+
+  refreshBtn.addEventListener('click', renderResources);
+  closeBtn.addEventListener('click', closePanel);
+
+  window.openAssetsPanel = () => {
+    if (panel.style.display !== 'none') { closePanel(); return; }
+    openPanel();
+  };
+
+})();

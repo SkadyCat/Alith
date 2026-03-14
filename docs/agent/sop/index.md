@@ -22,3 +22,11 @@
 1. 任务进来 → 用任务文本对每行「触发关键词正则」做匹配
 2. 命中第一个 → 读取对应 SOP 文件作为执行参考
 3. 无匹配 → 不加载 SOP，正常执行，完成后创建新 SOP 并在此追加
+
+| 加载失败排查 | sop/load-debug.md | 加载失败|加载错误|elements|无法加载 |
+
+| UI设计规范 | sop/uieditor-thinking.md | ui规范|设计规范|uieditor|控件选择|进度条|重叠|布局 |
+
+| canvas-editor修改 | sop/canvas-editor.md | canvas-editor|画布|节点|控件|选中|渲染|session|bag |
+| 图像生成 | sop/image-gen.md | 图像生成|生成图片|背景图|纹理|图标|SD|ComfyUI|Stable Diffusion |
+| UE数据资产配置 | (inline) | DA_|DataAsset|数据资产|UE配置|Angelscript|TAPython|WeaponScreen|UIBaseDA |

@@ -99,7 +99,8 @@ app.get('/docs/api/get', (req, res) => {
   const filePath = candidates.find(p => fs.existsSync(p));
   if (!filePath) return res.json({ success: false, error: 'not found' });
   try {
-    const content = fs.readFileSync(filePath, 'utf8');
+    const raw = fs.readFileSync(filePath, 'utf8');
+    const content = raw.replace(/^\uFEFF/, ''); // Strip UTF-8 BOM if present
     const ext = path.extname(filePath);
     res.json({ success: true, name, content, ext });
   } catch (e) {
@@ -117,7 +118,8 @@ app.post('/docs/api/save', (req, res) => {
   const filePath = path.join(DOCS_DIR, hasExt ? safeName : safeName + '.md');
   try {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, content || '', 'utf8');
+    const cleanContent = (content || '').replace(/^\uFEFF/, ''); // Strip BOM before saving
+    fs.writeFileSync(filePath, cleanContent, 'utf8');
     res.json({ success: true, name: safeName });
   } catch (e) {
     res.json({ success: false, error: e.message });
@@ -199,6 +201,30 @@ app.post('/docs/api/rename', (req, res) => {
   }
 });
 
+// List images in public/assets/ and public/images/ directories
+app.get('/api/images', (req, res) => {
+  const PUBLIC_DIR = path.join(__dirname, 'public');
+  const IMG_EXTS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.bmp'];
+  const results = [];
+  function walk(dir, urlBase) {
+    try {
+      fs.readdirSync(dir, { withFileTypes: true }).forEach(item => {
+        const fullPath = path.join(dir, item.name);
+        const urlPath = urlBase + '/' + item.name;
+        if (item.isDirectory()) {
+          walk(fullPath, urlPath);
+        } else if (IMG_EXTS.includes(path.extname(item.name).toLowerCase())) {
+          const stat = fs.statSync(fullPath);
+          results.push({ name: item.name, path: urlPath, size: stat.size, dir: urlBase });
+        }
+      });
+    } catch (_) {}
+  }
+  walk(path.join(PUBLIC_DIR, 'assets'), '/assets');
+  walk(path.join(PUBLIC_DIR, 'images'), '/images');
+  res.json({ success: true, images: results });
+});
+
 // Serve elements.json (WBP widget definitions) — stored in docs/config/
 const ELEMENTS_FILE = path.join(DOCS_DIR, 'config', 'elements.json');
 app.get('/api/elements', (req, res) => {
@@ -206,6 +232,20 @@ app.get('/api/elements', (req, res) => {
     if (!fs.existsSync(ELEMENTS_FILE)) return res.json({ success: false, error: 'elements.json not found' });
     const data = JSON.parse(fs.readFileSync(ELEMENTS_FILE, 'utf8'));
     res.json({ success: true, ...data });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// Serve any data-asset JSON from docs/config/
+app.get('/api/data-asset/:name', (req, res) => {
+  const name = (req.params.name || '').replace(/[^a-zA-Z0-9_\-]/g, '');
+  if (!name) return res.json({ success: false, error: 'name required' });
+  const filePath = path.join(DOCS_DIR, 'config', name + '.json');
+  try {
+    if (!fs.existsSync(filePath)) return res.json({ success: false, error: `${name}.json not found` });
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    res.json({ success: true, name, data });
   } catch (e) {
     res.json({ success: false, error: e.message });
   }
@@ -244,6 +284,37 @@ app.get('/api/sessions', (req, res) => {
   } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
+// Theme API — read/write data/themes/*.json (never stored in session)
+const THEMES_DIR = path.join(__dirname, 'data', 'themes');
+fs.mkdirSync(THEMES_DIR, { recursive: true });
+
+app.get('/api/theme', (req, res) => {
+  const name = (req.query.name || 'default').replace(/[^a-zA-Z0-9_-]/g, '');
+  const file = path.join(THEMES_DIR, `${name}.json`);
+  if (!fs.existsSync(file)) return res.json({ success: false, error: 'theme not found' });
+  try {
+    res.json({ success: true, theme: JSON.parse(fs.readFileSync(file, 'utf8')) });
+  } catch (e) { res.json({ success: false, error: e.message }); }
+});
+
+app.post('/api/theme', (req, res) => {
+  const { name = 'default', theme } = req.body || {};
+  const safeName = (name || 'default').replace(/[^a-zA-Z0-9_-]/g, '');
+  const file = path.join(THEMES_DIR, `${safeName}.json`);
+  try {
+    fs.writeFileSync(file, JSON.stringify(theme, null, 2), 'utf8');
+    res.json({ success: true, name: safeName });
+  } catch (e) { res.json({ success: false, error: e.message }); }
+});
+
+app.get('/api/themes', (req, res) => {
+  try {
+    const list = fs.readdirSync(THEMES_DIR).filter(f => f.endsWith('.json'))
+      .map(f => f.replace(/\.json$/, ''));
+    res.json({ success: true, themes: list });
+  } catch (e) { res.json({ success: false, error: e.message }); }
+});
+
 // Proxy: forward agent task requests to Alice (localhost:7439)
 function proxyToAlice(req, res, alicePath) {
   const qs = req.method === 'GET' && Object.keys(req.query).length
@@ -273,6 +344,6 @@ app.get('/proxy/agent/task-status', (req, res) => proxyToAlice(req, res, '/agent
 app.get('/proxy/agent/chat-history', (req, res) => proxyToAlice(req, res, '/agent/chat-history'));
 app.get('/proxy/agent/sessions-list', (req, res) => proxyToAlice(req, res, '/agent/sessions-list'));
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Canvas Editor running at http://localhost:${PORT}`);
 });
