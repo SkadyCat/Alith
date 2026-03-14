@@ -1,0 +1,302 @@
+[
+  {
+    "id": 1,
+    "name": "多重投射",
+    "en": "Multiple Projectiles",
+    "require_any": ["投射物"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "技能额外发射 2 枚投射物，每枚伤害降低 20%",
+    "effect": "+2 投射物数量，-20% 伤害"
+  },
+  {
+    "id": 2,
+    "name": "穿透",
+    "en": "Pierce",
+    "require_any": ["投射物"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "投射物穿过所有被命中的敌人",
+    "effect": "投射物穿透目标"
+  },
+  {
+    "id": 3,
+    "name": "弹射",
+    "en": "Fork",
+    "require_any": ["投射物"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "投射物命中后分裂成两枚弹射出去",
+    "effect": "命中后分叉 ×2"
+  },
+  {
+    "id": 4,
+    "name": "链连",
+    "en": "Chain",
+    "require_any": ["投射物", "链接"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "投射物在敌人间弹射，每次弹射后伤害降低",
+    "effect": "最多弹射 2 次，每次 -30% 伤害"
+  },
+  {
+    "id": 5,
+    "name": "集中效果",
+    "en": "Concentrated Effect",
+    "require_any": ["范围"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "大幅增加技能伤害，但范围缩小",
+    "effect": "+60% 范围伤害，-35% 范围"
+  },
+  {
+    "id": 6,
+    "name": "扩大范围",
+    "en": "Increased Area of Effect",
+    "require_any": ["范围"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "增大技能的有效范围",
+    "effect": "+50% 技能范围"
+  },
+  {
+    "id": 7,
+    "name": "近战物理伤害",
+    "en": "Melee Physical Damage",
+    "require_any": [],
+    "require_all": ["近战", "攻击"],
+    "exclude": [],
+    "desc": "大幅提升近战攻击的物理伤害",
+    "effect": "+80% 物理伤害"
+  },
+  {
+    "id": 8,
+    "name": "快速攻击",
+    "en": "Faster Attacks",
+    "require_any": ["攻击"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "提升攻击速度",
+    "effect": "+30% 攻击速度"
+  },
+  {
+    "id": 9,
+    "name": "快速施法",
+    "en": "Faster Casting",
+    "require_any": ["法术"],
+    "require_all": [],
+    "exclude": ["攻击"],
+    "desc": "提升法术施法速度",
+    "effect": "+25% 施法速度"
+  },
+  {
+    "id": 10,
+    "name": "元素专注",
+    "en": "Elemental Focus",
+    "require_any": ["火焰", "寒冷", "闪电"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "大幅提升元素伤害，但不能触发元素异常状态",
+    "effect": "+50% 元素伤害，无法点燃/冰冻/感电"
+  },
+  {
+    "id": 11,
+    "name": "燃烧伤害",
+    "en": "Burning Damage",
+    "require_any": ["火焰"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "提升燃烧伤害（持续火焰）",
+    "effect": "+65% 燃烧伤害"
+  },
+  {
+    "id": 12,
+    "name": "冰霜伤害",
+    "en": "Cold to Critical",
+    "require_any": ["寒冷"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "提升寒冷技能的暴击倍率",
+    "effect": "+60% 寒冷暴击伤害"
+  },
+  {
+    "id": 13,
+    "name": "雷霆伤害",
+    "en": "Lightning Penetration",
+    "require_any": ["闪电"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "穿透敌人的闪电抗性",
+    "effect": "-25% 目标闪电抗性"
+  },
+  {
+    "id": 14,
+    "name": "毒素伤害",
+    "en": "Vile Toxins",
+    "require_any": ["毒素"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "提升毒素持续伤害",
+    "effect": "+70% 毒素伤害"
+  },
+  {
+    "id": 15,
+    "name": "出血强化",
+    "en": "Brutality",
+    "require_any": ["出血"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "提升出血伤害，但禁止非物理伤害",
+    "effect": "+60% 出血伤害，技能只造成物理伤害"
+  },
+  {
+    "id": 16,
+    "name": "召唤伤害",
+    "en": "Minion Damage",
+    "require_any": ["召唤"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "提升仆从的所有伤害",
+    "effect": "+60% 仆从伤害"
+  },
+  {
+    "id": 17,
+    "name": "召唤速度",
+    "en": "Minion Speed",
+    "require_any": ["召唤"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "提升仆从的移动和攻击速度",
+    "effect": "+30% 仆从攻击/施法/移动速度"
+  },
+  {
+    "id": 18,
+    "name": "持续伤害",
+    "en": "Damage over Time",
+    "require_any": ["持续"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "提升技能的持续伤害效果",
+    "effect": "+55% 持续伤害"
+  },
+  {
+    "id": 19,
+    "name": "持续时间",
+    "en": "Increased Duration",
+    "require_any": ["持续"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "延长技能的持续时间",
+    "effect": "+60% 持续时间"
+  },
+  {
+    "id": 20,
+    "name": "额外物理",
+    "en": "Added Physical Damage",
+    "require_any": ["物理", "攻击"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "为技能附加额外的物理伤害",
+    "effect": "附加 (X-X) 物理伤害"
+  },
+  {
+    "id": 21,
+    "name": "近战溅射",
+    "en": "Melee Splash",
+    "require_any": [],
+    "require_all": ["近战", "单体"],
+    "exclude": [],
+    "desc": "近战单体技能命中时，伤害向周围溅射",
+    "effect": "命中时溅射至周围3米内敌人，溅射伤害-50%"
+  },
+  {
+    "id": 22,
+    "name": "图腾支援",
+    "en": "Spell Totem",
+    "require_any": ["图腾"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "让图腾自动释放已连接的技能",
+    "effect": "图腾每 X 秒释放一次连接的技能"
+  },
+  {
+    "id": 23,
+    "name": "陷阱支援",
+    "en": "Trap",
+    "require_any": ["陷阱"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "减少陷阱冷却，增加陷阱数量上限",
+    "effect": "-20% 陷阱冷却，+1 陷阱上限"
+  },
+  {
+    "id": 24,
+    "name": "地雷支援",
+    "en": "Remote Mine",
+    "require_any": ["地雷"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "减少地雷引爆延迟，增加地雷数量",
+    "effect": "-20% 引爆延迟，+1 地雷上限"
+  },
+  {
+    "id": 25,
+    "name": "亵渎",
+    "en": "Blasphemy",
+    "require_any": ["诅咒"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "将诅咒技能转化为光环，持续对周围敌人施加诅咒",
+    "effect": "诅咒转化为光环（消耗保留值）"
+  },
+  {
+    "id": 26,
+    "name": "暴击伤害",
+    "en": "Critical Damage",
+    "require_any": ["攻击", "法术"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "大幅提升暴击时的伤害倍率",
+    "effect": "+50% 暴击伤害倍率"
+  },
+  {
+    "id": 27,
+    "name": "坚毅",
+    "en": "Fortify",
+    "require_any": [],
+    "require_all": ["近战", "攻击"],
+    "exclude": [],
+    "desc": "近战命中时获得坚毅效果，减少受到的伤害",
+    "effect": "命中时获得坚毅（-20% 受到伤害）"
+  },
+  {
+    "id": 28,
+    "name": "触发支援",
+    "en": "Cast while Channelling",
+    "require_any": ["触发"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "吟唱/持续施法时周期性触发连接技能",
+    "effect": "每 0.5 秒触发一次连接技能"
+  },
+  {
+    "id": 29,
+    "name": "额外元素伤害",
+    "en": "Added Lightning Damage",
+    "require_any": ["攻击", "法术"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "为技能附加额外闪电伤害",
+    "effect": "附加 (X-X) 闪电伤害"
+  },
+  {
+    "id": 30,
+    "name": "混沌穿透",
+    "en": "Chaos Penetration",
+    "require_any": ["混沌"],
+    "require_all": [],
+    "exclude": [],
+    "desc": "穿透敌人的混沌抗性",
+    "effect": "-25% 目标混沌抗性"
+  }
+]
