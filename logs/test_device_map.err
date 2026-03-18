@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "E:\docs-service\logs\test_device_map.py", line 8, in <module>
+    pipe = WanPipeline.from_pretrained(
+  File "E:\AIGC\Flux\backend\venv\lib\site-packages\huggingface_hub\utils\_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+  File "E:\AIGC\Flux\backend\venv\lib\site-packages\diffusers\pipelines\pipeline_utils.py", line 801, in from_pretrained
+    raise NotImplementedError(
+NotImplementedError: auto not supported. Supported strategies are: balanced, cuda

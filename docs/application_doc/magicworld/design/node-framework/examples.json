@@ -1,0 +1,112 @@
+[
+  {
+    "schema_version": "1.0",
+    "id": "skill_example_fireball",
+    "name": "火球术（示例）",
+    "rarity": "普通",
+    "tags": ["投射物", "火焰", "持续"],
+    "nodes": [
+      { "id": "n1", "type": "source", "subtype": "active_cast", "label": "主动释放",
+        "params": { "mpCost": 25, "cooldown": 8, "castTime": 0.5 } },
+      { "id": "n2", "type": "delivery", "subtype": "projectile", "label": "火球",
+        "params": { "speed": 18, "range": 28, "count": 1, "element": "fire" } },
+      { "id": "n3", "type": "effect", "subtype": "damage", "label": "冲击伤害",
+        "params": { "base": "150%", "element": "fire" } },
+      { "id": "n4", "type": "condition", "subtype": "on_hit", "label": "命中时",
+        "params": { "chance": 1.0 } },
+      { "id": "n5", "type": "effect", "subtype": "dot", "label": "灼烧",
+        "params": { "damage_per_tick": "20%", "duration": 3, "interval": 0.5, "element": "fire", "stacks": false } }
+    ],
+    "edges": [
+      { "from": "n1.exec",          "to": "n2.exec" },
+      { "from": "n2.exec",          "to": "n3.exec" },
+      { "from": "n2.signal:on_hit", "to": "n4.signal:on_hit" },
+      { "from": "n4.exec",          "to": "n5.exec" }
+    ],
+    "meta": { "total_weight": 8, "max_weight": 10, "author": "system" }
+  },
+  {
+    "schema_version": "1.0",
+    "id": "skill_example_ice_arrow",
+    "name": "冰裂穿透箭（示例）",
+    "rarity": "稀有",
+    "tags": ["投射物", "冰霜"],
+    "nodes": [
+      { "id": "n1", "type": "source", "subtype": "active_cast", "label": "主动释放",
+        "params": { "mpCost": 35, "cooldown": 10, "castTime": 0.4 } },
+      { "id": "n2", "type": "delivery", "subtype": "projectile", "label": "冰矢",
+        "params": { "speed": 22, "range": 30, "count": 1, "element": "ice" } },
+      { "id": "n3", "type": "modifier", "subtype": "pierce", "label": "穿透",
+        "params": { "count": 2, "damage_decay": 0.85 } },
+      { "id": "n4", "type": "effect", "subtype": "damage", "label": "冰霜伤害",
+        "params": { "base": "180%", "element": "ice", "crit_chance": 0.12 } },
+      { "id": "n5", "type": "condition", "subtype": "on_crit", "label": "暴击触发",
+        "params": {} },
+      { "id": "n6", "type": "delivery", "subtype": "area", "label": "冰爆范围",
+        "params": { "radius": 5, "shape": "circle", "element": "ice" } },
+      { "id": "n7", "type": "effect", "subtype": "cc", "label": "冻结",
+        "params": { "type": "freeze", "duration": 2.5 } }
+    ],
+    "edges": [
+      { "from": "n1.exec",          "to": "n2.exec" },
+      { "from": "n2.exec",          "to": "n3.exec" },
+      { "from": "n3.exec",          "to": "n4.exec" },
+      { "from": "n2.signal:on_hit", "to": "n5.signal:on_hit" },
+      { "from": "n5.exec",          "to": "n6.exec" },
+      { "from": "n6.exec",          "to": "n7.exec" }
+    ],
+    "meta": { "total_weight": 13, "max_weight": 18, "author": "system" }
+  },
+  {
+    "schema_version": "1.0",
+    "id": "skill_example_poison_chain",
+    "name": "毒爆连锁（示例）",
+    "rarity": "史诗",
+    "tags": ["范围", "持续", "毒素"],
+    "nodes": [
+      { "id": "n1", "type": "source", "subtype": "passive_proc", "label": "击杀触发",
+        "params": { "trigger_on": "on_kill", "chance": 1.0, "cooldown": 0 } },
+      { "id": "n2", "type": "delivery", "subtype": "area", "label": "毒气扩散",
+        "params": { "radius": 8, "shape": "circle", "element": "poison" } },
+      { "id": "n3", "type": "effect", "subtype": "mark", "label": "施加毒标",
+        "params": { "mark_id": "poison_mark", "stack_max": 5 } },
+      { "id": "n4", "type": "condition", "subtype": "on_stack_max", "label": "5层满爆",
+        "params": { "mark_id": "poison_mark", "stack_count": 5 } },
+      { "id": "n5", "type": "delivery", "subtype": "area", "label": "毒爆波",
+        "params": { "radius": 12, "shape": "circle", "element": "poison" } },
+      { "id": "n6", "type": "effect", "subtype": "damage", "label": "毒爆伤害",
+        "params": { "base": "500%", "element": "poison" } }
+    ],
+    "edges": [
+      { "from": "n1.exec",          "to": "n2.exec" },
+      { "from": "n2.exec",          "to": "n3.exec" },
+      { "from": "n2.signal:on_hit", "to": "n4.signal:on_hit" },
+      { "from": "n4.exec",          "to": "n5.exec" },
+      { "from": "n5.exec",          "to": "n6.exec" }
+    ],
+    "meta": { "total_weight": 11, "max_weight": 24, "author": "system" }
+  },
+  {
+    "schema_version": "1.0",
+    "id": "skill_example_drain_aura",
+    "name": "吸血光环（示例）",
+    "rarity": "传奇",
+    "tags": ["光环", "范围", "暗影"],
+    "nodes": [
+      { "id": "n1", "type": "source", "subtype": "aura_pulse", "label": "光环脉冲",
+        "params": { "radius": 10, "interval": 1.0, "mpPerSec": 5 } },
+      { "id": "n2", "type": "filter", "subtype": "enemies_only", "label": "过滤敌方",
+        "params": {} },
+      { "id": "n3", "type": "effect", "subtype": "drain", "label": "生命汲取",
+        "params": { "amount": "80", "return_ratio": 0.5 } },
+      { "id": "n4", "type": "effect", "subtype": "debuff", "label": "减速减防",
+        "params": { "stat": "defense", "amount": -20, "duration": 2 } }
+    ],
+    "edges": [
+      { "from": "n1.exec", "to": "n2.exec" },
+      { "from": "n2.exec", "to": "n3.exec" },
+      { "from": "n3.exec", "to": "n4.exec" }
+    ],
+    "meta": { "total_weight": 9, "max_weight": 32, "author": "system" }
+  }
+]

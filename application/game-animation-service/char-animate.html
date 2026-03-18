@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎭 AI角色 → 2D骨骼动画</title>
+<style>
+:root {
+  --bg:#080b12;--surface:#0f1420;--panel:#141927;--border:#1e2535;
+  --accent:#7c3aed;--accent2:#06b6d4;--green:#10b981;--red:#ef4444;
+  --yellow:#f59e0b;--text:#e2e8f0;--muted:#4b5a72;--card:#111827;
+  --glow-a:rgba(124,58,237,.4);--glow-b:rgba(6,182,212,.3);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI','Microsoft YaHei',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column}
+
+/* Header */
+header{
+  background:linear-gradient(135deg,#0d0622,#071220);
+  border-bottom:1px solid var(--border);padding:10px 20px;
+  display:flex;align-items:center;gap:10px;
+}
+header h1{font-size:15px;color:#c4b5fd}
+.nav-pills{display:flex;gap:6px;margin-left:auto}
+.nav-pill{padding:4px 11px;border-radius:20px;border:1px solid var(--border);
+  background:var(--surface);color:var(--muted);font-size:11px;text-decoration:none;transition:all .2s}
+.nav-pill:hover,.nav-pill.active{border-color:var(--accent);color:#c4b5fd;background:#1e0a40}
+.badge-new{
+  display:inline-block;margin-left:6px;padding:1px 5px;border-radius:8px;
+  background:linear-gradient(90deg,#7c3aed,#06b6d4);color:#fff;font-size:9px;font-weight:700;
+}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:300px 1fr;flex:1;overflow:hidden}
+
+/* Left panel */
+.left{border-right:1px solid var(--border);overflow-y:auto;background:var(--surface);
+  padding:16px;display:flex;flex-direction:column;gap:14px}
+.sec-title{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}
+label{font-size:11px;color:#94a3b8;display:block;margin-bottom:4px}
+textarea,select,input[type=number]{
+  width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);
+  border-radius:5px;font-family:inherit;font-size:12px;padding:7px 10px;outline:none;
+  transition:border-color .15s;
+}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+textarea:focus,select:focus,input:focus{border-color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{padding:3px 9px;border-radius:16px;border:1px solid var(--border);
+  background:var(--card);color:var(--muted);font-size:10px;cursor:pointer;transition:all .15s}
+.chip:hover,.chip.on{border-color:var(--accent);color:#c4b5fd;background:#1a0a38}
+.chip.anim.on{border-color:var(--accent2);color:#67e8f9;background:#031a26}
+.gen-btn{
+  width:100%;padding:11px;
+  background:linear-gradient(135deg,#4c1d95,#0e7490);
+  border:none;border-radius:7px;color:#fff;font-size:13px;font-weight:600;
+  cursor:pointer;font-family:inherit;letter-spacing:.5px;transition:all .2s;
+}
+.gen-btn:hover:not(:disabled){box-shadow:0 0 20px rgba(124,58,237,.5);opacity:.9}
+.gen-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Log box */
+.log-box{
+  background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  padding:8px;font-size:10px;font-family:monospace;color:var(--muted);
+  max-height:120px;overflow-y:auto;line-height:1.6;
+}
+.log-box .lok{color:var(--green)} .log-box .lerr{color:var(--red)}
+.log-box .linfo{color:var(--accent2)}
+
+/* Right — animation stage */
+.right{display:flex;flex-direction:column;overflow:hidden}
+.stage-area{flex:1;background:#04060d;display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden}
+
+/* Ground / sky gradients */
+.stage-bg{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg,
+    #0a0e1a 0%, #0d1428 40%, #0f1a30 70%, #1a2a1a 85%, #0d1a0d 100%);
+}
+.stage-ground{
+  position:absolute;bottom:0;left:0;right:0;height:80px;
+  background:linear-gradient(180deg,#1a2a1a 0%,#0f1a0f 100%);
+  border-top:2px solid #2d4a2d;
+}
+.stage-ground::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,#3d6b3d,transparent);
+  box-shadow:0 0 12px #3d6b3d;
+}
+
+/* Stars */
+.stars{position:absolute;inset:0;pointer-events:none}
+
+/* Canvas wrapper */
+.canvas-wrap{position:relative;z-index:2}
+canvas{display:block;image-rendering:pixelated}
+
+/* Shadow under character */
+.char-shadow{
+  position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);
+  width:60%;height:16px;
+  background:radial-gradient(ellipse,rgba(0,0,0,.6) 0%,transparent 70%);
+  border-radius:50%;
+}
+
+/* HUD */
+.hud-top{
+  position:absolute;top:12px;left:12px;right:12px;
+  display:flex;justify-content:space-between;align-items:flex-start;
+  z-index:5;pointer-events:none;
+}
+.hud-badge{
+  background:rgba(0,0,0,.65);border:1px solid var(--border);
+  border-radius:6px;padding:5px 10px;font-size:10px;color:var(--muted);
+  backdrop-filter:blur(4px);
+}
+.hud-anim{color:var(--accent2);font-weight:700;font-size:11px}
+.hud-fps{color:var(--green)}
+
+/* Control bar */
+.ctrl-bar{
+  border-top:1px solid var(--border);background:#0a0c14;
+  padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0;
+}
+.anim-btn{
+  padding:6px 14px;border-radius:6px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);font-size:12px;cursor:pointer;
+  font-family:inherit;transition:all .15s;
+}
+.anim-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+.anim-btn.active{border-color:var(--accent2);color:var(--accent2);background:rgba(6,182,212,.1)}
+.speed-row{display:flex;align-items:center;gap:8px;margin-left:auto}
+.speed-row label{font-size:11px;color:var(--muted)}
+input[type=range]{width:80px;accent-color:var(--accent2);cursor:pointer}
+
+/* Statusbar */
+.statusbar{border-top:1px solid var(--border);background:#06080e;
+  padding:4px 16px;font-size:10px;color:var(--muted);display:flex;gap:16px;align-items:center;flex-shrink:0}
+.sb-dot{width:5px;height:5px;border-radius:50%;display:inline-block;margin-right:3px}
+.sd-g{background:var(--green);box-shadow:0 0 4px var(--green)}
+.sd-y{background:var(--yellow)}
+.sd-m{background:var(--muted)}
+
+/* Empty state */
+.empty-stage{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:10;pointer-events:none;
+}
+.empty-stage .big{font-size:64px;margin-bottom:12px;opacity:.3}
+.empty-stage p{font-size:13px;color:var(--muted);text-align:center;line-height:1.8}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:20px">🎭</span>
+  <h1>AI角色 → 2D骨骼动画 <span class="badge-new">NEW</span></h1>
+  <div class="nav-pills">
+    <a href="/" class="nav-pill">🎮 像素生成</a>
+    <a href="/cute" class="nav-pill">🌸 可爱动画</a>
+    <a href="/process" class="nav-pill">🔬 过程展示</a>
+    <span class="nav-pill active">🎭 AI角色动画</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ═══ LEFT ════ -->
+  <div class="left">
+
+    <div>
+      <div class="sec-title">📝 角色描述</div>
+      <textarea id="prompt" placeholder="例: warrior knight in shining armor, sword, fantasy RPG style, full body, white background">warrior knight in silver armor, holding sword, fantasy RPG style, full body, white background, detailed</textarea>
+    </div>
+
+    <div>
+      <div class="sec-title">👤 角色预设</div>
+      <div class="chips" id="preset-chips">
+        <div class="chip" data-p="warrior knight in silver armor, sword shield, fantasy RPG, full body, white bg">⚔️ 战士</div>
+        <div class="chip" data-p="dark mage in black robe, glowing staff, arcane magic, full body, white background">🔮 法师</div>
+        <div class="chip" data-p="elven archer in green cloak, bow and arrow, forest ranger, full body, white background">🏹 弓手</div>
+        <div class="chip" data-p="cute robot character, mechanical suit, sci-fi, full body, white background">🤖 机器人</div>
+        <div class="chip" data-p="female ninja in dark outfit, dual daggers, assassin, full body, white background">🗡️ 刺客</div>
+        <div class="chip" data-p="holy paladin in golden armor, divine shield, fantasy RPG, full body, white background">🛡️ 圣骑士</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>
+        <div class="sec-title">📐 宽度</div>
+        <select id="width">
+          <option value="512">512</option>
+          <option value="768" selected>768</option>
+        </select>
+      </div>
+      <div>
+        <div class="sec-title">📐 高度</div>
+        <select id="height">
+          <option value="768">768</option>
+          <option value="1024" selected>1024</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>
+        <div class="sec-title">🔢 步数</div>
+        <select id="steps">
+          <option value="15">15 (快)</option>
+          <option value="20" selected>20</option>
+          <option value="25">25 (慢)</option>
+        </select>
+      </div>
+      <div>
+        <div class="sec-title">🎲 种子</div>
+        <input type="number" id="seed" placeholder="随机">
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-title">⚙️ 模型</div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:6px 9px;font-size:11px;color:var(--accent2)">
+        waiIllustriousSDXL_v160 (本地 CUDA)
+      </div>
+    </div>
+
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px">
+      <button class="gen-btn" id="gen-btn" onclick="startGenerate()">
+        🎨 生成角色 → 骨骼动画
+      </button>
+      <label style="cursor:pointer;text-align:center;font-size:11px;color:var(--muted);
+        border:1px dashed var(--border);border-radius:6px;padding:6px;transition:border-color .15s"
+        onmouseover="this.style.borderColor='#4b5a72'" onmouseout="this.style.borderColor=''">
+        📁 或直接加载本地图片（跳过AI生成）
+        <input type="file" accept="image/*" style="display:none" onchange="loadLocalImage(this)">
+      </label>
+    </div>
+
+    <div>
+      <div class="sec-title">📋 生成日志</div>
+      <div class="log-box" id="log-box">等待生成...</div>
+    </div>
+
+  </div>
+
+  <!-- ═══ RIGHT STAGE ════ -->
+  <div class="right">
+
+    <div class="stage-area" id="stage">
+      <div class="stage-bg"></div>
+      <div class="stars" id="stars"></div>
+      <div class="stage-ground"></div>
+
+      <!-- Empty state -->
+      <div class="empty-stage" id="empty-state">
+        <div class="big">🎭</div>
+        <p>输入角色描述，点击生成<br>SDXL 将在本地 GPU 生成角色图像<br>然后自动套用 2D 骨骼动画</p>
+      </div>
+
+      <!-- Loading overlay -->
+      <div id="loading-overlay" style="display:none;position:absolute;inset:0;z-index:20;
+        background:rgba(4,6,13,.88);flex-direction:column;align-items:center;justify-content:center;gap:16px">
+        <div style="width:52px;height:52px;border:3px solid #1e1040;border-top-color:#a78bfa;
+          border-radius:50%;animation:spin .7s linear infinite"></div>
+        <div style="font-size:13px;color:#c4b5fd" id="loading-msg">初始化 SDXL 模型...</div>
+        <div style="font-size:11px;color:var(--muted)" id="loading-sub">首次加载约 30-60 秒</div>
+        <div style="width:240px;height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+          <div id="loading-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#06b6d4);
+            border-radius:2px;transition:width .5s"></div>
+        </div>
+      </div>
+
+      <div class="canvas-wrap" id="canvas-wrap" style="display:none">
+        <canvas id="anim-canvas" width="300" height="500"></canvas>
+        <div class="char-shadow"></div>
+      </div>
+
+      <div class="hud-top">
+        <div class="hud-badge">
+          <span class="hud-anim" id="hud-anim">— —</span>
+        </div>
+        <div class="hud-badge">
+          <span class="hud-fps" id="hud-fps">60 fps</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctrl-bar">
+      <span style="font-size:11px;color:var(--muted)">动画:</span>
+      <button class="anim-btn active" id="btn-idle"   onclick="setAnim('idle')">💤 待机</button>
+      <button class="anim-btn"        id="btn-walk"   onclick="setAnim('walk')">🚶 行走</button>
+      <button class="anim-btn"        id="btn-run"    onclick="setAnim('run')">🏃 奔跑</button>
+      <button class="anim-btn"        id="btn-attack" onclick="setAnim('attack')">⚔️ 攻击</button>
+      <button class="anim-btn"        id="btn-jump"   onclick="setAnim('jump')">⬆️ 跳跃</button>
+      <div class="speed-row">
+        <label>速度</label>
+        <input type="range" id="speed" min="0.3" max="3" step="0.1" value="1" oninput="setSpeed(+this.value)">
+        <span style="font-size:11px;color:var(--accent2)" id="speed-label">1.0×</span>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <div><span class="sb-dot sd-g"></span>GPU: CUDA</div>
+      <div><span class="sb-dot sd-y" id="sb-model-dot"></span><span id="sb-model">模型未加载</span></div>
+      <div id="sb-char" style="margin-left:auto;color:var(--muted)">未生成角色</div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+
+<script>
+// ── Stars ─────────────────────────────────────────────────────────────────────
+(function() {
+  const s = document.getElementById('stars');
+  for (let i = 0; i < 80; i++) {
+    const d = document.createElement('div');
+    const size = Math.random() * 2 + 1;
+    d.style.cssText = `position:absolute;width:${size}px;height:${size}px;
+      background:#fff;border-radius:50%;opacity:${Math.random()*.6+.1};
+      left:${Math.random()*100}%;top:${Math.random()*70}%;
+      animation:twinkle ${2+Math.random()*3}s infinite ${Math.random()*3}s`;
+    s.appendChild(d);
+  }
+  const st = document.createElement('style');
+  st.textContent = '@keyframes twinkle{0%,100%{opacity:.1}50%{opacity:.8}}';
+  document.head.appendChild(st);
+})();
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const app = {
+  charImg: null,     // HTMLImageElement of character
+  charW: 0, charH: 0,
+  anim: 'idle',
+  speed: 1.0,
+  running: false,
+  t: 0,
+  raf: null,
+  lastFpsTime: 0, frames: 0, fps: 60,
+  // canvas
+  canvas: null, ctx: null,
+  cW: 300, cH: 500,
+};
+
+// ── Presets ───────────────────────────────────────────────────────────────────
+document.querySelectorAll('#preset-chips .chip').forEach(c => {
+  c.addEventListener('click', () => {
+    document.getElementById('prompt').value = c.dataset.p;
+  });
+});
+
+// ── Animation state ───────────────────────────────────────────────────────────
+function setAnim(a) {
+  app.anim = a;
+  document.querySelectorAll('.anim-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-'+a).classList.add('active');
+  document.getElementById('hud-anim').textContent = {
+    idle:'💤 待机', walk:'🚶 行走', run:'🏃 奔跑', attack:'⚔️ 攻击', jump:'⬆️ 跳跃'
+  }[a];
+}
+function setSpeed(v) {
+  app.speed = v;
+  document.getElementById('speed-label').textContent = v.toFixed(1)+'×';
+}
+setAnim('idle');
+
+// ── Log ───────────────────────────────────────────────────────────────────────
+function addLog(msg, cls='') {
+  const b = document.getElementById('log-box');
+  const d = document.createElement('div');
+  if (cls) d.className = cls;
+  d.textContent = msg.replace(/^\[char_gen\] /, '');
+  b.appendChild(d);
+  b.scrollTop = b.scrollHeight;
+}
+function clearLog() { document.getElementById('log-box').innerHTML = ''; }
+
+// ── Generate ──────────────────────────────────────────────────────────────────
+async function startGenerate() {
+  if (app.running) return;
+  app.running = true;
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ 生成中...';
+  clearLog();
+
+  const overlay = document.getElementById('loading-overlay');
+  overlay.style.display = 'flex';
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('canvas-wrap').style.display = 'none';
+
+  let barVal = 5;
+  const barEl = document.getElementById('loading-bar');
+  barEl.style.width = '5%';
+
+  const body = {
+    prompt: document.getElementById('prompt').value,
+    width:  +document.getElementById('width').value,
+    height: +document.getElementById('height').value,
+    steps:  +document.getElementById('steps').value,
+    seed:   document.getElementById('seed').value || null,
+    remove_bg: true,
+  };
+
+  try {
+    const resp = await fetch('/api/gen-character', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        let ev;
+        try { ev = JSON.parse(line.slice(5).trim()); } catch { continue; }
+
+        if (ev.type === 'log') {
+          addLog(ev.msg, ev.msg.includes('ERROR') ? 'lerr' : 'linfo');
+          document.getElementById('loading-msg').textContent = ev.msg.replace(/^\[char_gen\] /,'').substring(0, 50);
+          barVal = Math.min(barVal + 8, 88);
+          barEl.style.width = barVal + '%';
+        } else if (ev.type === 'start') {
+          addLog('▶ ' + ev.msg, 'linfo');
+          document.getElementById('sb-model').textContent = 'SDXL 加载中...';
+        } else if (ev.type === 'done') {
+          barEl.style.width = '100%';
+          if (ev.success && ev.image) {
+            addLog('✓ 生成完成！加载骨骼动画...', 'lok');
+            await loadCharacter(ev.image, body.width, body.height);
+            document.getElementById('sb-char').textContent = `角色: ${body.prompt.substring(0,20)}...`;
+            document.getElementById('sb-model').textContent = 'SDXL 就绪';
+            document.getElementById('sb-model-dot').className = 'sb-dot sd-g';
+          } else {
+            addLog('✗ 失败: ' + (ev.error || '未知错误'), 'lerr');
+          }
+          overlay.style.display = 'none';
+        } else if (ev.type === 'error') {
+          addLog('✗ ' + ev.msg, 'lerr');
+          overlay.style.display = 'none';
+        }
+      }
+    }
+  } catch (e) {
+    addLog('✗ 网络错误: ' + e.message, 'lerr');
+    overlay.style.display = 'none';
+  }
+
+  app.running = false;
+  btn.disabled = false;
+  btn.textContent = '🎨 生成角色 → 骨骼动画';
+}
+
+// ── Load character and start animation ───────────────────────────────────────
+function loadCharacter(dataUrl, origW, origH) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      app.charImg = img;
+
+      // Scale to fit stage
+      const stage = document.getElementById('stage');
+      const stageH = stage.clientHeight - 100;
+      const ratio  = Math.min(300 / origW, stageH / origH, 1);
+      app.cW = Math.round(origW * ratio);
+      app.cH = Math.round(origH * ratio);
+      app.charW = app.cW;
+      app.charH = app.cH;
+
+      // Setup canvas
+      const canvas = document.getElementById('anim-canvas');
+      canvas.width  = app.cW;
+      canvas.height = app.cH;
+      app.canvas = canvas;
+      app.ctx    = canvas.getContext('2d');
+
+      document.getElementById('canvas-wrap').style.display = 'block';
+      document.getElementById('empty-state').style.display = 'none';
+
+      // Start animation loop
+      if (app.raf) cancelAnimationFrame(app.raf);
+      app.t = 0;
+      tick();
+      resolve();
+    };
+    img.src = dataUrl;
+  });
+}
+
+// ── Animation engine ──────────────────────────────────────────────────────────
+// Skeleton-style: slice character into horizontal regions, transform each
+const BONE_REGIONS = [
+  { name: 'head',      y0: 0.00, y1: 0.18 },  // head
+  { name: 'neck',      y0: 0.18, y1: 0.24 },  // neck/shoulders
+  { name: 'torso',     y0: 0.24, y1: 0.52 },  // upper body
+  { name: 'waist',     y0: 0.52, y1: 0.62 },  // waist/hips
+  { name: 'thighs',    y0: 0.62, y1: 0.78 },  // upper legs
+  { name: 'shins',     y0: 0.78, y1: 0.90 },  // lower legs
+  { name: 'feet',      y0: 0.90, y1: 1.00 },  // feet
+];
+
+// Animation transforms per bone per state — values deliberately large for visibility
+function getBoneTransform(bone, t, anim) {
+  const sp = app.speed;
+  const s = t * sp;  // scaled time
+  let dx = 0, dy = 0, rot = 0, scaleX = 1, scaleY = 1;
+
+  switch (anim) {
+    case 'idle': {
+      // Visible breathing + gentle bob
+      const bob = Math.sin(s * 1.8) * 6;       // ±6px vertical bob
+      const breathe = Math.sin(s * 1.0) * 0.03; // ±3% width breathe
+      if (bone === 'head')  { dy = bob * 1.0; rot = Math.sin(s*0.5)*0.04; }
+      if (bone === 'neck')  { dy = bob * 0.9; }
+      if (bone === 'torso') { dy = bob * 0.7; scaleX = 1+breathe; scaleY = 1-breathe*0.4; }
+      if (bone === 'waist') { dy = bob * 0.4; rot = Math.sin(s*1.8)*0.02; }
+      if (bone === 'thighs'){ dy = bob * 0.2; }
+      if (bone === 'shins') { dy = bob * 0.1; }
+      if (bone === 'feet')  { dy = 0; }
+      break;
+    }
+    case 'walk': {
+      const cycle = Math.sin(s * 3);
+      const hip   = Math.sin(s * 3) * 0.08;
+      if (bone === 'head')  { dy = Math.abs(cycle)*-4; rot = cycle*(-0.05); }
+      if (bone === 'neck')  { dy = Math.abs(cycle)*-3; }
+      if (bone === 'torso') { dy = Math.abs(cycle)*-2.5; rot = hip*0.5; }
+      if (bone === 'waist') { rot = -hip; dy = Math.abs(cycle)*-1.5; }
+      if (bone === 'thighs'){ rot = Math.sin(s*3+Math.PI)*0.30; dy = Math.abs(cycle)*2; }
+      if (bone === 'shins') { rot = Math.sin(s*3)*0.25; dy = Math.max(0,Math.sin(s*3))*8; }
+      if (bone === 'feet')  { dy = Math.max(0,Math.sin(s*3+Math.PI/2))*6; }
+      break;
+    }
+    case 'run': {
+      const cycle = Math.sin(s * 6);
+      const lean  = -0.12;
+      if (bone === 'head')  { dy = Math.abs(cycle)*-6; rot = lean + cycle*0.06; }
+      if (bone === 'neck')  { rot = lean*0.7; dy = Math.abs(cycle)*-5; }
+      if (bone === 'torso') { rot = lean; dy = Math.abs(cycle)*-4; scaleY = 0.95; }
+      if (bone === 'waist') { rot = -lean*0.5; dy = Math.abs(cycle)*-2; }
+      if (bone === 'thighs'){ rot = Math.sin(s*6+Math.PI)*0.45; dy = Math.abs(cycle)*3; }
+      if (bone === 'shins') { rot = Math.sin(s*6)*0.40; dy = Math.max(0,Math.sin(s*6))*12; }
+      if (bone === 'feet')  { dy = Math.max(0,Math.sin(s*6+Math.PI/2))*10; }
+      break;
+    }
+    case 'attack': {
+      const lunge = Math.sin(s * 4);
+      const slam  = Math.max(0, Math.sin(s * 4));
+      if (bone === 'head')  { dx = lunge*10; rot = lunge*0.12; }
+      if (bone === 'neck')  { dx = lunge*14; rot = lunge*0.10; }
+      if (bone === 'torso') { dx = lunge*18; rot = lunge*0.18; scaleX = 1+slam*0.08; }
+      if (bone === 'waist') { dx = lunge*12; rot = -lunge*0.08; }
+      if (bone === 'thighs'){ dx = lunge*5; dy = Math.abs(lunge)*4; }
+      if (bone === 'shins') { dy = Math.abs(lunge)*6; dx = lunge*2; }
+      if (bone === 'feet')  { dy = 0; }
+      break;
+    }
+    case 'jump': {
+      const phase = (s * 1.8) % (Math.PI * 2);
+      const upY   = -Math.abs(Math.sin(phase)) * 70;  // ±70px jump height
+      const squat = Math.sin(phase*0.5)*0.10;
+      if (bone === 'head')  { dy = upY * 0.98; rot = Math.sin(phase)*0.08; }
+      if (bone === 'neck')  { dy = upY * 0.95; }
+      if (bone === 'torso') { dy = upY * 0.90; scaleY = 1-Math.abs(squat)*0.6; }
+      if (bone === 'waist') { dy = upY * 0.75; scaleY = 1+Math.abs(squat)*1.4; }
+      if (bone === 'thighs'){ dy = upY * 0.55 + Math.sin(phase)*15; rot = Math.sin(phase)*0.30; }
+      if (bone === 'shins') { dy = upY * 0.35 + Math.sin(phase+.5)*12; rot = Math.sin(phase+.5)*0.35; }
+      if (bone === 'feet')  { dy = upY * 0.18 + Math.sin(phase+1)*8; }
+      break;
+    }
+  }
+  return { dx, dy, rot, scaleX, scaleY };
+}
+
+// ── Load local image file ─────────────────────────────────────────────────────
+function loadLocalImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    addLog('📁 加载本地图片: ' + file.name, 'linfo');
+    loadCharacter(e.target.result, 768, 1024).then(() => {
+      document.getElementById('sb-char').textContent = `角色: ${file.name}`;
+      addLog('✓ 图片加载完成，骨骼动画运行中', 'lok');
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function tick() {
+  if (!app.charImg) { app.raf = requestAnimationFrame(tick); return; }
+
+  const now = performance.now();
+  app.t += (now - (app._last || now)) / 1000;
+  app._last = now;
+
+  // FPS
+  app.frames++;
+  if (now - app.lastFpsTime > 500) {
+    app.fps = Math.round(app.frames * 1000 / (now - app.lastFpsTime));
+    app.frames = 0; app.lastFpsTime = now;
+    document.getElementById('hud-fps').textContent = app.fps + ' fps';
+  }
+
+  const { ctx, cW, cH, charImg } = app;
+  ctx.clearRect(0, 0, cW, cH);
+
+  // Draw each bone region
+  for (const bone of BONE_REGIONS) {
+    const srcY  = Math.floor(bone.y0 * charImg.height);
+    const srcH  = Math.ceil((bone.y1 - bone.y0) * charImg.height);
+    const destY = Math.floor(bone.y0 * cH);
+    const destH = Math.ceil((bone.y1 - bone.y0) * cH);
+    const pivotX = cW / 2;
+    const pivotY = destY + destH / 2;
+
+    const tf = getBoneTransform(bone.name, app.t, app.anim);
+
+    ctx.save();
+    ctx.translate(pivotX + tf.dx, pivotY + tf.dy);
+    ctx.rotate(tf.rot);
+    ctx.scale(tf.scaleX, tf.scaleY);
+    ctx.translate(-pivotX, -pivotY);
+
+    ctx.drawImage(
+      charImg,
+      0, srcY, charImg.width, srcH,   // source
+      0, destY, cW, destH              // dest
+    );
+    ctx.restore();
+  }
+
+  app.raf = requestAnimationFrame(tick);
+}
+</script>
+
+</body>
+</html>

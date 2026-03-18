@@ -134,6 +134,12 @@ else { Write-Host "POLL_TIMEOUT" }
 
 # 【输出格式规范】
 
+0. **【必须遵守】文档提交路径规则**：凡通过 `POST http://localhost:7439/open/submit` 提交文档时，
+   `filename` 字段必须以 `session_doc/{session_dirName}/` 为前缀（session_dirName = sessionId 去掉 `.md`）。
+   系统自动创建不存在的子目录。
+   示例：`"filename": "session_doc/session-1773151694653/report"`
+   **❌ 禁止**：直接提交到根目录（如 `"filename": "report"`）。
+
 1. **思考蓝图**：先用中文列出 1, 2, 3... 步骤，再开始执行
 2. **错误处理**：遇到错误时，输出错误原因 + 解决方案
 3. **验证方案**：每个解决方案必须有配套验证步骤

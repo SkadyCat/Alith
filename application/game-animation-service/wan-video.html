@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Wan Video — AI 视频生成</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#0d0d0d;--bg1:#1a1a1a;--bg2:#242424;--bg3:#2e2e2e;
+  --fg:#e8e8e8;--fg2:#aaa;
+  --accent:#7c6af5;--accent2:#f06292;--green:#4caf6e;--red:#e55;
+  --border:#333;
+}
+body{background:var(--bg0);color:var(--fg);font-family:'Segoe UI',system-ui,sans-serif;
+  display:flex;height:100vh;overflow:hidden}
+/* Sidebar */
+.sidebar{width:300px;min-width:300px;background:var(--bg1);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:16px;gap:12px;overflow-y:auto}
+.logo{font-size:18px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.logo span{color:var(--fg2);font-size:12px;font-weight:400;display:block;margin-top:2px}
+.nav-links{display:flex;gap:6px;flex-wrap:wrap}
+.nav-links a{color:var(--fg2);text-decoration:none;font-size:12px;padding:4px 8px;
+  background:var(--bg2);border-radius:4px;border:1px solid var(--border)}
+.nav-links a:hover{color:var(--fg);background:var(--bg3)}
+.sec-title{font-size:11px;color:var(--fg2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+textarea,select,input{background:var(--bg2);border:1px solid var(--border);color:var(--fg);
+  border-radius:6px;padding:8px;font-size:13px;width:100%}
+textarea{resize:vertical;min-height:80px}
+select:focus,textarea:focus,input:focus{outline:none;border-color:var(--accent)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;
+  background:#2a2060;color:#aab;border:1px solid #443}
+.gen-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;
+  border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:.2s}
+.gen-btn:hover:not(:disabled){background:#6a58e5}
+.gen-btn:disabled{opacity:.5;cursor:default}
+.log-box{flex:1;background:var(--bg2);border-radius:8px;padding:8px;
+  overflow-y:auto;font-family:monospace;font-size:11px;min-height:120px;max-height:200px}
+.log-box .lok{color:var(--green)}.log-box .lerr{color:var(--red)}.log-box .li{color:var(--accent2)}
+.log-box .ldl{color:#8af}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg1);
+  display:flex;align-items:center;gap:12px}
+.sb-item{font-size:12px;color:var(--fg2)}
+.sb-item span{color:var(--fg);font-weight:500}
+.stage{flex:1;display:flex;align-items:center;justify-content:center;
+  background:var(--bg0);position:relative;overflow:hidden}
+.empty-msg{text-align:center;color:var(--fg2)}
+.empty-msg .em-icon{font-size:56px;margin-bottom:12px}
+.empty-msg p{font-size:13px;line-height:1.6}
+#gif-wrap{display:none;flex-direction:column;align-items:center;gap:12px}
+#gif-img{max-width:90%;max-height:60vh;border-radius:8px;
+  border:1px solid var(--border);image-rendering:auto}
+.thumb-strip{display:flex;gap:4px;overflow-x:auto;max-width:90%;padding:4px 0}
+.thumb-strip img{height:56px;border-radius:4px;cursor:pointer;
+  border:2px solid transparent;flex-shrink:0}
+.thumb-strip img:hover{border-color:var(--accent)}
+.res-actions{display:none;gap:8px;flex-wrap:wrap;justify-content:center}
+.dl-btn{padding:7px 14px;background:var(--bg2);border:1px solid var(--border);color:var(--fg);
+  border-radius:6px;font-size:13px;cursor:pointer;text-decoration:none}
+.dl-btn:hover{background:var(--bg3)}
+/* Progress */
+.prog-wrap{position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--bg3)}
+.prog-bar{height:3px;background:var(--accent);width:0;transition:width .4s}
+/* Overlay */
+.overlay{display:none;position:absolute;inset:0;background:rgba(0,0,0,.5);
+  align-items:center;justify-content:center;z-index:10}
+.overlay-inner{text-align:center;color:#fff}
+.spinner{width:40px;height:40px;border:3px solid #444;border-top-color:var(--accent);
+  border-radius:50%;animation:sp .8s linear infinite;margin:0 auto 12px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="logo">🎬 Wan Video
+    <span>Wan2.1-T2V-1.3B · Text to Video</span>
+  </div>
+
+  <div class="nav-links">
+    <a href="/sprite">🗡️ 精灵帧</a>
+    <a href="/char">🦴 骨骼动画</a>
+    <a href="/">🎨 像素</a>
+  </div>
+
+  <div class="badge">首次运行自动下载模型 (~27GB)</div>
+
+  <div>
+    <div class="sec-title">✏️ 视频描述</div>
+    <textarea id="prompt" rows="5" placeholder="描述角色和动作，建议用英文...
+例: a warrior knight attacking with sword, dynamic motion, anime style, white background, full body"></textarea>
+  </div>
+
+  <div class="row2">
+    <div>
+      <div class="sec-title">📐 宽度</div>
+      <select id="vid-w">
+        <option value="320">320px</option>
+        <option value="480" selected>480px</option>
+        <option value="640">640px</option>
+      </select>
+    </div>
+    <div>
+      <div class="sec-title">📐 高度</div>
+      <select id="vid-h">
+        <option value="256">256px</option>
+        <option value="320" selected>320px</option>
+        <option value="480">480px</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row2">
+    <div>
+      <div class="sec-title">🎞️ 帧数</div>
+      <select id="vid-frames">
+        <option value="8">8帧 (快)</option>
+        <option value="16" selected>16帧</option>
+        <option value="24">24帧 (慢)</option>
+      </select>
+    </div>
+    <div>
+      <div class="sec-title">🚀 FPS</div>
+      <select id="vid-fps">
+        <option value="6">6fps</option>
+        <option value="8" selected>8fps</option>
+        <option value="12">12fps</option>
+      </select>
+    </div>
+  </div>
+
+  <div>
+    <div class="sec-title">🔢 推理步数</div>
+    <select id="steps">
+      <option value="15">15 (极快)</option>
+      <option value="20" selected>20</option>
+      <option value="30">30 (高质量)</option>
+    </select>
+  </div>
+
+  <div>
+    <div class="sec-title">🎲 种子 (留空=随机)</div>
+    <input id="seed-input" type="number" placeholder="随机">
+  </div>
+
+  <div style="margin-top:auto">
+    <button class="gen-btn" id="gen-btn" onclick="startGen()">🎬 生成视频</button>
+  </div>
+
+  <div>
+    <div class="sec-title">📋 日志</div>
+    <div class="log-box" id="log-box"></div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <div class="sb-item">模型: <span id="sb-model">Wan2.1-T2V-1.3B</span></div>
+    <div class="sb-item">状态: <span id="sb-status">待机</span></div>
+    <div class="sb-item" id="sb-info"></div>
+  </div>
+
+  <div class="stage">
+    <div class="empty-msg" id="empty">
+      <div class="em-icon">🎬</div>
+      <p>Wan Video — AI 视频生成</p>
+      <p style="margin-top:8px;font-size:12px">基于 Wan2.1-T2V-1.3B<br>输入描述，生成动态视频 GIF</p>
+      <p style="margin-top:8px;font-size:11px;color:#666">
+        首次运行将自动下载模型 (~27GB)，请耐心等待<br>
+        下载完成后每次生成约 30-60 秒
+      </p>
+    </div>
+
+    <div id="gif-wrap">
+      <img id="gif-img" src="" alt="Generated Video">
+      <div class="thumb-strip" id="thumb-strip"></div>
+      <div class="res-actions" id="res-actions">
+        <a class="dl-btn" id="dl-gif" href="#" download="wan-video.gif">⬇ 下载 GIF</a>
+      </div>
+    </div>
+
+    <div class="overlay" id="overlay">
+      <div class="overlay-inner">
+        <div class="spinner"></div>
+        <div id="overlay-msg">生成中...</div>
+      </div>
+    </div>
+
+    <div class="prog-wrap"><div class="prog-bar" id="prog"></div></div>
+  </div>
+</div>
+
+<script>
+const S = { running: false };
+
+function log(msg, cls='') {
+  const lb = document.getElementById('log-box');
+  const d = document.createElement('div');
+  if (cls) d.className = cls;
+  d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  lb.appendChild(d);
+  lb.scrollTop = lb.scrollHeight;
+}
+
+async function startGen() {
+  if (S.running) return;
+  S.running = true;
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true; btn.textContent = '⏳ 生成中...';
+
+  const ov = document.getElementById('overlay');
+  const prog = document.getElementById('prog');
+  ov.style.display = 'flex';
+  let pv = 5; prog.style.width = '5%';
+
+  const prompt = document.getElementById('prompt').value.trim() ||
+    'a warrior knight attacking with sword, dynamic motion, anime style, white background, full body';
+  const seedVal = document.getElementById('seed-input').value.trim();
+  const body = {
+    prompt,
+    frames: +document.getElementById('vid-frames').value,
+    fps:    +document.getElementById('vid-fps').value,
+    width:  +document.getElementById('vid-w').value,
+    height: +document.getElementById('vid-h').value,
+    steps:  +document.getElementById('steps').value,
+  };
+  if (seedVal) body.seed = parseInt(seedVal);
+
+  document.getElementById('sb-status').textContent = '生成中';
+  log(`▶ ${body.frames}帧 ${body.width}×${body.height} @ ${body.fps}fps`, 'li');
+
+  try {
+    const resp = await fetch('/api/gen-wan', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        let ev;
+        try { ev = JSON.parse(line.slice(5)); } catch { continue; }
+
+        if (ev.type === 'log') {
+          log(ev.msg);
+          // Progress heuristic
+          if (ev.msg.includes('Loading') || ev.msg.includes('Download')) pv = 15;
+          if (ev.msg.includes('Generating')) pv = 30;
+          if (ev.msg.includes('/')) {
+            const m = ev.msg.match(/(\d+)\/(\d+)/);
+            if (m) pv = 30 + Math.round(55 * parseInt(m[1]) / parseInt(m[2]));
+          }
+          prog.style.width = pv + '%';
+          document.getElementById('overlay-msg').textContent = ev.msg.replace(/\[wan_gen\] /,'');
+        } else if (ev.type === 'done') {
+          prog.style.width = '100%';
+          if (ev.success && ev.gif) {
+            loadVideo(ev);
+            document.getElementById('sb-status').textContent = '完成';
+            document.getElementById('sb-info').textContent =
+              `${ev.frame_count}帧 · ${ev.width}×${ev.height} · ${body.fps}fps`;
+          } else {
+            log('✗ ' + (ev.error || '生成失败'), 'lerr');
+            document.getElementById('empty').style.display = '';
+          }
+          ov.style.display = 'none';
+        } else if (ev.type === 'error') {
+          log('✗ ' + ev.msg, 'lerr');
+          ov.style.display = 'none';
+        } else if (ev.type === 'start') {
+          log(ev.msg, 'li');
+        }
+      }
+    }
+  } catch (e) {
+    log('✗ ' + e.message, 'lerr');
+    ov.style.display = 'none';
+  }
+
+  S.running = false;
+  btn.disabled = false; btn.textContent = '🎬 生成视频';
+}
+
+function loadVideo(data) {
+  document.getElementById('empty').style.display = 'none';
+  const gifWrap = document.getElementById('gif-wrap');
+  gifWrap.style.display = 'flex';
+
+  const img = document.getElementById('gif-img');
+  img.src = data.gif;
+  document.getElementById('dl-gif').href = data.gif;
+  document.getElementById('res-actions').style.display = 'flex';
+
+  const strip = document.getElementById('thumb-strip');
+  strip.innerHTML = '';
+  (data.thumbs || []).forEach(t => {
+    const el = document.createElement('img');
+    el.src = t;
+    strip.appendChild(el);
+  });
+
+  log(`✓ 视频生成完成！${data.frame_count}帧 · ${data.width}×${data.height}`, 'lok');
+}
+</script>
+</body>
+</html>

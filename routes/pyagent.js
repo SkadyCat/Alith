@@ -106,24 +106,52 @@ const PYAGENT_SERVER_SCRIPT = path.join(__dirname, '..', 'pyagent_server.js');
 let _launching = false;   // 防止并发重复启动
 let _pyagentProc = null;  // 持有子进程引用（hot-reload 安全）
 
+// 路由层日志写入（写到 docs/logs/pyagent-route.log）
+const _routeLogFile = path.join(__dirname, '..', 'docs', 'logs', 'pyagent-route.log');
+function rlog(level, msg, extra) {
+  try {
+    const ts  = new Date().toISOString();
+    const ext = extra ? ' ' + JSON.stringify(extra) : '';
+    fs.appendFileSync(_routeLogFile, `[${ts}] [${level}] ${msg}${ext}\n`, 'utf8');
+  } catch (_) {}
+}
+// 确保 logs 目录存在
+try { fs.mkdirSync(path.join(__dirname, '..', 'docs', 'logs'), { recursive: true }); } catch (_) {}
+
 function launchPyAgentService() {
   return new Promise((resolve) => {
     if (_launching) {
+      rlog('WARN', 'launchPyAgentService: 已在启动中，等待3s后返回');
       // 正在启动中，等待一段时间后直接 resolve
       setTimeout(resolve, 3000);
       return;
     }
     _launching = true;
+    rlog('INFO', 'launchPyAgentService: 开始启动 pyagent_server.js', { script: PYAGENT_SERVER_SCRIPT, node: process.execPath });
 
-    const child = spawn(process.execPath, [PYAGENT_SERVER_SCRIPT], {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true,
-      env: { ...process.env },
-    });
+    let child;
+    try {
+      child = spawn(process.execPath, [PYAGENT_SERVER_SCRIPT], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+        env: { ...process.env },
+      });
+    } catch (spawnErr) {
+      rlog('ERROR', 'launchPyAgentService: spawn 失败', { err: spawnErr.message, code: spawnErr.code });
+      _launching = false;
+      resolve();
+      return;
+    }
     child.unref();  // 不阻止 Node 主进程退出
     _pyagentProc = child;
+    rlog('INFO', 'launchPyAgentService: 进程已创建', { pid: child.pid });
     console.log(`[PyAgent] 已启动服务进程 PID=${child.pid}`);
+
+    // 监听子进程意外退出（detached 模式下 child.on('exit') 仍可触发）
+    child.on('error', (err) => {
+      rlog('ERROR', 'launchPyAgentService: 子进程 error', { pid: child.pid, err: err.message, code: err.code });
+    });
 
     // 等待服务就绪（最多 8 秒，每 500ms 轮询一次）
     let waited = 0;
@@ -136,6 +164,7 @@ function launchPyAgentService() {
       sock.connect(PYAGENT_PORT, PYAGENT_HOST, () => {
         sock.destroy();
         _launching = false;
+        rlog('INFO', 'launchPyAgentService: 服务就绪（TCP连接成功）', { waited, pid: child.pid });
         resolve();
       });
       sock.on('error', () => {
@@ -143,6 +172,7 @@ function launchPyAgentService() {
         waited += POLL_INTERVAL;
         if (waited >= MAX_WAIT) {
           _launching = false;
+          rlog('ERROR', 'launchPyAgentService: 等待超时，服务未就绪', { waited, pid: child.pid, port: PYAGENT_PORT });
           resolve();  // 超时也 resolve，让上层处理错误
         } else {
           setTimeout(tryConnect, POLL_INTERVAL);
@@ -398,19 +428,23 @@ router.post('/start', async (req, res) => {
       err.message.includes('connect')
     );
     if (!isConnRefused) {
+      rlog('ERROR', '/start: pyAgentRequest 非连接错误', { sessionId: params.sessionId, err: err.message });
       return res.status(503).json({ type: 'error', error: err.message });
     }
+    rlog('WARN', '/start: 连接被拒绝，自动启动 PyAgent 服务重试', { sessionId: params.sessionId, err: err.message });
     try {
       console.log('[PyAgent] 连接失败，正在自动启动 PyAgent 服务...');
       await launchPyAgentService();
       connectBroadcastSocket();
       const resp2 = await pyAgentRequest('start', params);
+      rlog('INFO', '/start: 自动启动后重试成功', { sessionId: params.sessionId });
       // 持久化用户任务到聊天文件（重试成功路径）
       if (params.sessionId && params.task) {
         persistPyChat(params.sessionId, 'user', params.task);
       }
       res.json(resp2);
     } catch (err2) {
+      rlog('ERROR', '/start: 自动启动后仍失败', { sessionId: params.sessionId, err: err2.message });
       res.status(503).json({ type: 'error', error: `PyAgent 服务启动失败: ${err2.message}` });
     }
   }

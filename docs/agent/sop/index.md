@@ -30,3 +30,4 @@
 | canvas-editor修改 | sop/canvas-editor.md | canvas-editor|画布|节点|控件|选中|渲染|session|bag |
 | 图像生成 | sop/image-gen.md | 图像生成|生成图片|背景图|纹理|图标|SD|ComfyUI|Stable Diffusion |
 | UE数据资产配置 | (inline) | DA_|DataAsset|数据资产|UE配置|Angelscript|TAPython|WeaponScreen|UIBaseDA |
+| 框架设计 | sop/framework-design.md | 设计框架|底层框架|设计思路|架构设计|节点设计|系统设计 |

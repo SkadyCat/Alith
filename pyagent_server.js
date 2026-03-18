@@ -28,6 +28,22 @@ const HISTORY_DIR = path.join(DOCS_DIR, 'history');
 const RUNTIME_DIR = path.join(ROOT_DIR, 'runtime');
 const CHAT_DIR = path.join(DOCS_DIR, 'agent', 'chat');
 const BASE_URL = 'http://localhost:7439';
+const LOG_DIR  = path.join(DOCS_DIR, 'logs');
+
+// ── 进程日志（追踪启动失败 / 自动停止原因）──────────────────────────────────
+fs.mkdirSync(LOG_DIR, { recursive: true });
+const PROCESS_LOG = path.join(LOG_DIR, 'pyagent-process.log');
+
+function plog(level, msg, extra) {
+  const ts   = new Date().toISOString();
+  const extraStr = extra ? ' ' + JSON.stringify(extra) : '';
+  const line = `[${ts}] [${level}] ${msg}${extraStr}\n`;
+  console.log(line.trimEnd());
+  try { fs.appendFileSync(PROCESS_LOG, line, 'utf8'); } catch (_) {}
+}
+
+// 启动时写入标记，方便确认日志文件已激活
+plog('INFO', '=== pyagent_server 启动 ===', { pid: process.pid, node: process.version });
 
 // ── 聊天持久化（直接写文件，不依赖 TCP 广播连接）────────────────────────────
 fs.mkdirSync(CHAT_DIR, { recursive: true });
@@ -216,6 +232,7 @@ function buildPrompt(params) {
 
 // ── doSpawn：实际 spawn Copilot CLI ────────────────────────────────────────────
 function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, params) {
+  plog('INFO', `[doSpawn] 尝试启动进程`, { sessionId, runId, relaunchCount: sess.relaunchCount || 0, cmd, shell });
   try {
     let child;
     try {
@@ -223,12 +240,16 @@ function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, pa
     } catch (epermErr) {
       if (epermErr.code === 'EPERM' || epermErr.message.includes('EPERM')) {
         // windowsHide:true 在某些 Windows 环境下会导致 EPERM，降级重试
+        plog('WARN', `[doSpawn] spawn EPERM (windowsHide:true)，降级重试`, { sessionId, runId, code: epermErr.code });
         console.warn('[PyAgent] spawn EPERM with windowsHide:true, retrying without...');
         child = spawn(cmd, agentArgs, { env, shell, windowsHide: false, cwd: ROOT_DIR });
       } else {
+        plog('ERROR', `[doSpawn] spawn 异常`, { sessionId, runId, err: epermErr.message, code: epermErr.code });
         throw epermErr;
       }
     }
+
+    plog('INFO', `[doSpawn] 进程已创建`, { sessionId, runId, pid: child.pid });
 
     sess.process    = child;
     sess.status     = 'running';
@@ -250,6 +271,7 @@ function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, pa
       sess.outputBuf += text;
       if (_firstOutput) {
         _firstOutput = false;
+        plog('INFO', `[doSpawn] 进程首次输出（已成功启动）`, { sessionId, runId, pid: child.pid });
         broadcast({ type: 'agent_launched', sessionId, message: 'CopilotCli 启动成功' });
       }
       broadcast({ type: 'agent_output', sessionId, stream: 'stdout', text });
@@ -265,9 +287,29 @@ function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, pa
       }
     });
     child.stderr.on('data', (chunk) => {
+      const stderrText = chunk.toString('utf8').trim();
+      if (stderrText) {
+        plog('WARN', `[doSpawn] 进程 stderr`, { sessionId, runId, pid: child.pid, text: stderrText.slice(0, 300) });
+      }
       broadcast({ type: 'agent_output', sessionId, stream: 'stderr', text: chunk.toString('utf8') });
     });
-    child.on('close', (code) => {
+    child.on('close', (code, signal) => {
+      // ── 分析退出原因 ──────────────────────────────────────────────────────
+      let stopReason;
+      if (sess.status === 'stopped') {
+        stopReason = '用户手动停止';
+      } else if (signal) {
+        stopReason = `收到信号 ${signal}（被外部强制终止）`;
+      } else if (code === 0) {
+        stopReason = `正常退出(0)，将自动重启(#${(sess.relaunchCount || 0) + 1})`;
+        if ((sess.relaunchCount || 0) >= 50) stopReason = '正常退出(0)，已达重启上限(50次)，停止';
+      } else if (code === null) {
+        stopReason = '退出码为 null（进程被信号终止或异常崩溃）';
+      } else {
+        stopReason = `非零退出码 ${code}，${(sess.outputBuf || '').includes('transient API error') ? '检测到API瞬时错误，将延迟重启' : '停止自动重启'}`;
+      }
+      plog('INFO', `[doSpawn] 进程退出`, { sessionId, runId, pid: child.pid, code, signal, reason: stopReason, outputLen: (sess.outputBuf || '').length });
+
       if (sess.historyDoc && sess.outputBuf.trim()) {
         try {
           const histPath = path.join(HISTORY_DIR, sess.historyDoc);
@@ -287,30 +329,43 @@ function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, pa
       sess.outputBuf = '';
       sess.process   = null;
 
-      // 正常退出（code=0）且未被用户手动停止 → 自动 relaunch（最多 50 次）
-      // pyagent 自身运行 POLL 脚本，relaunch 保持其持续监听 waitprocess/
-      if (code === 0 && sess.status !== 'stopped' && sess.relaunchCount < 50) {
+      // 正常退出（code=0）或 API 瞬时错误（code=1 且输出含 transient API error）
+      // 且未被用户手动停止 → 自动 relaunch（最多 50 次）
+      const isTransientApiError = code === 1 &&
+        (sess.outputBuf || '').includes('transient API error');
+      const shouldRelaunch = (code === 0 || isTransientApiError) &&
+        sess.status !== 'stopped' && sess.relaunchCount < 50;
+
+      if (shouldRelaunch) {
         sess.relaunchCount++;
         sess.status = 'running';
         const newRunId = Date.now().toString(36) + Math.random().toString(36).slice(2);
-        broadcast({ type: 'agent_output', sessionId, stream: 'stdout',
-          text: `\n[自动重启 #${sess.relaunchCount}]\n` });
-        doSpawn(cmd, agentArgs, env, shell, sess, sessionId, newRunId, histDoc, params);
+        const delayMs  = isTransientApiError ? 10000 : 0;  // 瞬时错误延迟 10s 再重启
+        const label    = isTransientApiError ? `[API瞬时错误，${delayMs/1000}s 后重启 #${sess.relaunchCount}]`
+                                             : `[自动重启 #${sess.relaunchCount}]`;
+        plog('INFO', `[doSpawn] 自动重启`, { sessionId, newRunId, relaunchCount: sess.relaunchCount, isTransientApiError, delayMs });
+        broadcast({ type: 'agent_output', sessionId, stream: 'stdout', text: `\n${label}\n` });
+        setTimeout(() => {
+          doSpawn(cmd, agentArgs, env, shell, sess, sessionId, newRunId, histDoc, params);
+        }, delayMs);
         return;
       }
 
       sess.status = 'idle';
       sess.relaunchCount = 0;
+      plog('INFO', `[doSpawn] 进程彻底停止，状态→idle`, { sessionId, runId, code, signal });
       broadcast({ type: 'status', sessionId, status: 'idle', exitCode: code, runId });
       broadcast({ type: 'agent_output', sessionId, stream: 'done', text: `\n[Agent 已退出，退出码: ${code}]\n` });
     });
     child.on('error', (err) => {
+      plog('ERROR', `[doSpawn] 进程 error 事件`, { sessionId, runId, pid: child.pid, err: err.message, code: err.code });
       sess.process = null;
       sess.status  = 'error';
       broadcast({ type: 'status', sessionId, status: 'error', error: err.message, runId });
       broadcast({ type: 'agent_output', sessionId, stream: 'stderr', text: `[启动失败: ${err.message}]` });
     });
   } catch (e) {
+    plog('ERROR', `[doSpawn] spawn 顶层异常`, { sessionId, runId, err: e.message, stack: e.stack && e.stack.split('\n').slice(0,3).join(' | ') });
     sess.process = null;
     sess.status  = 'error';
     broadcast({ type: 'status', sessionId, status: 'error', error: e.message, runId });
@@ -471,8 +526,10 @@ function handleAction(action, params, respond, socket) {
         if (proxyOk) {
           env.HTTPS_PROXY = 'http://127.0.0.1:7890';
           env.HTTP_PROXY  = 'http://127.0.0.1:7890';
+          plog('INFO', '[start] 代理可用，已设置 HTTPS_PROXY', { sessionId, runId, proxy: 'http://127.0.0.1:7890' });
           console.log('[PyAgent] 代理可用，已设置 HTTPS_PROXY=http://127.0.0.1:7890');
         } else {
+          plog('WARN', '[start] 代理不可用（7890未开放），使用直连', { sessionId, runId });
           console.log('[PyAgent] 代理不可用（端口 7890 未开放），使用直连');
         }
       }
@@ -493,6 +550,8 @@ function handleAction(action, params, respond, socket) {
 
   if (action === 'stop') {
     const sess = getSession(sessionId);
+    const pid  = sess.process ? sess.process.pid : null;
+    plog('INFO', `[stop] 用户手动停止`, { sessionId, pid, prevStatus: sess.status });
     if (sess.process) {
       try { sess.process.kill('SIGTERM'); } catch (_) {}
       try { sess.process.kill('SIGKILL'); } catch (_) {}

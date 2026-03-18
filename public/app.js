@@ -2618,22 +2618,23 @@ async function loadTaskPrefixDocs() {
     const data = await res.json();
     const docs = data.docs || [];
 
-    function fillPrefixSel(selId) {
+    function fillPrefixSel(selId, filterPrefix) {
       const sel = document.getElementById(selId);
       if (!sel) return;
       const current = sel.value;
       sel.innerHTML = '<option value="">— 无前缀 —</option>';
-      docs.forEach(p => {
+      const list = filterPrefix ? docs.filter(p => p.startsWith(filterPrefix)) : docs;
+      list.forEach(p => {
         const opt = document.createElement('option');
         opt.value = p;
-        opt.textContent = p.replace(/\.md$/, '');
+        opt.textContent = p.replace(/\.md$/, '').replace(filterPrefix || '', '');
         sel.appendChild(opt);
       });
       if (current) sel.value = current;
     }
 
     fillPrefixSel('agentTaskPrefix');
-    fillPrefixSel('pyagentTaskPrefix');
+    fillPrefixSel('pyagentTaskPrefix', 'agent/setting/');
   } catch (e) {}
 }
 

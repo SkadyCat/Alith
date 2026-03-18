@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌸 可爱角色骨骼动画</title>
+<style>
+:root{--bg:#0e0a18;--panel:#18142a;--border:#2d2550;--accent:#b06cff;--accent2:#ff6cb0;--green:#4ade80;--text:#f0e6ff;--muted:#8b7ab8;--card:#201a35}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI','Microsoft YaHei',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+header{background:linear-gradient(135deg,#2a0e4a,#0e1a3a);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:12px}
+header h1{font-size:18px;color:#e0aaff;letter-spacing:1px}
+.badge{padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;background:#200a40;color:#e0aaff;border:1px solid #7c3aed}
+.nav-link{margin-left:auto;padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;text-decoration:none;transition:all .15s}
+.nav-link:hover{border-color:var(--accent);color:var(--accent)}
+.layout{display:grid;grid-template-columns:300px 1fr;flex:1;overflow:hidden}
+/* Left */
+.left{border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+.sec{padding:14px;border-bottom:1px solid var(--border)}
+.sec-title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{padding:4px 11px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;cursor:pointer;transition:all .15s}
+.chip:hover,.chip.active{border-color:var(--accent);color:#e0aaff;background:#1e0a40}
+.color-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:4px}
+.color-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.color-dot:hover,.color-dot.active{border-color:#fff;transform:scale(1.15)}
+label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;margin-top:8px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.anim-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.anim-btn{padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s;text-align:center}
+.anim-btn:hover,.anim-btn.active{border-color:var(--accent2);background:#3a0a2a;color:#ff9fd4}
+.export-btn{width:100%;padding:10px;background:linear-gradient(135deg,#6a00c8,#b02060);border:none;border-radius:6px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s;margin-top:6px}
+.export-btn:hover{opacity:.85}
+.export-btn:disabled{opacity:.4;cursor:not-allowed}
+.speed-row{display:flex;align-items:center;gap:8px;margin-top:4px}
+.speed-val{font-size:11px;color:var(--accent);min-width:28px;text-align:right}
+/* Right - canvas area */
+.right{display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#1a0e30 0%,#080614 70%);position:relative;overflow:hidden}
+#main-canvas{border-radius:12px;box-shadow:0 0 60px rgba(176,108,255,.15)}
+.ctrl-bar{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;background:rgba(14,10,24,.85);border:1px solid var(--border);border-radius:24px;padding:8px 16px;backdrop-filter:blur(8px)}
+.ctrl-btn{background:none;border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:11px;padding:4px 12px;cursor:pointer;font-family:inherit;transition:all .15s}
+.ctrl-btn:hover{border-color:var(--accent);color:var(--accent)}
+.ctrl-btn.on{border-color:var(--green);color:var(--green)}
+/* Status */
+.statusbar{border-top:1px solid var(--border);background:#06040e;padding:5px 14px;font-size:10px;color:var(--muted);display:flex;gap:16px;align-items:center}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:3px;background:var(--green)}
+/* Export progress */
+.progress-bar{width:100%;height:4px;background:var(--card);border-radius:2px;margin-top:8px;overflow:hidden;display:none}
+.progress-fill{height:100%;background:linear-gradient(90deg,#b06cff,#ff6cb0);border-radius:2px;transition:width .1s}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌸 可爱骨骼动画</h1>
+  <span class="badge">Skeleton 2D</span>
+  <span class="badge" style="background:#0a200a;color:#4ade80;border-color:#16a34a">实时渲染</span>
+  <a class="nav-link" href="/">← 像素风</a>
+</header>
+
+<div class="layout">
+  <!-- ═══ LEFT ═══ -->
+  <div class="left">
+
+    <div class="sec">
+      <div class="sec-title">🧁 角色风格</div>
+      <div class="chips" id="char-chips">
+        <div class="chip active" data-char="princess">👸 公主</div>
+        <div class="chip" data-char="knight">⚔️ 骑士</div>
+        <div class="chip" data-char="witch">🧙 魔女</div>
+        <div class="chip" data-char="cat">🐱 猫娘</div>
+        <div class="chip" data-char="fairy">🧚 精灵</div>
+        <div class="chip" data-char="robot">🤖 机器人</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🎨 主题色</div>
+      <div class="color-grid" id="color-grid"></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🎬 动画</div>
+      <div class="anim-btns" id="anim-btns">
+        <div class="anim-btn active" data-anim="idle">💤 待机</div>
+        <div class="anim-btn" data-anim="walk">🚶 行走</div>
+        <div class="anim-btn" data-anim="run">🏃 奔跑</div>
+        <div class="anim-btn" data-anim="wave">👋 挥手</div>
+        <div class="anim-btn" data-anim="dance">💃 跳舞</div>
+        <div class="anim-btn" data-anim="attack">⚔️ 攻击</div>
+        <div class="anim-btn" data-anim="jump">🦘 跳跃</div>
+        <div class="anim-btn" data-anim="spin">🌀 旋转</div>
+      </div>
+      <label style="margin-top:10px">播放速度</label>
+      <div class="speed-row">
+        <input type="range" id="speed" min="0.2" max="3" step="0.1" value="1">
+        <span class="speed-val" id="speed-val">1.0×</span>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">✨ 特效</div>
+      <div class="chips" id="fx-chips">
+        <div class="chip active" data-fx="particles">✨ 粒子</div>
+        <div class="chip active" data-fx="shadow">🌑 阴影</div>
+        <div class="chip" data-fx="glow">💫 光晕</div>
+        <div class="chip" data-fx="trail">🌈 拖尾</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🖌️ 画风</div>
+      <label>头身比</label>
+      <div class="chips" id="chibi-chips">
+        <div class="chip" data-chibi="0">写实</div>
+        <div class="chip active" data-chibi="1">Q版</div>
+        <div class="chip" data-chibi="2">超Q</div>
+      </div>
+      <label>轮廓线</label>
+      <div class="chips" id="outline-chips">
+        <div class="chip active" data-outline="0">无线</div>
+        <div class="chip" data-outline="1.5">细线</div>
+        <div class="chip" data-outline="3">粗线</div>
+      </div>
+      <label>着色风格</label>
+      <div class="chips" id="shading-chips">
+        <div class="chip" data-shading="flat">纯色</div>
+        <div class="chip active" data-shading="gradient">渐变</div>
+        <div class="chip" data-shading="cel">赛璐珞</div>
+      </div>
+      <label>背景</label>
+      <div class="chips" id="bg-chips">
+        <div class="chip active" data-bg="dark">星空</div>
+        <div class="chip" data-bg="light">浅色</div>
+        <div class="chip" data-bg="transparent">透明</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">📤 导出</div>
+      <label>帧数 (GIF)</label>
+      <div class="chips" id="frame-chips">
+        <div class="chip" data-frames="12">12帧</div>
+        <div class="chip active" data-frames="24">24帧</div>
+        <div class="chip" data-frames="36">36帧</div>
+      </div>
+      <button class="export-btn" id="export-btn" onclick="startExport()">⬇ 导出动画 GIF</button>
+      <div class="progress-bar" id="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <div id="export-status" style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center"></div>
+    </div>
+
+  </div>
+
+  <!-- ═══ RIGHT ═══ -->
+  <div class="right">
+    <canvas id="main-canvas" width="480" height="480"></canvas>
+    <div class="ctrl-bar">
+      <button class="ctrl-btn on" id="play-btn" onclick="togglePlay()">⏸ 暂停</button>
+      <button class="ctrl-btn" onclick="resetAnim()">⏮ 重置</button>
+      <span id="frame-info" style="font-size:10px;color:var(--muted);padding:0 4px">帧: 0</span>
+    </div>
+  </div>
+</div>
+
+<div class="statusbar">
+  <span><span class="dot"></span>骨骼动画引擎 v1.0</span>
+  <span id="status-msg">正在渲染...</span>
+  <span id="fps-counter" style="margin-left:auto">60 fps</span>
+</div>
+
+<!-- gif.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js" onerror="gifJsError=true"></script>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════════════════════
+const W = 480, H = 480, CX = W/2, CY = H/2;
+const canvas = document.getElementById('main-canvas');
+const ctx = canvas.getContext('2d');
+
+let playing = true;
+let animTime = 0;
+let lastTs = 0;
+let animSpeed = 1;
+let currentAnim = 'idle';
+let currentChar = 'princess';
+let fxEnabled = {particles: true, shadow: true, glow: false, trail: false};
+let styleConfig = { chibiLevel: 1, outlineWidth: 0, shadingMode: 'gradient', bgStyle: 'dark' };
+let exportFrames = 24;
+let frameIdx = 0;
+let fpsFrames = 0, fpsTimer = 0;
+
+// ── Color themes ──────────────────────────────────────────────────────────────
+const THEMES = [
+  {name:'粉紫',  body:'#e88edc', hair:'#7b2f8c', skin:'#ffe0d4', outfit:'#d264c8', accent:'#f4b8f0'},
+  {name:'天蓝',  body:'#6ec8f8', hair:'#1a4a8a', skin:'#ffe0d4', outfit:'#3a9de8', accent:'#b0e8ff'},
+  {name:'翠绿',  body:'#6ce88a', hair:'#1a5a2a', skin:'#ffe0d4', outfit:'#2ab850', accent:'#b0f0c0'},
+  {name:'金橙',  body:'#f8c44e', hair:'#8a4a00', skin:'#ffe0d4', outfit:'#f09020', accent:'#fde8a0'},
+  {name:'玫红',  body:'#f86e8e', hair:'#6a0a2a', skin:'#ffe0d4', outfit:'#e83060', accent:'#fcc0d0'},
+  {name:'冰白',  body:'#e8f0ff', hair:'#a0b0d0', skin:'#ffe0d4', outfit:'#c0d0f0', accent:'#ffffff'},
+  {name:'暗紫',  body:'#9060d8', hair:'#200840', skin:'#f0d8e8', outfit:'#6030b0', accent:'#c090ff'},
+  {name:'秋棕',  body:'#d09060', hair:'#402010', skin:'#f0d0b0', outfit:'#a06030', accent:'#e8c080'},
+  {name:'霓虹',  body:'#00ffcc', hair:'#ff00aa', skin:'#ffe0d4', outfit:'#aa00ff', accent:'#00aaff'},
+  {name:'炫彩',  body:'#ff6060', hair:'#600000', skin:'#ffe0d4', outfit:'#ff3030', accent:'#ff9090'},
+  {name:'哑金',  body:'#c8a840', hair:'#3a2800', skin:'#f0d8b0', outfit:'#a88020', accent:'#e8d060'},
+  {name:'暗夜',  body:'#404060', hair:'#101020', skin:'#c8b0d0', outfit:'#202040', accent:'#8080c0'},
+];
+
+let activeTheme = THEMES[0];
+
+// Character shape presets
+const CHAR_PRESETS = {
+  princess: {headR:52, bodyH:55, bodyW:42, legLen:58, armLen:44, earType:'human', accessory:'crown'},
+  knight:   {headR:46, bodyH:62, bodyW:48, legLen:62, armLen:46, earType:'human', accessory:'helmet'},
+  witch:    {headR:48, bodyH:52, bodyW:36, legLen:56, armLen:44, earType:'human', accessory:'hat'},
+  cat:      {headR:50, bodyH:50, bodyW:38, legLen:54, armLen:42, earType:'cat',   accessory:'none'},
+  fairy:    {headR:46, bodyH:44, bodyW:32, legLen:50, armLen:40, earType:'elf',   accessory:'wings'},
+  robot:    {headR:44, bodyH:64, bodyW:52, legLen:60, armLen:48, earType:'robot', accessory:'antenna'},
+};
+
+// ── Particles ─────────────────────────────────────────────────────────────────
+const particles = [];
+function spawnParticle(x, y, color) {
+  for (let i = 0; i < 2; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random()-0.5)*2,
+      vy: -Math.random()*2-0.5,
+      life: 1, decay: Math.random()*0.02+0.015,
+      r: Math.random()*4+2,
+      color: color || activeTheme.accent,
+    });
+  }
+}
+function updateParticles(dt) {
+  for (let i = particles.length-1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.04;
+    p.life -= p.decay;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    ctx.globalAlpha = p.life * 0.8;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SKELETON & ANIMATION
+// ══════════════════════════════════════════════════════════════════════════════
+// Each bone: { angle (radians), length }
+// Skeleton joints: hips, spine, chest, head, armL, forearmL, armR, forearmR,
+//                  thighL, shinL, thighR, shinR
+function getBones(t, anim) {
+  const s = animSpeed;
+  const T = t;
+  const bones = {
+    bodyY: 0, bodyX: 0, bodyAngle: 0,
+    spineAngle: 0,
+    headAngle: 0, headNod: 0,
+    armLAngle: 0, forearmLAngle: 0,
+    armRAngle: 0, forearmRAngle: 0,
+    thighLAngle: 0, shinLAngle: 0,
+    thighRAngle: 0, shinRAngle: 0,
+    footLAngle: 0, footRAngle: 0,
+    squash: 1, stretch: 1,
+    blushIntensity: 0.5,
+    eyeOpen: 1, pupilScale: 1,
+    mouthCurve: 0.3,
+  };
+
+  switch(anim) {
+    case 'idle': {
+      const b = Math.sin(T*2)*0.04;
+      bones.bodyY   = Math.sin(T*2)*2;
+      bones.spineAngle = b;
+      bones.headNod = Math.sin(T*1.5)*0.04;
+      bones.armLAngle  = -0.15 + Math.sin(T*2)*0.05;
+      bones.forearmLAngle = 0.3;
+      bones.armRAngle  =  0.15 - Math.sin(T*2)*0.05;
+      bones.forearmRAngle = -0.3;
+      bones.thighLAngle = 0; bones.shinLAngle = 0.1;
+      bones.thighRAngle = 0; bones.shinRAngle = 0.1;
+      bones.eyeOpen = 1 - Math.max(0, Math.sin(T*0.7) > 0.95 ? 0.8 : 0);
+      bones.blushIntensity = 0.5 + Math.sin(T)*0.1;
+      break;
+    }
+    case 'walk': {
+      const phase = T * 3;
+      bones.bodyY = Math.abs(Math.sin(phase)) * -3;
+      bones.spineAngle = Math.sin(phase)*0.06;
+      bones.headAngle  = Math.sin(phase)*0.04;
+      bones.armLAngle  = Math.sin(phase)*0.5;
+      bones.forearmLAngle = Math.max(0, Math.sin(phase)*0.4);
+      bones.armRAngle  = -Math.sin(phase)*0.5;
+      bones.forearmRAngle = Math.max(0, -Math.sin(phase)*0.4);
+      bones.thighLAngle = Math.sin(phase+Math.PI)*0.55;
+      bones.shinLAngle  = Math.max(0.05, -Math.sin(phase+Math.PI)*0.5+0.3);
+      bones.thighRAngle = Math.sin(phase)*0.55;
+      bones.shinRAngle  = Math.max(0.05, -Math.sin(phase)*0.5+0.3);
+      bones.squash = 1; bones.stretch = 1;
+      break;
+    }
+    case 'run': {
+      const phase = T * 5;
+      bones.bodyY = Math.abs(Math.sin(phase)) * -5;
+      bones.bodyAngle = Math.sin(phase)*0.08;
+      bones.spineAngle = Math.sin(phase)*0.1;
+      bones.armLAngle  = Math.sin(phase)*0.9;
+      bones.forearmLAngle = Math.max(0, Math.sin(phase)*0.6);
+      bones.armRAngle  = -Math.sin(phase)*0.9;
+      bones.forearmRAngle = Math.max(0, -Math.sin(phase)*0.6);
+      bones.thighLAngle = Math.sin(phase+Math.PI)*0.9;
+      bones.shinLAngle  = Math.max(0.1, -Math.sin(phase+Math.PI)*0.8+0.5);
+      bones.thighRAngle = Math.sin(phase)*0.9;
+      bones.shinRAngle  = Math.max(0.1, -Math.sin(phase)*0.8+0.5);
+      break;
+    }
+    case 'wave': {
+      bones.bodyY = Math.sin(T*2)*1.5;
+      bones.spineAngle = Math.sin(T*2)*0.05;
+      bones.headAngle = Math.sin(T*3)*0.06;
+      bones.armLAngle = -0.2;
+      bones.forearmLAngle = 0.25;
+      // Right arm waves
+      bones.armRAngle = -1.8 + Math.sin(T*4)*0.4;
+      bones.forearmRAngle = -0.8 + Math.sin(T*4+0.5)*0.6;
+      bones.thighLAngle = 0; bones.shinLAngle = 0.1;
+      bones.thighRAngle = 0; bones.shinRAngle = 0.1;
+      bones.mouthCurve = 0.5;
+      bones.blushIntensity = 0.7;
+      if (fxEnabled.particles && Math.sin(T*4) > 0.9) {
+        const hx = CX + 60, hy = CY - 120;
+        spawnParticle(hx, hy, activeTheme.accent);
+      }
+      break;
+    }
+    case 'dance': {
+      const d = T * 2.5;
+      bones.bodyY = Math.sin(d*2)*8;
+      bones.bodyX = Math.sin(d)*10;
+      bones.bodyAngle = Math.sin(d)*0.18;
+      bones.spineAngle = Math.sin(d+0.5)*0.12;
+      bones.headAngle = Math.sin(d*2)*0.1;
+      bones.armLAngle = -1.2 + Math.sin(d*2)*0.8;
+      bones.forearmLAngle = 0.5 + Math.sin(d)*0.5;
+      bones.armRAngle = 1.2 - Math.sin(d*2)*0.8;
+      bones.forearmRAngle = -0.5 - Math.sin(d)*0.5;
+      bones.thighLAngle = Math.sin(d+Math.PI)*0.45;
+      bones.shinLAngle  = Math.max(0, Math.sin(d+Math.PI)*0.5+0.1);
+      bones.thighRAngle = Math.sin(d)*0.45;
+      bones.shinRAngle  = Math.max(0, Math.sin(d)*0.5+0.1);
+      bones.blushIntensity = 0.8;
+      bones.mouthCurve = 0.6;
+      if (fxEnabled.particles) spawnParticle(CX + bones.bodyX, CY - 80 + bones.bodyY, activeTheme.accent);
+      break;
+    }
+    case 'attack': {
+      const p = (T * 2.5) % (Math.PI*2);
+      const slash = Math.pow(Math.sin(p*0.5), 2);
+      bones.bodyY = -slash*6;
+      bones.bodyAngle = slash * 0.3;
+      bones.spineAngle = slash * 0.2;
+      bones.armRAngle = -2.0 + slash * 2.8;
+      bones.forearmRAngle = -0.5 + slash * 0.6;
+      bones.armLAngle = -0.3;
+      bones.forearmLAngle = 0.3;
+      bones.thighLAngle = 0.2; bones.shinLAngle = 0.15;
+      bones.thighRAngle = -0.1; bones.shinRAngle = 0.05;
+      if (fxEnabled.particles && slash > 0.8) {
+        spawnParticle(CX + 60, CY - 50, '#fff');
+        spawnParticle(CX + 60, CY - 50, activeTheme.accent);
+      }
+      break;
+    }
+    case 'jump': {
+      const jp = (T * 2) % (Math.PI*2);
+      const inAir = Math.sin(jp) > 0;
+      const jumpH = Math.max(0, Math.sin(jp)) * 80;
+      bones.bodyY = -jumpH;
+      bones.squash = inAir ? 1 : Math.max(0.7, 1 - jumpH/200);
+      bones.stretch = inAir ? 1 + jumpH/160 : 1;
+      bones.spineAngle = (inAir ? -0.1 : 0.1) * (jumpH/80);
+      bones.armLAngle = inAir ? -0.8 : 0.2;
+      bones.forearmLAngle = inAir ? 0.4 : -0.1;
+      bones.armRAngle = inAir ? 0.8 : -0.2;
+      bones.forearmRAngle = inAir ? -0.4 : 0.1;
+      bones.thighLAngle = inAir ? -0.7 : 0.1;
+      bones.shinLAngle  = inAir ? 0.6 : 0.1;
+      bones.thighRAngle = inAir ? -0.7 : 0.1;
+      bones.shinRAngle  = inAir ? 0.6 : 0.1;
+      if (!inAir && jumpH < 5 && fxEnabled.particles) {
+        spawnParticle(CX-15, CY+20, '#ddd');
+        spawnParticle(CX+15, CY+20, '#ddd');
+      }
+      break;
+    }
+    case 'spin': {
+      const sp = T * 2;
+      bones.bodyAngle = sp;
+      bones.spineAngle = Math.sin(sp*0.5)*0.1;
+      bones.headAngle = -sp * 0.8;
+      bones.armLAngle = -1.2 - Math.sin(sp)*0.3;
+      bones.forearmLAngle = 1.0;
+      bones.armRAngle = 1.2 + Math.sin(sp)*0.3;
+      bones.forearmRAngle = -1.0;
+      bones.thighLAngle = Math.sin(sp)*0.6;
+      bones.shinLAngle = Math.max(0.1, Math.sin(sp)*0.5+0.2);
+      bones.thighRAngle = -Math.sin(sp)*0.6;
+      bones.shinRAngle = Math.max(0.1, -Math.sin(sp)*0.5+0.2);
+      if (fxEnabled.particles) spawnParticle(
+        CX + Math.cos(sp)*40, CY - 60 + Math.sin(sp)*20, activeTheme.accent
+      );
+      break;
+    }
+  }
+  return bones;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// RENDERER
+// ══════════════════════════════════════════════════════════════════════════════
+function drawLimb(x1, y1, x2, y2, w, color, cap='round') {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = w;
+  ctx.lineCap = cap;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  if (styleConfig.outlineWidth > 0) {
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.lineWidth = w + styleConfig.outlineWidth * 2;
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  ctx.restore();
+}
+
+function drawRoundedRect(x, y, w, h, r, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.roundRect(x - w/2, y, w, h, r);
+  ctx.fill();
+}
+
+// Forward kinematics: given parent joint, bone angle, bone length → child joint
+function fk(px, py, parentAngle, boneAngle, boneLen) {
+  const angle = parentAngle + boneAngle;
+  return {
+    x: px + Math.sin(angle) * boneLen,
+    y: py + Math.cos(angle) * boneLen,
+    angle,
+  };
+}
+
+function drawCharacter(bones) {
+  const basePreset = CHAR_PRESETS[currentChar];
+  const T = activeTheme;
+
+  // ── Chibi scaling ──────────────────────────────────────────────────────────
+  const chibiHS = [0.82, 1.0, 1.3][styleConfig.chibiLevel];
+  const chibiBS = [1.18, 1.0, 0.72][styleConfig.chibiLevel];
+  const preset = {
+    headR:  basePreset.headR  * chibiHS,
+    bodyH:  basePreset.bodyH  * chibiBS,
+    bodyW:  basePreset.bodyW  * chibiBS,
+    legLen: basePreset.legLen * chibiBS,
+    armLen: basePreset.armLen * chibiBS,
+    earType:   basePreset.earType,
+    accessory: basePreset.accessory,
+  };
+
+  // ── Shading helper ─────────────────────────────────────────────────────────
+  function fillStyle(gradFn, flatColor, celColor) {
+    if (styleConfig.shadingMode === 'flat') return flatColor;
+    if (styleConfig.shadingMode === 'cel')  return celColor;
+    return gradFn();
+  }
+
+  // ── Outline helper ─────────────────────────────────────────────────────────
+  function outlineShape(w) {
+    if (styleConfig.outlineWidth <= 0) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.lineWidth = styleConfig.outlineWidth * w;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  const bx = CX + (bones.bodyX || 0);
+  const by = CY + (bones.bodyY || 0) + 60;
+  const bAngle = bones.bodyAngle || 0;
+
+  // ── Shadow ───────────────────────────────────────────────────────────────
+  if (fxEnabled.shadow) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(bx, CY + 62, 36, 10, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ── Glow ─────────────────────────────────────────────────────────────────
+  if (fxEnabled.glow) {
+    ctx.save();
+    const g = ctx.createRadialGradient(bx, by - 40, 10, bx, by - 40, 80);
+    g.addColorStop(0, T.accent + '40');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(bx, by - 40, 80, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.translate(bx, by);
+  ctx.rotate(bAngle);
+  ctx.scale(bones.squash || 1, bones.stretch || 1);
+
+  // Spine & chest joint
+  const spineStart = {x:0, y:0};
+  const chest = fk(0, 0, bAngle, bones.spineAngle - bAngle, -preset.bodyH * 0.55);
+  const hipY = 0;
+  const chestY = chest.y;
+  const chestX = chest.x;
+  const spineAngleFull = bones.spineAngle;
+
+  // ── Legs ──────────────────────────────────────────────────────────────────
+  const legSep = preset.bodyW * 0.3;
+  // Left leg
+  const thighL = fk(chestX - legSep, hipY, 0, bones.thighLAngle, preset.legLen * 0.5);
+  const shinL  = fk(thighL.x, thighL.y, thighL.angle, bones.shinLAngle, preset.legLen * 0.5);
+  // Right leg
+  const thighR = fk(chestX + legSep, hipY, 0, bones.thighRAngle, preset.legLen * 0.5);
+  const shinR  = fk(thighR.x, thighR.y, thighR.angle, bones.shinRAngle, preset.legLen * 0.5);
+
+  // Draw legs
+  drawLimb(chestX - legSep, hipY, thighL.x, thighL.y, 13, T.outfit);
+  drawLimb(thighL.x, thighL.y, shinL.x, shinL.y, 12, T.outfit);
+  // Feet (small ellipses)
+  ctx.save();
+  ctx.fillStyle = T.body;
+  ctx.beginPath(); ctx.ellipse(shinL.x, shinL.y+2, 10, 6, thighL.angle, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+  drawLimb(chestX + legSep, hipY, thighR.x, thighR.y, 13, T.outfit);
+  drawLimb(thighR.x, thighR.y, shinR.x, shinR.y, 12, T.outfit);
+  ctx.save();
+  ctx.fillStyle = T.body;
+  ctx.beginPath(); ctx.ellipse(shinR.x, shinR.y+2, 10, 6, thighR.angle, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // ── Body ──────────────────────────────────────────────────────────────────
+  ctx.save();
+  ctx.translate(chestX, chestY);
+  ctx.rotate(bones.spineAngle - bAngle);
+  // Body shape (cute rounded torso)
+  const grad = ctx.createLinearGradient(-preset.bodyW/2, 0, preset.bodyW/2, preset.bodyH*0.55);
+  grad.addColorStop(0, T.outfit);
+  grad.addColorStop(1, T.body);
+  const celBody = ctx.createLinearGradient(0, 0, 0, preset.bodyH*0.55);
+  celBody.addColorStop(0, lighten(T.outfit, 30)); celBody.addColorStop(0.4, T.outfit); celBody.addColorStop(0.41, darken(T.outfit, 20)); celBody.addColorStop(1, darken(T.outfit, 20));
+  ctx.fillStyle = fillStyle(() => grad, T.outfit, celBody);
+  ctx.beginPath();
+  ctx.roundRect(-preset.bodyW/2, 0, preset.bodyW, preset.bodyH*0.55, 10);
+  ctx.fill();
+  outlineShape(2);
+  // Collar / neckline
+  ctx.fillStyle = T.body;
+  ctx.beginPath();
+  ctx.roundRect(-10, -4, 20, 14, 8);
+  ctx.fill();
+
+  // ── Arms ──────────────────────────────────────────────────────────────────
+  const armSep = preset.bodyW * 0.52;
+  const armY = 6;
+  // Left arm
+  const upperL = fk(-armSep, armY, 0, bones.armLAngle, preset.armLen * 0.52);
+  const lowerL = fk(upperL.x, upperL.y, upperL.angle, bones.forearmLAngle, preset.armLen * 0.48);
+  drawLimb(-armSep, armY, upperL.x, upperL.y, 11, T.skin);
+  drawLimb(upperL.x, upperL.y, lowerL.x, lowerL.y, 10, T.skin);
+  // Hand
+  ctx.fillStyle = T.skin;
+  ctx.beginPath(); ctx.arc(lowerL.x, lowerL.y, 7, 0, Math.PI*2); ctx.fill();
+
+  // Right arm
+  const upperR = fk(armSep, armY, 0, bones.armRAngle, preset.armLen * 0.52);
+  const lowerR = fk(upperR.x, upperR.y, upperR.angle, bones.forearmRAngle, preset.armLen * 0.48);
+  drawLimb(armSep, armY, upperR.x, upperR.y, 11, T.skin);
+  drawLimb(upperR.x, upperR.y, lowerR.x, lowerR.y, 10, T.skin);
+  ctx.fillStyle = T.skin;
+  ctx.beginPath(); ctx.arc(lowerR.x, lowerR.y, 7, 0, Math.PI*2); ctx.fill();
+
+  // ── Neck ──────────────────────────────────────────────────────────────────
+  const headBase = {y: -preset.headR * 0.3};
+  drawLimb(0, 0, 0, headBase.y - 6, 10, T.skin);
+
+  // ── Head ──────────────────────────────────────────────────────────────────
+  ctx.save();
+  ctx.translate(0, headBase.y - preset.headR * 0.6);
+  ctx.rotate(bones.headAngle + (bones.headNod || 0));
+
+  const R = preset.headR;
+
+  // Ears
+  if (preset.earType === 'cat') {
+    ctx.fillStyle = T.hair;
+    // Left cat ear
+    ctx.beginPath(); ctx.moveTo(-R*0.6,-R*0.55); ctx.lineTo(-R*0.9,-R*1.1); ctx.lineTo(-R*0.2,-R*0.7); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = T.accent;
+    ctx.beginPath(); ctx.moveTo(-R*0.6,-R*0.6); ctx.lineTo(-R*0.8,-R*1.0); ctx.lineTo(-R*0.28,-R*0.72); ctx.closePath(); ctx.fill();
+    // Right cat ear
+    ctx.fillStyle = T.hair;
+    ctx.beginPath(); ctx.moveTo(R*0.6,-R*0.55); ctx.lineTo(R*0.9,-R*1.1); ctx.lineTo(R*0.2,-R*0.7); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = T.accent;
+    ctx.beginPath(); ctx.moveTo(R*0.6,-R*0.6); ctx.lineTo(R*0.8,-R*1.0); ctx.lineTo(R*0.28,-R*0.72); ctx.closePath(); ctx.fill();
+  } else if (preset.earType === 'elf') {
+    ctx.fillStyle = T.skin;
+    ctx.beginPath(); ctx.moveTo(-R*0.82,-R*0.1); ctx.lineTo(-R*1.3,-R*0.4); ctx.lineTo(-R*0.75,R*0.2); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(R*0.82,-R*0.1); ctx.lineTo(R*1.3,-R*0.4); ctx.lineTo(R*0.75,R*0.2); ctx.closePath(); ctx.fill();
+  } else if (preset.earType === 'robot') {
+    ctx.fillStyle = T.outfit;
+    ctx.fillRect(-R-6, -8, 8, 16);
+    ctx.fillRect(R-2, -8, 8, 16);
+    ctx.fillStyle = T.accent;
+    ctx.fillRect(-R-4, -4, 4, 8);
+    ctx.fillRect(R, -4, 4, 8);
+  } else {
+    // Human ears
+    ctx.fillStyle = T.skin;
+    ctx.beginPath(); ctx.ellipse(-R-2, 0, 7, 10, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(R+2, 0, 7, 10, 0, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Head base
+  const headGrad = ctx.createRadialGradient(-R*0.2, -R*0.3, R*0.1, 0, 0, R*1.1);
+  headGrad.addColorStop(0, lighten(T.skin, 20));
+  headGrad.addColorStop(1, T.skin);
+  const celHead = ctx.createLinearGradient(0, -R, 0, R);
+  celHead.addColorStop(0, lighten(T.skin, 25)); celHead.addColorStop(0.45, T.skin); celHead.addColorStop(0.46, darken(T.skin, 15)); celHead.addColorStop(1, darken(T.skin, 15));
+  ctx.fillStyle = fillStyle(() => headGrad, T.skin, celHead);
+  ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI*2); ctx.fill();
+  outlineShape(2);
+
+  // Hair
+  drawHair(R, T.hair, currentChar);
+
+  // Accessory
+  drawAccessory(R, preset.accessory, T);
+
+  // Blush cheeks
+  ctx.globalAlpha = bones.blushIntensity * 0.5;
+  ctx.fillStyle = '#ff9090';
+  ctx.beginPath(); ctx.ellipse(-R*0.5, R*0.22, R*0.22, R*0.12, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(R*0.5, R*0.22, R*0.22, R*0.12, 0, 0, Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Eyes
+  const eyeY = -R*0.08;
+  const eyeOpenF = bones.eyeOpen !== undefined ? bones.eyeOpen : 1;
+  drawEye(-R*0.33, eyeY, R*0.22, eyeOpenF, T, preset.earType === 'robot');
+  drawEye( R*0.33, eyeY, R*0.22, eyeOpenF, T, preset.earType === 'robot');
+
+  // Mouth
+  drawMouth(0, R*0.32, R*0.25, bones.mouthCurve || 0.3);
+
+  ctx.restore(); // head
+  ctx.restore(); // body/spine
+
+  ctx.restore(); // root transform
+}
+
+function drawEye(x, y, size, openFactor, theme, isRobot) {
+  if (openFactor < 0.05) {
+    // Closed (line)
+    ctx.strokeStyle = '#604040';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x-size*0.7, y); ctx.lineTo(x+size*0.7, y); ctx.stroke();
+    return;
+  }
+  const h = size * openFactor;
+  if (isRobot) {
+    ctx.fillStyle = '#00ccff';
+    ctx.beginPath(); ctx.ellipse(x, y, size*0.7, h, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(x+size*0.2, y-h*0.2, size*0.2, 0, Math.PI*2); ctx.fill();
+    return;
+  }
+  // Sclera
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(x, y, size*0.75, h, 0, 0, Math.PI*2); ctx.fill();
+  // Iris
+  ctx.fillStyle = theme.body;
+  ctx.beginPath(); ctx.ellipse(x, y, size*0.5, h*0.85, 0, 0, Math.PI*2); ctx.fill();
+  // Pupil
+  ctx.fillStyle = '#1a0a0a';
+  ctx.beginPath(); ctx.ellipse(x, y+h*0.05, size*0.28, h*0.55, 0, 0, Math.PI*2); ctx.fill();
+  // Highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.beginPath(); ctx.arc(x+size*0.15, y-h*0.15, size*0.15, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x-size*0.1, y+h*0.1, size*0.07, 0, Math.PI*2); ctx.fill();
+  // Top lash line
+  ctx.strokeStyle = '#3a1a2a';
+  ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.ellipse(x, y - h*0.1, size*0.75, h, 0, Math.PI, Math.PI*2);
+  ctx.stroke();
+}
+
+function drawMouth(x, y, size, curve) {
+  ctx.strokeStyle = '#c05060';
+  ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x - size, y);
+  ctx.quadraticCurveTo(x, y + size * curve * 1.5, x + size, y);
+  ctx.stroke();
+}
+
+function drawHair(R, color, charType) {
+  ctx.fillStyle = color;
+  switch(charType) {
+    case 'princess':
+      // Long flowing hair
+      ctx.beginPath(); ctx.ellipse(0,-R*0.1,R*1.05,R*0.95,0,Math.PI,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(-R*0.7,R*0.4,R*0.32,R*0.7,0.3,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(R*0.7,R*0.4,R*0.32,R*0.7,-0.3,0,Math.PI*2); ctx.fill();
+      break;
+    case 'knight': case 'robot':
+      // Short/covered
+      ctx.beginPath(); ctx.ellipse(0,-R*0.1,R*1.02,R*0.9,0,Math.PI,Math.PI*2); ctx.fill();
+      break;
+    case 'witch':
+      // Wavy medium hair
+      ctx.beginPath(); ctx.ellipse(0,-R*0.05,R*1.05,R*0.92,0,Math.PI,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-R,0); ctx.quadraticCurveTo(-R*1.2,R*0.6,-R*0.6,R); ctx.lineTo(-R*0.4,R*0.4); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(R,0); ctx.quadraticCurveTo(R*1.2,R*0.6,R*0.6,R); ctx.lineTo(R*0.4,R*0.4); ctx.closePath(); ctx.fill();
+      break;
+    case 'cat':
+      ctx.beginPath(); ctx.ellipse(0,-R*0.1,R*1.0,R*0.88,0,Math.PI,Math.PI*2); ctx.fill();
+      break;
+    case 'fairy':
+      // Short with bun
+      ctx.beginPath(); ctx.ellipse(0,-R*0.12,R*1.0,R*0.85,0,Math.PI,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(0,-R*0.95,R*0.28,0,Math.PI*2); ctx.fill();
+      break;
+    default:
+      ctx.beginPath(); ctx.ellipse(0,-R*0.1,R*1.02,R*0.9,0,Math.PI,Math.PI*2); ctx.fill();
+  }
+  // Fringe / bangs
+  ctx.fillStyle = color;
+  if (charType !== 'robot') {
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.ellipse(i * R*0.3, -R*0.75, R*0.2, R*0.35, i*0.15, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+}
+
+function drawAccessory(R, type, T) {
+  switch(type) {
+    case 'crown':
+      ctx.fillStyle = '#f0c020';
+      const crownPoints = [-R*0.5,-R*0.9, -R*0.35,-R*1.25, -R*0.15,-R*1.0, 0,-R*1.35, R*0.15,-R*1.0, R*0.35,-R*1.25, R*0.5,-R*0.9];
+      ctx.beginPath();
+      ctx.moveTo(crownPoints[0],crownPoints[1]);
+      for (let i = 2; i < crownPoints.length; i+=2) ctx.lineTo(crownPoints[i],crownPoints[i+1]);
+      ctx.lineTo(R*0.5,-R*0.7); ctx.lineTo(-R*0.5,-R*0.7); ctx.closePath(); ctx.fill();
+      // Gems
+      ['#ff4060','#4060ff','#40c040'].forEach((c,i) => {
+        ctx.fillStyle = c;
+        ctx.beginPath(); ctx.arc((i-1)*R*0.35, -R*0.88, 4, 0, Math.PI*2); ctx.fill();
+      });
+      break;
+    case 'hat':
+      // Witch hat
+      ctx.fillStyle = '#200840';
+      ctx.beginPath();
+      ctx.ellipse(0,-R*0.7,R*0.75,R*0.2,0,0,Math.PI*2); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-R*0.3,-R*0.72); ctx.lineTo(-R*0.1,-R*1.5); ctx.lineTo(R*0.1,-R*1.5); ctx.lineTo(R*0.3,-R*0.72); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = T.accent; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(0,-R*0.7,R*0.75,R*0.2,0,0,Math.PI*2); ctx.stroke();
+      break;
+    case 'helmet':
+      ctx.fillStyle = T.outfit;
+      ctx.beginPath(); ctx.arc(0, -R*0.12, R*1.0, -Math.PI*0.8, Math.PI*0.05); ctx.fill();
+      ctx.fillStyle = lighten(T.outfit, 30);
+      ctx.fillRect(-R*0.08, -R*0.3, R*0.16, R*0.5);
+      break;
+    case 'wings':
+      ctx.save();
+      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = T.accent;
+      ctx.beginPath(); ctx.ellipse(-R*1.1, R*0.3, R*0.6, R*0.25, -0.4, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(R*1.1, R*0.3, R*0.6, R*0.25, 0.4, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+      break;
+    case 'antenna':
+      ctx.strokeStyle = T.accent; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(0,-R*0.9); ctx.lineTo(0,-R*1.4); ctx.stroke();
+      ctx.fillStyle = T.accent;
+      ctx.beginPath(); ctx.arc(0,-R*1.42, 5, 0, Math.PI*2); ctx.fill();
+      break;
+  }
+}
+
+function lighten(hex, amount) {
+  const r = Math.min(255, parseInt(hex.slice(1,3),16)+amount);
+  const g = Math.min(255, parseInt(hex.slice(3,5),16)+amount);
+  const b = Math.min(255, parseInt(hex.slice(5,7),16)+amount);
+  return `rgb(${r},${g},${b})`;
+}
+
+function darken(hex, amount) {
+  const r = Math.max(0, parseInt(hex.slice(1,3),16)-amount);
+  const g = Math.max(0, parseInt(hex.slice(3,5),16)-amount);
+  const b = Math.max(0, parseInt(hex.slice(5,7),16)-amount);
+  return `rgb(${r},${g},${b})`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BACKGROUND
+// ══════════════════════════════════════════════════════════════════════════════
+function drawBackground() {
+  if (styleConfig.bgStyle === 'transparent') {
+    ctx.clearRect(0, 0, W, H);
+    return;
+  }
+  if (styleConfig.bgStyle === 'light') {
+    const bg = ctx.createRadialGradient(W/2, H/2, 20, W/2, H/2, W*0.7);
+    bg.addColorStop(0, '#f8f0ff');
+    bg.addColorStop(1, '#e8e0f8');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(180,140,220,0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, CY+64); ctx.lineTo(W, CY+64); ctx.stroke();
+    return;
+  }
+  // dark (default)
+  const bg = ctx.createRadialGradient(W/2, H/2, 20, W/2, H/2, W*0.7);
+  bg.addColorStop(0, '#1e1030');
+  bg.addColorStop(1, '#06040e');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(160,100,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, CY+64); ctx.lineTo(W, CY+64); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  for (let i = 0; i < 40; i++) {
+    const sx = (i*137.5)%W, sy = (i*89.3)%H;
+    if (sy > CY+30) continue;
+    const sr = 0.5 + (Math.sin(animTime*0.5+i)*0.5+0.5)*0.8;
+    ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MAIN LOOP
+// ══════════════════════════════════════════════════════════════════════════════
+let rafId = null;
+function loop(ts) {
+  rafId = requestAnimationFrame(loop);
+  const dt = Math.min((ts - lastTs) / 1000, 0.05);
+  lastTs = ts;
+  if (playing) animTime += dt * animSpeed;
+
+  // FPS counter
+  fpsFrames++;
+  fpsTimer += dt;
+  if (fpsTimer >= 1) {
+    document.getElementById('fps-counter').textContent = fpsFrames + ' fps';
+    fpsFrames = 0; fpsTimer = 0;
+  }
+  frameIdx++;
+  document.getElementById('frame-info').textContent = 'T: ' + animTime.toFixed(1) + 's';
+
+  ctx.clearRect(0, 0, W, H);
+  drawBackground();
+
+  const bones = getBones(animTime, currentAnim);
+  drawCharacter(bones);
+
+  if (fxEnabled.particles) updateParticles(dt);
+
+  document.getElementById('status-msg').textContent =
+    `${currentChar} · ${currentAnim} · t=${animTime.toFixed(2)}s`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// EXPORT GIF
+// ══════════════════════════════════════════════════════════════════════════════
+let gifJsError = false;
+async function startExport() {
+  if (typeof GIF === 'undefined') {
+    document.getElementById('export-status').textContent = '⚠ gif.js 未加载（需要网络）。尝试下载帧图？';
+    downloadFrames();
+    return;
+  }
+  const btn = document.getElementById('export-btn');
+  btn.disabled = true;
+  const pb = document.getElementById('progress-bar');
+  const pf = document.getElementById('progress-fill');
+  const es = document.getElementById('export-status');
+  pb.style.display = 'block';
+  pf.style.width = '0%';
+  es.textContent = '正在录制帧...';
+
+  const n = exportFrames;
+  const animDuration = getAnimDuration(currentAnim);
+  const delay = Math.round((animDuration / n) * 1000);
+
+  const gif = new GIF({
+    workers: 2, quality: 8, width: W, height: H,
+    workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js',
+  });
+
+  // Capture frames
+  const savedTime = animTime;
+  for (let i = 0; i < n; i++) {
+    const t = (i / n) * animDuration;
+    animTime = t;
+    ctx.clearRect(0, 0, W, H);
+    drawBackground();
+    drawCharacter(getBones(t, currentAnim));
+    gif.addFrame(ctx, {copy: true, delay});
+    pf.style.width = `${Math.round((i+1)/n*50)}%`;
+    await new Promise(r => setTimeout(r, 0));
+  }
+  animTime = savedTime;
+
+  es.textContent = '正在编码 GIF...';
+  gif.on('progress', p => { pf.style.width = `${50 + Math.round(p*50)}%`; });
+  gif.on('finished', blob => {
+    pf.style.width = '100%';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `cute-${currentChar}-${currentAnim}.gif`;
+    a.click();
+    URL.revokeObjectURL(url);
+    es.textContent = `✅ 已导出 ${n}帧 GIF (${(blob.size/1024).toFixed(0)}KB)`;
+    btn.disabled = false;
+    setTimeout(() => { pb.style.display = 'none'; pf.style.width='0%'; }, 3000);
+  });
+  gif.render();
+}
+
+function downloadFrames() {
+  // Fallback: download a single PNG frame
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = `cute-${currentChar}-${currentAnim}-frame.png`;
+  a.click();
+  document.getElementById('export-btn').disabled = false;
+}
+
+function getAnimDuration(anim) {
+  const durations = {idle:3.14,walk:2.09,run:1.26,wave:1.57,dance:2.51,attack:2.51,jump:3.14,spin:3.14};
+  return durations[anim] || 2;
+}
+
+function togglePlay() {
+  playing = !playing;
+  const btn = document.getElementById('play-btn');
+  btn.textContent = playing ? '⏸ 暂停' : '▶ 播放';
+  btn.className = 'ctrl-btn' + (playing ? ' on' : '');
+}
+
+function resetAnim() {
+  animTime = 0;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// UI SETUP
+// ══════════════════════════════════════════════════════════════════════════════
+// Character chips
+document.querySelectorAll('#char-chips .chip').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('#char-chips .chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    currentChar = el.dataset.char;
+  };
+});
+
+// Animation buttons
+document.querySelectorAll('#anim-btns .anim-btn').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('#anim-btns .anim-btn').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    currentAnim = el.dataset.anim;
+    animTime = 0;
+  };
+});
+
+// Speed slider
+document.getElementById('speed').oninput = function() {
+  animSpeed = parseFloat(this.value);
+  document.getElementById('speed-val').textContent = animSpeed.toFixed(1) + '×';
+};
+
+// FX chips
+document.querySelectorAll('#fx-chips .chip').forEach(el => {
+  el.onclick = () => {
+    el.classList.toggle('active');
+    fxEnabled[el.dataset.fx] = el.classList.contains('active');
+  };
+});
+
+// Frame count chips
+document.querySelectorAll('#frame-chips .chip').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('#frame-chips .chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    exportFrames = parseInt(el.dataset.frames);
+  };
+});
+
+// Color grid
+const colorGrid = document.getElementById('color-grid');
+THEMES.forEach((theme, i) => {
+  const dot = document.createElement('div');
+  dot.className = 'color-dot' + (i === 0 ? ' active' : '');
+  dot.style.background = `linear-gradient(135deg, ${theme.hair}, ${theme.body})`;
+  dot.title = theme.name;
+  dot.onclick = () => {
+    document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+    dot.classList.add('active');
+    activeTheme = theme;
+  };
+  colorGrid.appendChild(dot);
+});
+
+// Style config chips
+function makeExclusive(groupId, setter) {
+  document.querySelectorAll(`#${groupId} .chip`).forEach(el => {
+    el.onclick = () => {
+      document.querySelectorAll(`#${groupId} .chip`).forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      setter(el);
+    };
+  });
+}
+makeExclusive('chibi-chips',   el => { styleConfig.chibiLevel   = parseInt(el.dataset.chibi); });
+makeExclusive('outline-chips', el => { styleConfig.outlineWidth = parseFloat(el.dataset.outline); });
+makeExclusive('shading-chips', el => { styleConfig.shadingMode  = el.dataset.shading; });
+makeExclusive('bg-chips',      el => { styleConfig.bgStyle      = el.dataset.bg; });
+
+// Start loop
+lastTs = performance.now();
+loop(lastTs);
+</script>
+</body>
+</html>

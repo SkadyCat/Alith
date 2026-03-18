@@ -2,9 +2,10 @@
  * Tools 路由
  * 挂载路径: /tools
  *
- * 提供两个执行工具接口，供 Agent 或外部系统调用：
- *   POST /tools/python  — 执行 Python 代码片段
- *   POST /tools/shell   — 执行 PowerShell 命令/脚本
+ * 提供执行工具接口，供 Agent 或外部系统调用：
+ *   POST /tools/python         — 执行 Python 代码片段
+ *   POST /tools/shell          — 执行 PowerShell 命令/脚本
+ *   POST /tools/tavily-search  — Tavily 网页搜索
  *
  * 安全说明：接口不对外暴露，仅限本机/内网访问。
  */
@@ -171,6 +172,103 @@ router.post('/shell', async (req, res) => {
         stderr: result.stderr || result.stdout,
         exitCode: result.exitCode,
       });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ── POST /tools/duckduckgo-search ────────────────────────────────────────────
+/**
+ * DuckDuckGo 网页搜索（无需 API Key）
+ *
+ * 请求体 (JSON):
+ *   query        {string}  必填 — 搜索词
+ *   max_results  {number}  可选 — 返回结果数，默认 5，最多 20
+ *   region       {string}  可选 — 地区，默认 "cn-zh"（中文），"wt-wt"（全球）
+ *   safesearch   {string}  可选 — "moderate"/"off"/"on"，默认 "moderate"
+ *   timelimit    {string}  可选 — "d"(天)/"w"(周)/"m"(月)/null，默认 null
+ *
+ * 响应:
+ *   { success, query, results: [{title, url, body}] }
+ */
+router.post('/duckduckgo-search', async (req, res) => {
+  const { query, max_results = 5, region = 'cn-zh', safesearch = 'moderate', timelimit = null, timeout = 30000 } = req.body || {};
+
+  if (!query || typeof query !== 'string' || !query.trim()) {
+    return res.status(400).json({ success: false, error: 'query 字段必填，且不可为空' });
+  }
+
+  const ms = Math.min(Number(timeout) || 30000, MAX_TIMEOUT);
+  const scriptPath = path.join(TOOLS_DIR, 'duckduckgo_search.py');
+  const inputJson = JSON.stringify({ query, max_results, region, safesearch, timelimit });
+
+  try {
+    const result = await runProcess(PYTHON_CMD, [scriptPath], { cwd: TOOLS_DIR }, inputJson, ms);
+    let parsed = null;
+    try { parsed = JSON.parse(result.stdout.trim()); } catch (_) {}
+    if (parsed) {
+      res.json(parsed);
+    } else {
+      res.json({ success: false, error: result.stderr || result.stdout || '未知错误' });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ── POST /tools/tavily-search ─────────────────────────────────────────────────
+/**
+ * Tavily 网页搜索
+ *
+ * 请求体 (JSON):
+ *   query          {string}  必填 — 搜索词
+ *   max_results    {number}  可选 — 返回结果数，默认 5，最多 10
+ *   search_depth   {string}  可选 — "basic"（快）/ "advanced"（深），默认 "basic"
+ *   include_answer {boolean} 可选 — 是否包含 AI 摘要，默认 true
+ *
+ * 响应:
+ *   { success, answer, results: [{title, url, content, score}], query }
+ *
+ * API Key 配置: application/tavily-search/.env → TAVILY_API_KEY=tvly-xxx
+ */
+router.post('/tavily-search', async (req, res) => {
+  const { query, max_results = 5, search_depth = 'basic', include_answer = true, timeout = 30000 } = req.body || {};
+
+  if (!query || typeof query !== 'string' || !query.trim()) {
+    return res.status(400).json({ success: false, error: 'query 字段必填，且不可为空' });
+  }
+
+  // Load API key from application/tavily-search/.env
+  const envPath = path.join(__dirname, '..', 'application', 'tavily-search', '.env');
+  let apiKey = process.env.TAVILY_API_KEY || '';
+  if (!apiKey && fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    const match = envContent.match(/^TAVILY_API_KEY=(.+)$/m);
+    if (match) apiKey = match[1].trim();
+  }
+
+  if (!apiKey || apiKey.startsWith('tvly-xxx')) {
+    return res.status(400).json({
+      success: false,
+      error: '未配置 Tavily API Key。请编辑 application/tavily-search/.env，填入 TAVILY_API_KEY=tvly-你的key。免费申请: https://app.tavily.com/'
+    });
+  }
+
+  const ms = Math.min(Number(timeout) || 30000, MAX_TIMEOUT);
+  const scriptPath = path.join(TOOLS_DIR, 'tavily_search.py');
+  const inputJson = JSON.stringify({ query, api_key: apiKey, max_results, search_depth, include_answer });
+
+  try {
+    const result = await runProcess(PYTHON_CMD, [scriptPath], { cwd: TOOLS_DIR }, inputJson, ms);
+
+    let parsed = null;
+    try { parsed = JSON.parse(result.stdout.trim()); } catch (_) {}
+
+    if (parsed) {
+      res.json(parsed);
+    } else {
+      res.json({ success: false, error: result.stderr || result.stdout || '未知错误' });
     }
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

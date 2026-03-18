@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎮 游戏精灵动画生成器</title>
+<style>
+:root {
+  --bg:#0c0e14;--panel:#141720;--border:#252a38;
+  --accent:#7c3aed;--accent2:#06b6d4;--green:#10b981;
+  --red:#ef4444;--yellow:#f59e0b;--text:#e2e8f0;--muted:#64748b;--card:#1a1e2c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI','Microsoft YaHei',monospace,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+header{background:linear-gradient(135deg,#1a0533,#0a1628);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:12px}
+header h1{font-size:18px;color:#a78bfa;letter-spacing:1px}
+.badge{padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;background:#1e1040;color:#a78bfa;border:1px solid #4c1d95}
+.badge.green{background:#052e16;color:#34d399;border-color:#065f46}
+.layout{display:grid;grid-template-columns:340px 1fr;flex:1;overflow:hidden}
+/* ── Left Panel ── */
+.left{border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+.sec{padding:14px;border-bottom:1px solid var(--border)}
+.sec-title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
+label{font-size:12px;color:#94a3b8;display:block;margin-bottom:5px;margin-top:8px}
+label:first-child{margin-top:0}
+select,input,textarea{width:100%;background:#0c0e14;border:1px solid var(--border);color:var(--text);border-radius:5px;font-family:inherit;font-size:12px;padding:7px 10px;outline:none;transition:border-color .15s}
+select:focus,input:focus,textarea:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:70px;line-height:1.5}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+.chip{padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;cursor:pointer;transition:all .15s}
+.chip:hover,.chip.active{border-color:var(--accent);color:#a78bfa;background:#1e1040}
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.preset{padding:7px 6px;border-radius:5px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:11px;cursor:pointer;font-family:inherit;text-align:left;transition:all .15s}
+.preset:hover{border-color:var(--accent2);color:var(--accent2)}
+/* animation config */
+.anim-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.toggle-label{font-size:12px;color:#94a3b8;flex:1}
+.toggle{position:relative;width:40px;height:22px;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:#1e2433;border-radius:11px;transition:.2s}
+.slider:before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;background:#64748b;border-radius:50%;transition:.2s}
+input:checked+.slider{background:#4c1d95}
+input:checked+.slider:before{transform:translateX(18px);background:#a78bfa}
+.gen-btn{width:100%;padding:11px;background:linear-gradient(135deg,#4c1d95,#1e40af);border:none;border-radius:6px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s;letter-spacing:.5px}
+.gen-btn:hover{opacity:.88}
+.gen-btn:disabled{opacity:.4;cursor:not-allowed}
+/* ── Right Panel ── */
+.right{display:flex;flex-direction:column;overflow:hidden}
+.canvas-area{flex:1;position:relative;overflow:auto;background:#080a0f;display:flex;align-items:center;justify-content:center}
+.empty{text-align:center;color:var(--muted)}
+.empty .big{font-size:64px;margin-bottom:16px}
+.empty p{font-size:13px;line-height:1.8}
+/* Loading */
+.loading{position:absolute;inset:0;background:rgba(8,10,15,.88);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:9}
+.spinner{width:44px;height:44px;border:3px solid #1e1040;border-top-color:#a78bfa;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-msg{font-size:13px;color:#a78bfa}
+/* Result grid */
+.result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;padding:14px;width:100%}
+.card{border:2px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;overflow:hidden;transition:all .15s}
+.card:hover{border-color:var(--accent2)}
+.card.selected{border-color:var(--accent)}
+.card img{width:100%;display:block;image-rendering:pixelated;aspect-ratio:1}
+.card-foot{padding:6px 8px;font-size:10px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+.card-type{background:#1e1040;color:#a78bfa;padding:1px 6px;border-radius:10px;font-size:9px}
+/* Preview bar */
+.preview-bar{border-top:1px solid var(--border);background:#0a0c14;padding:12px 16px;display:none;align-items:center;gap:16px;min-height:110px}
+.preview-img-wrap{width:80px;height:80px;border:1px solid var(--border);border-radius:6px;background:#000;image-rendering:pixelated;overflow:hidden;flex-shrink:0}
+.preview-img-wrap img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
+.preview-info{flex:1}
+.preview-info h3{font-size:12px;color:var(--text);margin-bottom:4px}
+.preview-info p{font-size:11px;color:var(--muted);line-height:1.6}
+.preview-acts{display:flex;flex-direction:column;gap:5px}
+.act-btn{padding:5px 12px;border-radius:5px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.act-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+/* Frame strip */
+.frame-strip{display:flex;gap:4px;margin-top:6px;overflow-x:auto;padding-bottom:2px}
+.frame-thumb{width:32px;height:32px;border:1px solid var(--border);border-radius:3px;background:#000;cursor:pointer;flex-shrink:0;image-rendering:pixelated;overflow:hidden}
+.frame-thumb img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
+.frame-thumb.active-frame{border-color:var(--accent)}
+/* Status bar */
+.statusbar{border-top:1px solid var(--border);background:#08090e;padding:5px 14px;font-size:10px;color:var(--muted);display:flex;gap:16px;align-items:center}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:3px}
+.dot-g{background:var(--green)}.dot-r{background:var(--red)}.dot-y{background:var(--yellow)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎮 游戏精灵动画生成器</h1>
+  <span class="badge">Pixel Art</span>
+  <span class="badge green">本地生成</span>
+  <span class="badge" style="margin-left:auto;background:#0a1628;color:#38bdf8;border-color:#1e40af">Port 8333</span>
+  <a href="/cute" style="margin-left:8px;padding:4px 12px;border-radius:6px;border:1px solid #7c3aed;background:#1e0a40;color:#e0aaff;font-size:11px;text-decoration:none">🌸 可爱骨骼动画 →</a>
+  <a href="/process" style="margin-left:4px;padding:4px 12px;border-radius:6px;border:1px solid #06b6d4;background:#031a26;color:#67e8f9;font-size:11px;text-decoration:none">🔬 过程展示 →</a>
+  <a href="/char" style="margin-left:4px;padding:4px 12px;border-radius:6px;border:1px solid #f59e0b;background:#1c1000;color:#fcd34d;font-size:11px;text-decoration:none;font-weight:600">🎭 AI角色动画 ★</a>
+</header>
+
+<div class="layout">
+
+  <!-- ═══ LEFT ════════════════════════════════════════ -->
+  <div class="left">
+
+    <!-- Character type -->
+    <div class="sec">
+      <div class="sec-title">🧙 角色类型</div>
+      <div class="chips" id="char-chips">
+        <div class="chip active" data-char="warrior">⚔️ 战士</div>
+        <div class="chip" data-char="mage">🔮 法师</div>
+        <div class="chip" data-char="archer">🏹 弓手</div>
+        <div class="chip" data-char="robot">🤖 机器人</div>
+        <div class="chip" data-char="ghost">👻 幽灵</div>
+        <div class="chip" data-char="zombie">🧟 僵尸</div>
+      </div>
+    </div>
+
+    <!-- Style -->
+    <div class="sec">
+      <div class="sec-title">🎨 风格</div>
+      <div class="chips" id="style-chips">
+        <div class="chip active" data-style="pixel art">像素艺术</div>
+        <div class="chip" data-style="8-bit retro">8-bit 复古</div>
+        <div class="chip" data-style="16-bit SNES">16-bit</div>
+        <div class="chip" data-style="chibi cute">Q版 Chibi</div>
+      </div>
+    </div>
+
+    <!-- Prompt -->
+    <div class="sec">
+      <div class="sec-title">✏️ 描述</div>
+      <textarea id="prompt" placeholder="warrior with sword and armor, idle pose&#10;mage casting fireball&#10;knight with shield..."></textarea>
+      <div class="presets" style="margin-top:8px">
+        <button class="preset" onclick="setPrompt('knight warrior with sword and shield, idle pose')">⚔️ 战士</button>
+        <button class="preset" onclick="setPrompt('mage wizard casting spell with staff')">🧙 法师</button>
+        <button class="preset" onclick="setPrompt('archer ranger with bow, forest hunter')">🏹 弓手</button>
+        <button class="preset" onclick="setPrompt('robot android metal mech warrior')">🤖 机器人</button>
+        <button class="preset" onclick="setPrompt('ghost spirit phantom undead creature')">👻 幽灵</button>
+        <button class="preset" onclick="setPrompt('zombie monster creature enemy')">🧟 僵尸</button>
+        <button class="preset" onclick="setPrompt('ninja assassin stealth fighter')">🥷 忍者</button>
+        <button class="preset" onclick="setPrompt('dragon boss enemy fantasy creature')">🐉 龙王</button>
+      </div>
+    </div>
+
+    <!-- Animation -->
+    <div class="sec">
+      <div class="sec-title">🎬 动画设置</div>
+      <div class="toggle-row">
+        <span class="toggle-label">启用动画（生成 GIF）</span>
+        <label class="toggle">
+          <input type="checkbox" id="animate-toggle" onchange="onAnimToggle()">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div id="anim-config" style="display:none">
+        <label>动画类型</label>
+        <div class="chips" id="anim-chips">
+          <div class="chip active" data-anim="idle">💤 待机</div>
+          <div class="chip" data-anim="walk">🚶 行走</div>
+          <div class="chip" data-anim="run">🏃 奔跑</div>
+          <div class="chip" data-anim="attack">⚔️ 攻击</div>
+        </div>
+        <div class="anim-row" style="margin-top:8px">
+          <div>
+            <label>帧延迟 (ms)</label>
+            <input type="number" id="frame-delay" value="" placeholder="自动" min="50" max="2000">
+          </div>
+          <div>
+            <label>随机种子</label>
+            <input type="number" id="seed" placeholder="随机" min="0" max="99999">
+          </div>
+        </div>
+      </div>
+      <div id="static-config">
+        <label>随机种子</label>
+        <input type="number" id="seed2" placeholder="随机" min="0" max="99999">
+      </div>
+    </div>
+
+    <!-- Size -->
+    <div class="sec">
+      <div class="sec-title">📐 输出尺寸</div>
+      <div class="chips" id="size-chips">
+        <div class="chip" data-size="128">128px</div>
+        <div class="chip active" data-size="256">256px</div>
+        <div class="chip" data-size="512">512px</div>
+      </div>
+    </div>
+
+    <!-- Generate -->
+    <div class="sec">
+      <button class="gen-btn" id="gen-btn" onclick="generate()">✨ 生成精灵</button>
+      <p style="font-size:10px;color:var(--muted);text-align:center;margin-top:8px">
+        🖥️ 本地过程化生成 · 无需网络 · 即时响应
+      </p>
+    </div>
+
+  </div>
+
+  <!-- ═══ RIGHT ════════════════════════════════════════ -->
+  <div class="right">
+    <div class="canvas-area" id="canvas">
+
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div class="loading-msg" id="loading-msg">正在生成精灵...</div>
+      </div>
+
+      <div class="empty" id="empty">
+        <div class="big">🎮</div>
+        <p>选择角色类型、风格和动画设置<br>点击「生成精灵」开始创作</p>
+      </div>
+
+      <div class="result-grid" id="grid" style="display:none;align-self:flex-start"></div>
+    </div>
+
+    <!-- Preview bar -->
+    <div class="preview-bar" id="preview-bar">
+      <div class="preview-img-wrap">
+        <img id="preview-img" src="" alt="preview">
+      </div>
+      <div class="preview-info">
+        <h3 id="preview-title">精灵预览</h3>
+        <p id="preview-desc"></p>
+        <div class="frame-strip" id="frame-strip"></div>
+      </div>
+      <div class="preview-acts">
+        <button class="act-btn" onclick="downloadSelected()">⬇ 下载</button>
+        <button class="act-btn" onclick="regenerateVariant()">🔄 变体</button>
+        <button class="act-btn" onclick="copyPromptText()">📋 Prompt</button>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <span><span class="dot dot-g"></span>服务就绪 :8333</span>
+      <span id="status-msg">等待生成...</span>
+      <span id="gen-count" style="margin-left:auto">已生成: 0</span>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedChar  = 'warrior';
+let selectedStyle = 'pixel art';
+let selectedAnim  = 'idle';
+let selectedSize  = 256;
+let selectedCard  = null;
+let genCount      = 0;
+let lastSeed      = null;
+let lastPrompt    = '';
+
+// ── Chip selectors ────────────────────────────────────────────────────────────
+document.querySelectorAll('#char-chips .chip').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('#char-chips .chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    selectedChar = el.dataset.char;
+    // Auto-update prompt hint
+    const map = {warrior:'knight warrior with sword and shield, idle pose',mage:'mage wizard casting spell with staff',archer:'archer ranger with bow, forest hunter',robot:'robot android metal mech warrior',ghost:'ghost spirit phantom undead creature',zombie:'zombie monster creature enemy'};
+    if (!document.getElementById('prompt').value) {
+      document.getElementById('prompt').value = map[selectedChar] || '';
+    }
+  };
+});
+
+document.querySelectorAll('#style-chips .chip').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('#style-chips .chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    selectedStyle = el.dataset.style;
+  };
+});
+
+document.querySelectorAll('#anim-chips .chip').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('#anim-chips .chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    selectedAnim = el.dataset.anim;
+  };
+});
+
+document.querySelectorAll('#size-chips .chip').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('#size-chips .chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    selectedSize = parseInt(el.dataset.size);
+  };
+});
+
+function onAnimToggle() {
+  const on = document.getElementById('animate-toggle').checked;
+  document.getElementById('anim-config').style.display = on ? 'block' : 'none';
+  document.getElementById('static-config').style.display = on ? 'none' : 'block';
+}
+
+function setPrompt(txt) {
+  document.getElementById('prompt').value = txt;
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────────
+async function generate(overrideSeed) {
+  const prompt  = document.getElementById('prompt').value.trim() || (selectedChar + ' game sprite');
+  const animate = document.getElementById('animate-toggle').checked;
+  const seed    = overrideSeed !== undefined ? overrideSeed
+                : (animate
+                    ? (parseInt(document.getElementById('seed').value) || undefined)
+                    : (parseInt(document.getElementById('seed2').value) || undefined));
+  const frameDelay = animate ? (parseInt(document.getElementById('frame-delay').value) || undefined) : undefined;
+
+  lastPrompt = prompt;
+  lastSeed = seed;
+
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('empty').style.display   = 'none';
+  document.getElementById('gen-btn').disabled = true;
+  document.getElementById('loading-msg').textContent = animate
+    ? `正在生成 ${selectedAnim} 动画（${selectedChar}）...`
+    : `正在生成精灵（${selectedChar}）...`;
+  document.getElementById('status-msg').textContent = '⏳ 生成中...';
+
+  try {
+    const body = {
+      prompt, style: selectedStyle, width: selectedSize, height: selectedSize,
+      seed, animate,
+      animation_type: selectedAnim,
+      frame_count: 4,
+      frame_delay: frameDelay,
+    };
+    const r    = await fetch('/api/generate', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    const data = await r.json();
+
+    if (data.success) {
+      addCard(data);
+      genCount++;
+      document.getElementById('gen-count').textContent = `已生成: ${genCount}`;
+      document.getElementById('status-msg').textContent = `✅ 成功 — ${data.palette || ''} ${animate ? data.animation_type : '静态'}`;
+    } else {
+      document.getElementById('status-msg').textContent = `❌ ${data.error}`;
+    }
+  } catch (e) {
+    document.getElementById('status-msg').textContent = `❌ ${e.message}`;
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('gen-btn').disabled = false;
+  }
+}
+
+function addCard(data) {
+  const grid = document.getElementById('grid');
+  grid.style.display = 'grid';
+  document.getElementById('empty').style.display = 'none';
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  const isAnim = data.frames && data.frames.length > 1;
+  const typeTag = isAnim ? data.animation_type : '静态';
+  card.innerHTML = `
+    <img src="${data.image}" alt="sprite" style="${isAnim?'':'image-rendering:pixelated'}">
+    <div class="card-foot">
+      <span>${data.palette || ''}</span>
+      <span class="card-type">${typeTag}</span>
+    </div>`;
+  card.onclick = () => selectCard(card, data);
+  grid.insertBefore(card, grid.firstChild);
+  selectCard(card, data);
+}
+
+function selectCard(card, data) {
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  selectedCard = data;
+
+  const bar = document.getElementById('preview-bar');
+  bar.style.display = 'flex';
+  document.getElementById('preview-img').src = data.image;
+  document.getElementById('preview-title').textContent =
+    `${data.palette || ''} · ${data.animation_type || '静态'} · seed:${data.seed}`;
+  document.getElementById('preview-desc').textContent = data.prompt;
+
+  // Frame strip
+  const strip = document.getElementById('frame-strip');
+  strip.innerHTML = '';
+  if (data.frames && data.frames.length > 1) {
+    data.frames.forEach((f, i) => {
+      const thumb = document.createElement('div');
+      thumb.className = 'frame-thumb' + (i === 0 ? ' active-frame' : '');
+      thumb.innerHTML = `<img src="${f}" alt="f${i}">`;
+      thumb.onclick = () => {
+        document.getElementById('preview-img').src = f;
+        document.querySelectorAll('.frame-thumb').forEach(t => t.classList.remove('active-frame'));
+        thumb.classList.add('active-frame');
+      };
+      strip.appendChild(thumb);
+    });
+    // Add GIF thumb
+    const gifThumb = document.createElement('div');
+    gifThumb.className = 'frame-thumb';
+    gifThumb.title = '查看 GIF';
+    gifThumb.innerHTML = `<img src="${data.image}" alt="gif">`;
+    gifThumb.onclick = () => {
+      document.getElementById('preview-img').src = data.image;
+      document.querySelectorAll('.frame-thumb').forEach(t => t.classList.remove('active-frame'));
+      gifThumb.classList.add('active-frame');
+    };
+    strip.appendChild(gifThumb);
+  }
+}
+
+function downloadSelected() {
+  if (!selectedCard) return;
+  const a = document.createElement('a');
+  a.href = selectedCard.image;
+  const ext = selectedCard.image.startsWith('data:image/gif') ? 'gif' : 'png';
+  a.download = `sprite-${selectedCard.palette}-${Date.now()}.${ext}`;
+  a.click();
+}
+
+function regenerateVariant() {
+  if (!selectedCard) return;
+  // Use a different seed for variant
+  const newSeed = (selectedCard.seed + Math.floor(Math.random() * 1000)) % 100000;
+  document.getElementById('prompt').value = lastPrompt;
+  generate(newSeed);
+}
+
+function copyPromptText() {
+  if (!selectedCard) return;
+  navigator.clipboard.writeText(selectedCard.prompt).catch(() => {});
+  document.getElementById('status-msg').textContent = '✅ Prompt 已复制到剪贴板';
+}
+</script>
+</body>
+</html>

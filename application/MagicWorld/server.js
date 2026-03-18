@@ -67,7 +67,7 @@ function readDesign(name) {
 function readMagic(name) {
   const p = path.join(DESIGN_DIR, 'magic', `${name}.json`);
   if (!fs.existsSync(p)) return [];
-  return JSON.parse(fs.readFileSync(p, 'utf8'));
+  return JSON.parse(fs.readFileSync(p, 'utf8').replace(/^\uFEFF/, ''));
 }
 
 app.get('/api/dict/skills', (req, res) => {
@@ -109,14 +109,39 @@ app.get('/api/dict/skills/:id/supports', (req, res) => {
   try {
     const skills = readDesign('skills');
     const supports = readDesign('supports');
+    const allModifiers = readMagic('modifiers');
+    const deliveryTypes = readMagic('delivery_types');
     const skill = skills.find(s => s.id === req.params.id);
     if (!skill) return res.status(404).json({ success: false, error: 'Skill not found' });
+
     const skillTags = new Set(skill.tags || []);
+    // Get delivery caps for magic system compatibility
+    const deliveryId = skill.magic?.delivery;
+    const deliveryType = deliveryTypes.find(d => d.id === deliveryId);
+    const dtCaps = new Set(deliveryType?.caps || []);
+    const modMap = Object.fromEntries(allModifiers.map(m => [m.id, m]));
+
     const matched = supports.filter(sup => {
       const anyOk = !sup.require_any.length || sup.require_any.some(t => skillTags.has(t));
       const allOk = sup.require_all.every(t => skillTags.has(t));
       const noExc = !sup.exclude.some(t => skillTags.has(t));
       return anyOk && allOk && noExc;
+    }).map(sup => {
+      // Annotate with magic modifier info and cap compatibility
+      const mod = sup.magic_modifier ? modMap[sup.magic_modifier] : null;
+      const required = mod?.requires_caps || [];
+      const missing = required.filter(cap => !dtCaps.has(cap));
+      return {
+        ...sup,
+        magic_modifier_info: mod ? {
+          id: mod.id,
+          name: mod.name,
+          desc: mod.desc,
+          requires_caps: required,
+          compatible: missing.length === 0,
+          missing_caps: missing,
+        } : null,
+      };
     });
     res.json({ success: true, skill, data: matched });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
@@ -175,6 +200,7 @@ app.get('/api/magic/spells', (req, res) => {
       tags:        s.tags || [],
       type:        s.type || '主动',
       damage:      s.damage || '',
+      ue_effect:   s.ue_effect || '',
     }));
     res.json({ success: true, data: [...spells, ...converted] });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -192,14 +218,15 @@ app.post('/api/magic/validate', (req, res) => {
 
     const errors = [];
     const mods = (spell.delivery?.modifiers || []).map(m => m.id);
+    const dtCaps = new Set(dt.caps || []);
     for (const modId of mods) {
       const mod = modMap[modId];
       if (!mod) { errors.push(`未知修饰符: ${modId}`); continue; }
-      if (!mod.applies_to.includes(spell.delivery.type)) {
-        errors.push(`修饰符 "${mod.name}" 不适用于投射类型 "${dt.name}"`);
-      }
-      if (!dt.compatible_modifiers.includes(modId)) {
-        errors.push(`投射类型 "${dt.name}" 不支持修饰符 "${mod.name}"`);
+      // Cap-tag system: modifier requires all listed caps present on delivery
+      const required = mod.requires_caps || mod.applies_to || [];
+      const missing = required.filter(cap => !dtCaps.has(cap));
+      if (missing.length > 0) {
+        errors.push(`修饰符 "${mod.name}" 不适用于 "${dt.name}"（缺少能力: ${missing.join(', ')}）`);
       }
       for (const conflict of (mod.conflicts || [])) {
         if (mods.includes(conflict)) {

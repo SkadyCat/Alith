@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎮 2D 游戏动画生成器</title>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --panel: #161a23;
+    --border: #2a2f3d;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --green: #10b981;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --card: #1e2433;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', 'Microsoft YaHei', monospace, sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, #1a0533 0%, #0a1628 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  header h1 { font-size: 20px; color: #a78bfa; letter-spacing: 1px; }
+  .tag {
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: bold;
+    background: #2d1b69;
+    color: #a78bfa;
+    border: 1px solid #4c1d95;
+  }
+  .main {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 0;
+    height: calc(100vh - 54px);
+  }
+  /* Left Panel */
+  .left {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
+  }
+  label { font-size: 13px; color: #94a3b8; display: block; margin-bottom: 6px; }
+  textarea, input, select {
+    width: 100%;
+    background: #0d0f14;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea { resize: vertical; min-height: 80px; }
+  textarea:focus, input:focus, select:focus { border-color: var(--accent); }
+  select option { background: #161a23; }
+
+  .preset-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .preset-btn {
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--accent); color: #a78bfa; }
+  .preset-btn .preset-icon { font-size: 18px; display: block; margin-bottom: 4px; }
+
+  .generate-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    margin-top: 4px;
+    font-family: inherit;
+  }
+  .generate-btn:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
+  .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .style-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chip {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--card);
+  }
+  .chip:hover, .chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  /* Right Panel */
+  .right {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .canvas-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow: auto;
+    position: relative;
+  }
+  .empty-state {
+    text-align: center;
+    color: var(--muted);
+  }
+  .empty-state .big-icon { font-size: 64px; opacity: 0.3; margin-bottom: 16px; }
+  .empty-state p { font-size: 14px; }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    width: 100%;
+    max-width: 900px;
+  }
+  .result-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+    cursor: pointer;
+  }
+  .result-card:hover { border-color: var(--accent); transform: scale(1.02); }
+  .result-card.selected { border-color: var(--green); box-shadow: 0 0 12px rgba(16,185,129,0.3); }
+  .result-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: contain;
+    background: #0a0c12;
+    display: block;
+    image-rendering: pixelated;
+  }
+  .result-card .card-meta {
+    padding: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+
+  /* Preview panel */
+  .preview-panel {
+    border-top: 1px solid var(--border);
+    background: #0a0c12;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    min-height: 120px;
+  }
+  .preview-canvas {
+    width: 96px;
+    height: 96px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #000;
+    image-rendering: pixelated;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .preview-canvas img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+  .preview-info { flex: 1; }
+  .preview-info h3 { font-size: 13px; color: var(--text); margin-bottom: 6px; }
+  .preview-info p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .preview-actions { display: flex; flex-direction: column; gap: 6px; }
+  .action-btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .action-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* Status bar */
+  .statusbar {
+    padding: 6px 16px;
+    font-size: 11px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    background: #0a0c12;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+  .dot-green { background: var(--green); }
+  .dot-red { background: var(--red); }
+  .dot-yellow { background: #f59e0b; }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(13,15,20,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    display: none;
+    z-index: 10;
+  }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 4px solid #2d1b69;
+    border-top-color: #a78bfa;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 14px; color: #a78bfa; }
+
+  /* HF token input */
+  .token-row { display: flex; gap: 8px; }
+  .token-row input { flex: 1; }
+  .token-row .token-toggle {
+    padding: 0 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎮 2D 游戏动画生成器</h1>
+  <span class="tag">AI Pixel Art</span>
+  <span class="tag">本地生成</span>
+</header>
+
+<div class="main">
+  <!-- ═══ LEFT PANEL ═══════════════════════════════════════════════════════════ -->
+  <div class="left">
+
+    <!-- Model -->
+    <div class="section">
+      <div class="section-title">🎮 角色类型</div>
+      <label>选择角色类型（影响配色与风格）</label>
+      <select id="model-select">
+        <option value="procedural-warrior">战士/骑士  ⚔️</option>
+        <option value="procedural-mage">法师/巫师  🔮</option>
+        <option value="procedural-archer">弓手/猎人  🏹</option>
+        <option value="procedural-robot">机器人      🤖</option>
+        <option value="procedural-ghost">幽灵/精魂  👻</option>
+        <option value="procedural-default">通用角色   🎮</option>
+      </select>
+    </div>
+
+    <!-- Style -->
+    <div class="section">
+      <div class="section-title">🎨 风格</div>
+      <div class="style-chips">
+        <div class="chip active" onclick="selectStyle(this, 'pixel art')">像素艺术</div>
+        <div class="chip" onclick="selectStyle(this, 'retro 8-bit pixel art')">8-bit 复古</div>
+        <div class="chip" onclick="selectStyle(this, '16-bit SNES pixel art')">16-bit SNES</div>
+        <div class="chip" onclick="selectStyle(this, 'anime 2D game art')">日系动画</div>
+        <div class="chip" onclick="selectStyle(this, 'chibi cute 2D game sprite')">Q版 Chibi</div>
+        <div class="chip" onclick="selectStyle(this, 'dark fantasy 2D game art')">暗黑幻想</div>
+      </div>
+    </div>
+
+    <!-- Prompt -->
+    <div class="section">
+      <div class="section-title">✏️ 描述</div>
+      <label>角色/场景描述（英文效果更好）</label>
+      <textarea id="prompt" placeholder="e.g. warrior character with sword, facing right, idle pose, game sprite"></textarea>
+    </div>
+
+    <!-- Presets -->
+    <div class="section">
+      <div class="section-title">⚡ 快速预设</div>
+      <div class="preset-grid">
+        <button class="preset-btn" onclick="usePreset('warrior character with sword and shield, idle pose, game sprite, RPG')">
+          <span class="preset-icon">⚔️</span>战士角色
+        </button>
+        <button class="preset-btn" onclick="usePreset('mage wizard with magic staff, casting spell, game sprite, RPG')">
+          <span class="preset-icon">🧙</span>法师角色
+        </button>
+        <button class="preset-btn" onclick="usePreset('cute slime monster, enemy sprite, game character, bouncy')">
+          <span class="preset-icon">🟢</span>史莱姆怪
+        </button>
+        <button class="preset-btn" onclick="usePreset('dragon boss enemy, side view, fantasy game sprite')">
+          <span class="preset-icon">🐉</span>龙BOSS
+        </button>
+        <button class="preset-btn" onclick="usePreset('wooden treasure chest with gold coins, game item, RPG')">
+          <span class="preset-icon">📦</span>宝箱道具
+        </button>
+        <button class="preset-btn" onclick="usePreset('medieval castle tileset, stone wall, game background tile')">
+          <span class="preset-icon">🏰</span>城堡图块
+        </button>
+        <button class="preset-btn" onclick="usePreset('ninja assassin character, crouching pose, stealth game sprite')">
+          <span class="preset-icon">🥷</span>忍者角色
+        </button>
+        <button class="preset-btn" onclick="usePreset('potion bottle red health potion, game item, inventory icon')">
+          <span class="preset-icon">🧪</span>药水道具
+        </button>
+      </div>
+    </div>
+
+    <!-- Generate -->
+    <div class="section">
+      <button class="generate-btn" id="gen-btn" onclick="generate()">
+        ✨ 生成游戏精灵
+      </button>
+      <p style="font-size:11px;color:var(--muted);margin-top:10px;text-align:center;">
+        🖥️ 本地过程化生成 · 即时响应 · 无需 API Key
+      </p>
+    </div>
+
+  </div>
+
+  <!-- ═══ RIGHT PANEL ══════════════════════════════════════════════════════════ -->
+  <div class="right">
+    <div class="canvas-area" id="canvas-area">
+      <!-- Loading overlay -->
+      <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loading-text">正在生成像素艺术...</div>
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-state" id="empty-state">
+        <div class="big-icon">🎮</div>
+        <p>选择预设或输入描述，点击「生成」按钮</p>
+        <p style="margin-top:8px;font-size:12px">支持像素艺术、精灵图、游戏图块生成</p>
+      </div>
+
+      <!-- Results grid -->
+      <div class="result-grid" id="result-grid" style="display:none"></div>
+    </div>
+
+    <!-- Preview panel -->
+    <div class="preview-panel" id="preview-panel" style="display:none">
+      <div class="preview-canvas">
+        <img id="preview-img" src="" alt="preview">
+      </div>
+      <div class="preview-info">
+        <h3 id="preview-title">选中图片</h3>
+        <p id="preview-prompt" style="color:var(--muted)"></p>
+      </div>
+      <div class="preview-actions">
+        <button class="action-btn" onclick="downloadSelected()">⬇ 下载 PNG</button>
+        <button class="action-btn" onclick="copyPrompt()">📋 复制 Prompt</button>
+        <button class="action-btn" onclick="generateVariant()">🔄 生成变体</button>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="statusbar">
+      <span><span class="dot dot-green"></span>服务就绪</span>
+      <span id="status-msg">等待生成...</span>
+      <span id="gen-count">已生成: 0 张</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';  // same origin
+let selectedStyle = 'pixel art';
+let selectedCard = null;
+let genCount = 0;
+let lastPrompt = '';
+
+function selectStyle(el, style) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  selectedStyle = style;
+}
+
+function usePreset(prompt) {
+  document.getElementById('prompt').value = prompt;
+}
+
+function copyPrompt() {
+  if (!selectedCard) return;
+  navigator.clipboard.writeText(selectedCard.prompt).catch(()=>{});
+  document.getElementById('status-msg').textContent = '✅ Prompt 已复制';
+}
+
+async function generate() {
+  const prompt = document.getElementById('prompt').value.trim();
+
+  if (!prompt) {
+    document.getElementById('status-msg').textContent = '⚠ 请输入描述或选择预设';
+    return;
+  }
+
+  lastPrompt = prompt;
+
+  // Show loading
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('gen-btn').disabled = true;
+  document.getElementById('loading-text').textContent = '正在过程化生成像素精灵...';
+  document.getElementById('status-msg').textContent = '⏳ 生成中...';
+
+  try {
+    const resp = await fetch('/game-animation/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, style: selectedStyle, width: 256, height: 256 })
+    });
+    const data = await resp.json();
+
+    if (data.success) {
+      addResult(data.image, data.prompt, data.engine || 'procedural');
+      genCount++;
+      document.getElementById('gen-count').textContent = `已生成: ${genCount} 张`;
+      document.getElementById('status-msg').textContent = `✅ 生成成功`;
+    } else {
+      document.getElementById('status-msg').textContent = `❌ ${data.error}`;
+      showError(data.error);
+    }
+  } catch (e) {
+    document.getElementById('status-msg').textContent = `❌ 网络错误: ${e.message}`;
+    showError(e.message);
+  } finally {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('gen-btn').disabled = false;
+  }
+}
+
+function addResult(imgData, prompt, model) {
+  const grid = document.getElementById('result-grid');
+  grid.style.display = 'grid';
+  document.getElementById('empty-state').style.display = 'none';
+
+  const card = document.createElement('div');
+  card.className = 'result-card';
+  card.innerHTML = `
+    <img src="${imgData}" alt="generated">
+    <div class="card-meta">${model} · ${new Date().toLocaleTimeString()}</div>
+  `;
+  card.onclick = () => selectCard(card, imgData, prompt, model);
+  grid.insertBefore(card, grid.firstChild);
+  selectCard(card, imgData, prompt, model);
+}
+
+function selectCard(card, imgData, prompt, model) {
+  document.querySelectorAll('.result-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  selectedCard = { imgData, prompt, model };
+
+  document.getElementById('preview-panel').style.display = 'flex';
+  document.getElementById('preview-img').src = imgData;
+  document.getElementById('preview-title').textContent = model;
+  document.getElementById('preview-prompt').textContent = prompt;
+}
+
+function showError(msg) {
+  const grid = document.getElementById('result-grid');
+  if (grid.children.length === 0) {
+    document.getElementById('empty-state').style.display = 'block';
+  }
+  const errDiv = document.createElement('div');
+  errDiv.style.cssText = 'grid-column:1/-1;padding:16px;background:#2d0a0a;border:1px solid #ef4444;border-radius:8px;color:#fca5a5;font-size:13px;';
+  errDiv.innerHTML = `❌ 生成失败: ${msg}<br><small style="color:#94a3b8;margin-top:8px;display:block">提示：请稍后重试，或检查服务器日志</small>`;
+  grid.style.display = 'grid';
+  grid.insertBefore(errDiv, grid.firstChild);
+  setTimeout(() => errDiv.remove(), 10000);
+}
+
+function downloadSelected() {
+  if (!selectedCard) return;
+  const a = document.createElement('a');
+  a.href = selectedCard.imgData;
+  a.download = `sprite-${Date.now()}.png`;
+  a.click();
+}
+
+function copyPrompt() {
+  if (!selectedCard) return;
+  navigator.clipboard.writeText(selectedCard.prompt);
+  document.getElementById('status-msg').textContent = '✅ Prompt 已复制';
+}
+
+function generateVariant() {
+  if (!selectedCard) return;
+  document.getElementById('prompt').value = lastPrompt;
+  generate();
+}
+</script>
+</body>
+</html>

@@ -5,12 +5,45 @@
     "icon": "🎯",
     "desc": "向目标方向发射一枚或多枚弹体，命中时触发效果。",
     "params": {
-      "speed": { "type": "number", "default": 20, "desc": "弹体速度（格/秒）" },
-      "count":  { "type": "number", "default": 1,  "desc": "同时发射数量" },
-      "range":  { "type": "number", "default": 30, "desc": "最大射程（格）" },
-      "spread": { "type": "number", "default": 0,  "desc": "散射角度（度），0=直线" }
+      "speed": {
+        "type": "number",
+        "default": 20,
+        "desc": "弹体速度（格/秒）"
+      },
+      "count": {
+        "type": "number",
+        "default": 1,
+        "desc": "同时发射数量"
+      },
+      "range": {
+        "type": "number",
+        "default": 30,
+        "desc": "最大射程（格）"
+      },
+      "spread": {
+        "type": "number",
+        "default": 0,
+        "desc": "散射角度（度），0=直线"
+      }
     },
-    "compatible_modifiers": ["split","bounce","pierce","chain","homing","fork","barrage","slow_projectile","returning","nova_on_expire"]
+    "compatible_modifiers": [
+      "split",
+      "bounce",
+      "pierce",
+      "chain",
+      "homing",
+      "fork",
+      "barrage",
+      "slow_projectile",
+      "returning",
+      "nova_on_expire"
+    ],
+    "caps": [
+      "has_trajectory",
+      "has_impact",
+      "is_discrete",
+      "has_motion"
+    ]
   },
   {
     "id": "area",
@@ -18,11 +51,40 @@
     "icon": "💥",
     "desc": "以目标点或自身为中心，对范围内所有目标触发效果。",
     "params": {
-      "radius":  { "type": "number", "default": 5, "desc": "爆炸半径（格）" },
-      "shape":   { "type": "enum",   "values": ["circle","cone","line","ring"], "default": "circle" },
-      "falloff": { "type": "boolean","default": false, "desc": "边缘伤害衰减" }
+      "radius": {
+        "type": "number",
+        "default": 5,
+        "desc": "爆炸半径（格）"
+      },
+      "shape": {
+        "type": "enum",
+        "values": [
+          "circle",
+          "cone",
+          "line",
+          "ring"
+        ],
+        "default": "circle"
+      },
+      "falloff": {
+        "type": "boolean",
+        "default": false,
+        "desc": "边缘伤害衰减"
+      }
     },
-    "compatible_modifiers": ["expand","linger","cascade","ground_effect","elevation"]
+    "compatible_modifiers": [
+      "expand",
+      "linger",
+      "cascade",
+      "ground_effect",
+      "elevation"
+    ],
+    "caps": [
+      "has_geometry",
+      "has_impact",
+      "is_instantaneous",
+      "has_spread"
+    ]
   },
   {
     "id": "persistent",
@@ -30,11 +92,35 @@
     "icon": "🌀",
     "desc": "在目标位置持续存在一段时间，定期触发效果。",
     "params": {
-      "duration": { "type": "number", "default": 5, "desc": "持续时间（秒）" },
-      "interval": { "type": "number", "default": 1, "desc": "触发间隔（秒）" },
-      "radius":   { "type": "number", "default": 3, "desc": "作用范围（格）" }
+      "duration": {
+        "type": "number",
+        "default": 5,
+        "desc": "持续时间（秒）"
+      },
+      "interval": {
+        "type": "number",
+        "default": 1,
+        "desc": "触发间隔（秒）"
+      },
+      "radius": {
+        "type": "number",
+        "default": 3,
+        "desc": "作用范围（格）"
+      }
     },
-    "compatible_modifiers": ["pulse","aura","linger","rotating","summoned_anchor"]
+    "compatible_modifiers": [
+      "pulse",
+      "aura",
+      "linger",
+      "rotating",
+      "summoned_anchor"
+    ],
+    "caps": [
+      "has_geometry",
+      "has_timing",
+      "is_continuous",
+      "has_spread"
+    ]
   },
   {
     "id": "instant",
@@ -42,9 +128,28 @@
     "icon": "⚡",
     "desc": "无弹体，立即对目标或自身触发效果，无延迟。",
     "params": {
-      "target": { "type": "enum", "values": ["single","self","all_enemies","all_allies"], "default": "single" }
+      "target": {
+        "type": "enum",
+        "values": [
+          "single",
+          "self",
+          "all_enemies",
+          "all_allies"
+        ],
+        "default": "single"
+      }
     },
-    "compatible_modifiers": ["echo","chain","aoe_burst","copy"]
+    "compatible_modifiers": [
+      "echo",
+      "chain",
+      "aoe_burst",
+      "copy"
+    ],
+    "caps": [
+      "has_impact",
+      "is_instantaneous",
+      "is_discrete"
+    ]
   },
   {
     "id": "beam",
@@ -52,12 +157,42 @@
     "icon": "〰️",
     "desc": "持续输出的直线光束，命中路径上所有目标。",
     "params": {
-      "length":    { "type": "number", "default": 20, "desc": "射线长度（格）" },
-      "width":     { "type": "number", "default": 1,  "desc": "射线宽度（格）" },
-      "tick_rate": { "type": "number", "default": 4,  "desc": "每秒伤害次数" },
-      "duration":  { "type": "number", "default": 3,  "desc": "持续时间（秒）" }
+      "length": {
+        "type": "number",
+        "default": 20,
+        "desc": "射线长度（格）"
+      },
+      "width": {
+        "type": "number",
+        "default": 1,
+        "desc": "射线宽度（格）"
+      },
+      "tick_rate": {
+        "type": "number",
+        "default": 4,
+        "desc": "每秒伤害次数"
+      },
+      "duration": {
+        "type": "number",
+        "default": 3,
+        "desc": "持续时间（秒）"
+      }
     },
-    "compatible_modifiers": ["split","fork","rotating","widening","bounce"]
+    "compatible_modifiers": [
+      "split",
+      "fork",
+      "rotating",
+      "widening",
+      "bounce"
+    ],
+    "caps": [
+      "has_trajectory",
+      "has_geometry",
+      "has_impact",
+      "has_timing",
+      "is_continuous",
+      "has_motion"
+    ]
   },
   {
     "id": "summon",
@@ -65,10 +200,31 @@
     "icon": "🐲",
     "desc": "召唤一个实体单位，按指令行动。",
     "params": {
-      "max_count": { "type": "number", "default": 1, "desc": "最大同时存在数量" },
-      "duration":  { "type": "number", "default": 30, "desc": "持续时间（秒），0=永久" },
-      "inherit_element": { "type": "boolean", "default": true, "desc": "继承施法者元素" }
+      "max_count": {
+        "type": "number",
+        "default": 1,
+        "desc": "最大同时存在数量"
+      },
+      "duration": {
+        "type": "number",
+        "default": 30,
+        "desc": "持续时间（秒），0=永久"
+      },
+      "inherit_element": {
+        "type": "boolean",
+        "default": true,
+        "desc": "继承施法者元素"
+      }
     },
-    "compatible_modifiers": ["empowered","aura","echo"]
+    "compatible_modifiers": [
+      "empowered",
+      "aura",
+      "echo"
+    ],
+    "caps": [
+      "has_entity",
+      "has_timing",
+      "has_duration"
+    ]
   }
 ]

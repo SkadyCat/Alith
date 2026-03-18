@@ -1,0 +1,161 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SkillNodeGraph",
+  "description": "MagicWorld 技能节点图 Schema v1.0",
+  "type": "object",
+  "required": ["schema_version", "id", "name", "nodes", "edges"],
+  "properties": {
+    "schema_version": { "type": "string", "enum": ["1.0"] },
+    "id": { "type": "string", "pattern": "^skill_[a-zA-Z0-9_]+$" },
+    "name": { "type": "string" },
+    "rarity": {
+      "type": "string",
+      "enum": ["普通", "魔法", "稀有", "史诗", "传奇", "传说"]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["投射物", "范围", "持续", "单体", "近战", "召唤", "诅咒", "光环", "爆炸", "链接", "瞬发", "移动", "被动"]
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/definitions/Node" }
+    },
+    "edges": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Edge" }
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "total_weight": { "type": "number" },
+        "max_weight": { "type": "number" },
+        "author": { "type": "string" }
+      }
+    }
+  },
+  "definitions": {
+    "Node": {
+      "type": "object",
+      "required": ["id", "type", "subtype"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["source", "delivery", "modifier", "effect", "condition", "transform", "filter"]
+        },
+        "subtype": { "type": "string" },
+        "params": { "type": "object" },
+        "position": {
+          "type": "object",
+          "description": "可视化编辑器中的节点位置",
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" }
+          }
+        }
+      }
+    },
+    "Edge": {
+      "type": "object",
+      "required": ["from", "to"],
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "格式: {nodeId}.{portType}，如 n2.exec 或 n2.signal:on_hit"
+        },
+        "to": {
+          "type": "string",
+          "description": "格式: {nodeId}.{portType}，如 n3.exec"
+        }
+      }
+    },
+    "PortTypes": {
+      "type": "string",
+      "enum": [
+        "exec",
+        "signal:on_hit",
+        "signal:on_expire",
+        "signal:on_kill",
+        "signal:on_crit",
+        "data:number",
+        "data:element",
+        "data:target_list",
+        "data:entity_ref",
+        "data:effect_ref"
+      ]
+    },
+    "NodeWeights": {
+      "description": "各节点类型的复杂度权重",
+      "source": 0,
+      "delivery": 3,
+      "modifier": 2,
+      "effect": 2,
+      "condition": 1,
+      "transform": 1,
+      "filter": 1
+    },
+    "RarityMaxWeight": {
+      "description": "各稀有度对应的最大权重上限",
+      "普通": 10,
+      "魔法": 14,
+      "稀有": 18,
+      "史诗": 24,
+      "传奇": 32,
+      "传说": 48
+    },
+    "SourceSubtypes": {
+      "active_cast": { "mpCost": "number", "cooldown": "number", "castTime": "number", "channeled": "boolean" },
+      "passive_proc": { "trigger_on": "string", "chance": "number", "cooldown": "number" },
+      "aura_pulse": { "radius": "number", "interval": "number", "mpPerSec": "number" },
+      "reaction": { "listen_to_skill": "string", "listen_signal": "string" }
+    },
+    "DeliverySubtypes": {
+      "projectile": { "speed": "number", "range": "number", "count": "number", "element": "string" },
+      "area": { "radius": "number", "shape": ["circle","cone","line","ring"], "element": "string", "falloff": "boolean" },
+      "beam": { "length": "number", "width": "number", "tickRate": "number", "element": "string" },
+      "instant": { "targets_count": "number", "element": "string" },
+      "persistent": { "duration": "number", "radius": "number", "interval": "number" },
+      "summon": { "entity_id": "string", "count": "number", "duration": "number", "ai_behavior": "string" }
+    },
+    "ModifierSubtypes": {
+      "split": { "count": "number", "trigger": ["on_hit","on_expire","on_halfway"], "angle_spread": "number", "inherit_mods": "boolean" },
+      "fork": { "count": "number", "angle_spread": "number" },
+      "bounce": { "count": "number", "range": "number", "damage_decay": "number", "prefer_new": "boolean" },
+      "pierce": { "count": "number", "damage_decay": "number" },
+      "chain": { "count": "number", "range": "number", "damage_decay": "number" },
+      "homing": { "turn_rate": "number", "acquire_range": "number" },
+      "spiral": { "rotations": "number", "radius": "number" },
+      "orbit": { "radius": "number", "duration": "number", "angular_speed": "number" }
+    },
+    "EffectSubtypes": {
+      "damage": { "base": "string", "element": "string", "crit_chance": "number", "crit_mult": "number" },
+      "dot": { "damage_per_tick": "string", "duration": "number", "interval": "number", "stacks": "boolean", "max_stacks": "number", "element": "string" },
+      "heal": { "base": "string", "hot": "boolean", "duration": "number", "interval": "number" },
+      "buff": { "stat": "string", "amount": "number", "duration": "number" },
+      "debuff": { "stat": "string", "amount": "number", "duration": "number" },
+      "cc": { "type": ["freeze","stun","slow","root","knockback"], "duration": "number", "magnitude": "number" },
+      "shield": { "amount": "string", "duration": "number", "element_absorb": "string" },
+      "drain": { "amount": "string", "return_ratio": "number" },
+      "mark": { "mark_id": "string", "stack_max": "number" }
+    },
+    "ConditionSubtypes": {
+      "on_hit": { "chance": "number" },
+      "on_crit": {},
+      "on_kill": {},
+      "on_expire": {},
+      "on_hp_below": { "threshold": "number" },
+      "on_stack_max": { "mark_id": "string", "stack_count": "number" },
+      "on_consume_mark": { "mark_id": "string" }
+    },
+    "ModifierConflicts": {
+      "split": ["fork"],
+      "fork": ["split"],
+      "homing": ["spiral"]
+    }
+  }
+}

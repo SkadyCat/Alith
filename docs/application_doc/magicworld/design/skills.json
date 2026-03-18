@@ -14,7 +14,11 @@
     "tags": [
       "单体",
       "诅咒"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理；目标标记光环(P_CurseAura)，蒙皮后处理轮廓高亮(Outline PostProcess)，连线Beam效果",
+    "magic": {
+      "delivery": "instant"
+    }
   },
   {
     "id": "skill_002",
@@ -31,7 +35,11 @@
     "tags": [
       "投射物",
       "单体"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 骨灰粒子(P_BoneAsh)，绿幽灵色材质(M_NecroEmissive)，腐蚀残留Decal，灵魂飘散效果；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_003",
@@ -48,7 +56,11 @@
     "tags": [
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 火焰粒子(P_FireBurst)，橙红色发光材质(M_EmissiveFire)，动态火焰形变，烟雾残留效果；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_004",
@@ -64,7 +76,11 @@
     "icon": "/icons/skillicon_04_20260302_151312_4bc6b307.png",
     "tags": [
       "范围"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冰晶碎片(P_IceShard)，冰蓝色折射材质(M_IceRefraction)，冻结结晶扩散，寒气雾粒；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_005",
@@ -81,7 +97,11 @@
     "tags": [
       "投射物",
       "链接"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 闪电弧光(P_LightningArc)，电光蓝材质(M_ElectricEmissive)，随机电弧分叉，电磁扭曲Post-Process；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；目标标记光环(P_CurseAura)，蒙皮后处理轮廓高亮(Outline PostProcess)，连线Beam效果",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_006",
@@ -98,7 +118,11 @@
     "tags": [
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 毒雾粒子(P_PoisonCloud)，酸绿色半透明材质(M_PoisonGas)，毒液滴落Decal，腐蚀气泡；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_007",
@@ -114,7 +138,11 @@
     "icon": "/icons/skillicon_07_20260302_151315_52d296eb.png",
     "tags": [
       "范围"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 圣光粒子(P_HolyLight)，金白色辉光材质(M_HolyGlow)，光柱照射，光环Decal投影；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_008",
@@ -130,7 +158,11 @@
     "icon": "/icons/skillicon_08_20260302_151316_634e08d4.png",
     "tags": [
       "范围"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 虚空涡旋(P_VoidVortex)，深紫扭曲材质(M_VoidDistortion)，空间撕裂后处理，星空粒子；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_009",
@@ -147,7 +179,11 @@
     "tags": [
       "单体",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 骨灰粒子(P_BoneAsh)，绿幽灵色材质(M_NecroEmissive)，腐蚀残留Decal，灵魂飘散效果；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_010",
@@ -164,7 +200,11 @@
     "tags": [
       "近战",
       "单体"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冲击碎片(P_ImpactDebris)，物理材质(M_StoneImpact)，地面裂缝Decal，尘埃扬起效果；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)",
+    "magic": {
+      "delivery": "instant"
+    }
   },
   {
     "id": "skill_011",
@@ -181,7 +221,11 @@
     "tags": [
       "投射物",
       "单体"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_012",
@@ -197,7 +241,11 @@
     "icon": "/icons/skillicon_12_20260302_151320_38b6c8db.png",
     "tags": [
       "召唤"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 骨灰粒子(P_BoneAsh)，绿幽灵色材质(M_NecroEmissive)，腐蚀残留Decal，灵魂飘散效果；召唤传送阵动画(P_SummonCircle)，被召唤物SpawnActor生成动画，Dissolve材质淡入效果",
+    "magic": {
+      "delivery": "summon"
+    }
   },
   {
     "id": "skill_013",
@@ -214,7 +262,11 @@
     "tags": [
       "投射物",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 火焰粒子(P_FireBurst)，橙红色发光材质(M_EmissiveFire)，动态火焰形变，烟雾残留效果；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_014",
@@ -231,7 +283,11 @@
     "tags": [
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冰晶碎片(P_IceShard)，冰蓝色折射材质(M_IceRefraction)，冻结结晶扩散，寒气雾粒；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_015",
@@ -248,7 +304,11 @@
     "tags": [
       "范围",
       "投射物"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 闪电弧光(P_LightningArc)，电光蓝材质(M_ElectricEmissive)，随机电弧分叉，电磁扭曲Post-Process；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_016",
@@ -266,7 +326,11 @@
       "近战",
       "持续",
       "诅咒"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 毒雾粒子(P_PoisonCloud)，酸绿色半透明材质(M_PoisonGas)，毒液滴落Decal，腐蚀气泡；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长；目标标记光环(P_CurseAura)，蒙皮后处理轮廓高亮(Outline PostProcess)，连线Beam效果",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_017",
@@ -283,7 +347,11 @@
     "tags": [
       "单体",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 圣光粒子(P_HolyLight)，金白色辉光材质(M_HolyGlow)，光柱照射，光环Decal投影；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_018",
@@ -300,7 +368,11 @@
     "tags": [
       "单体",
       "诅咒"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 虚空涡旋(P_VoidVortex)，深紫扭曲材质(M_VoidDistortion)，空间撕裂后处理，星空粒子；目标标记光环(P_CurseAura)，蒙皮后处理轮廓高亮(Outline PostProcess)，连线Beam效果",
+    "magic": {
+      "delivery": "instant"
+    }
   },
   {
     "id": "skill_019",
@@ -317,7 +389,11 @@
     "tags": [
       "范围",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 骨灰粒子(P_BoneAsh)，绿幽灵色材质(M_NecroEmissive)，腐蚀残留Decal，灵魂飘散效果；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_020",
@@ -333,7 +409,11 @@
     "icon": "/icons/skillicon_20_20260302_151329_8d500f8b.png",
     "tags": [
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_021",
@@ -350,7 +430,11 @@
     "tags": [
       "投射物",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 火焰粒子(P_FireBurst)，橙红色发光材质(M_EmissiveFire)，动态火焰形变，烟雾残留效果；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_022",
@@ -366,7 +450,11 @@
     "icon": "/icons/skillicon_22_20260302_151331_0fae0bf1.png",
     "tags": [
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冰晶碎片(P_IceShard)，冰蓝色折射材质(M_IceRefraction)，冻结结晶扩散，寒气雾粒；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_023",
@@ -382,7 +470,11 @@
     "icon": "/icons/skillicon_23_20260302_151332_0bd195e8.png",
     "tags": [
       "范围"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 闪电弧光(P_LightningArc)，电光蓝材质(M_ElectricEmissive)，随机电弧分叉，电磁扭曲Post-Process；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_024",
@@ -399,7 +491,11 @@
     "tags": [
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 毒雾粒子(P_PoisonCloud)，酸绿色半透明材质(M_PoisonGas)，毒液滴落Decal，腐蚀气泡；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_025",
@@ -416,7 +512,11 @@
     "tags": [
       "近战",
       "单体"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 圣光粒子(P_HolyLight)，金白色辉光材质(M_HolyGlow)，光柱照射，光环Decal投影；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)",
+    "magic": {
+      "delivery": "instant"
+    }
   },
   {
     "id": "skill_026",
@@ -433,7 +533,11 @@
     "tags": [
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 虚空涡旋(P_VoidVortex)，深紫扭曲材质(M_VoidDistortion)，空间撕裂后处理，星空粒子；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_027",
@@ -450,7 +554,11 @@
     "tags": [
       "召唤",
       "范围"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 骨灰粒子(P_BoneAsh)，绿幽灵色材质(M_NecroEmissive)，腐蚀残留Decal，灵魂飘散效果；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；召唤传送阵动画(P_SummonCircle)，被召唤物SpawnActor生成动画，Dissolve材质淡入效果",
+    "magic": {
+      "delivery": "summon"
+    }
   },
   {
     "id": "skill_028",
@@ -467,7 +575,11 @@
     "tags": [
       "单体",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_029",
@@ -484,7 +596,11 @@
     "tags": [
       "范围",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 圣光粒子(P_HolyLight)，金白色辉光材质(M_HolyGlow)，光柱照射，光环Decal投影；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_030",
@@ -502,7 +618,11 @@
       "近战",
       "范围",
       "移动"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冲击碎片(P_ImpactDebris)，物理材质(M_StoneImpact)，地面裂缝Decal，尘埃扬起效果；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_031",
@@ -764,7 +884,11 @@
     "tags": [
       "投射物",
       "范围"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_047",
@@ -782,7 +906,11 @@
       "范围",
       "持续",
       "投射物"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 火焰粒子(P_FireBurst)，橙红色发光材质(M_EmissiveFire)，动态火焰形变，烟雾残留效果；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_048",
@@ -798,7 +926,11 @@
     "icon": "/icons/skillicon_18_20260302_151327_854c6ac9.png",
     "tags": [
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冰晶碎片(P_IceShard)，冰蓝色折射材质(M_IceRefraction)，冻结结晶扩散，寒气雾粒；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_049",
@@ -815,7 +947,11 @@
     "tags": [
       "范围",
       "投射物"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 闪电弧光(P_LightningArc)，电光蓝材质(M_ElectricEmissive)，随机电弧分叉，电磁扭曲Post-Process；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_050",
@@ -832,7 +968,11 @@
     "tags": [
       "投射物",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 毒雾粒子(P_PoisonCloud)，酸绿色半透明材质(M_PoisonGas)，毒液滴落Decal，腐蚀气泡；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_051",
@@ -848,7 +988,11 @@
     "icon": "/icons/skillicon_21_20260302_151330_88617e4a.png",
     "tags": [
       "范围"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 圣光粒子(P_HolyLight)，金白色辉光材质(M_HolyGlow)，光柱照射，光环Decal投影；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_052",
@@ -864,7 +1008,11 @@
     "icon": "/icons/skillicon_22_20260302_151331_0fae0bf1.png",
     "tags": [
       "移动"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 虚空涡旋(P_VoidVortex)，深紫扭曲材质(M_VoidDistortion)，空间撕裂后处理，星空粒子",
+    "magic": {
+      "delivery": "instant"
+    }
   },
   {
     "id": "skill_053",
@@ -880,7 +1028,11 @@
     "icon": "/icons/skillicon_23_20260302_151332_0bd195e8.png",
     "tags": [
       "召唤"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 骨灰粒子(P_BoneAsh)，绿幽灵色材质(M_NecroEmissive)，腐蚀残留Decal，灵魂飘散效果；召唤传送阵动画(P_SummonCircle)，被召唤物SpawnActor生成动画，Dissolve材质淡入效果",
+    "magic": {
+      "delivery": "summon"
+    }
   },
   {
     "id": "skill_054",
@@ -897,7 +1049,11 @@
     "tags": [
       "近战",
       "范围"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冲击碎片(P_ImpactDebris)，物理材质(M_StoneImpact)，地面裂缝Decal，尘埃扬起效果；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_055",
@@ -914,7 +1070,11 @@
     "tags": [
       "范围",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_056",
@@ -930,7 +1090,11 @@
     "icon": "/icons/skillicon_26_20260302_151335_0492b2c3.png",
     "tags": [
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 火焰粒子(P_FireBurst)，橙红色发光材质(M_EmissiveFire)，动态火焰形变，烟雾残留效果；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_057",
@@ -947,7 +1111,11 @@
     "tags": [
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冰晶碎片(P_IceShard)，冰蓝色折射材质(M_IceRefraction)，冻结结晶扩散，寒气雾粒；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_058",
@@ -964,7 +1132,11 @@
     "tags": [
       "投射物",
       "范围"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 闪电弧光(P_LightningArc)，电光蓝材质(M_ElectricEmissive)，随机电弧分叉，电磁扭曲Post-Process；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_059",
@@ -981,7 +1153,11 @@
     "tags": [
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 毒雾粒子(P_PoisonCloud)，酸绿色半透明材质(M_PoisonGas)，毒液滴落Decal，腐蚀气泡；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_060",
@@ -998,7 +1174,11 @@
     "tags": [
       "近战",
       "投射物"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 圣光粒子(P_HolyLight)，金白色辉光材质(M_HolyGlow)，光柱照射，光环Decal投影；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_061",
@@ -1015,7 +1195,11 @@
     "tags": [
       "范围",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 虚空涡旋(P_VoidVortex)，深紫扭曲材质(M_VoidDistortion)，空间撕裂后处理，星空粒子；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_062",
@@ -1031,7 +1215,11 @@
     "icon": "/icons/skillicon_02_20260302_151310_877b6f04.png",
     "tags": [
       "召唤"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 骨灰粒子(P_BoneAsh)，绿幽灵色材质(M_NecroEmissive)，腐蚀残留Decal，灵魂飘散效果；召唤传送阵动画(P_SummonCircle)，被召唤物SpawnActor生成动画，Dissolve材质淡入效果",
+    "magic": {
+      "delivery": "summon"
+    }
   },
   {
     "id": "skill_063",
@@ -1048,7 +1236,11 @@
     "tags": [
       "近战",
       "范围"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冲击碎片(P_ImpactDebris)，物理材质(M_StoneImpact)，地面裂缝Decal，尘埃扬起效果；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_064",
@@ -1066,7 +1258,11 @@
       "移动",
       "近战",
       "单体"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)",
+    "magic": {
+      "delivery": "instant"
+    }
   },
   {
     "id": "skill_065",
@@ -1082,7 +1278,11 @@
     "icon": "/icons/skillicon_05_20260302_151313_467cbe69.png",
     "tags": [
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 火焰粒子(P_FireBurst)，橙红色发光材质(M_EmissiveFire)，动态火焰形变，烟雾残留效果；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_066",
@@ -1099,7 +1299,11 @@
     "tags": [
       "投射物",
       "单体"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冰晶碎片(P_IceShard)，冰蓝色折射材质(M_IceRefraction)，冻结结晶扩散，寒气雾粒；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_067",
@@ -1115,7 +1319,11 @@
     "icon": "/icons/skillicon_07_20260302_151315_52d296eb.png",
     "tags": [
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 闪电弧光(P_LightningArc)，电光蓝材质(M_ElectricEmissive)，随机电弧分叉，电磁扭曲Post-Process；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_068",
@@ -1132,7 +1340,11 @@
     "tags": [
       "近战",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 毒雾粒子(P_PoisonCloud)，酸绿色半透明材质(M_PoisonGas)，毒液滴落Decal，腐蚀气泡；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_069",
@@ -1148,7 +1360,11 @@
     "icon": "/icons/skillicon_09_20260302_151317_e2bf7f9b.png",
     "tags": [
       "召唤"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 圣光粒子(P_HolyLight)，金白色辉光材质(M_HolyGlow)，光柱照射，光环Decal投影；召唤传送阵动画(P_SummonCircle)，被召唤物SpawnActor生成动画，Dissolve材质淡入效果",
+    "magic": {
+      "delivery": "summon"
+    }
   },
   {
     "id": "skill_070",
@@ -1165,7 +1381,11 @@
     "tags": [
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 虚空涡旋(P_VoidVortex)，深紫扭曲材质(M_VoidDistortion)，空间撕裂后处理，星空粒子；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_071",
@@ -1345,7 +1565,11 @@
     "tags": [
       "范围",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 骨灰粒子(P_BoneAsh)，绿幽灵色材质(M_NecroEmissive)，腐蚀残留Decal，灵魂飘散效果；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_082",
@@ -1362,7 +1586,11 @@
     "tags": [
       "近战",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冲击碎片(P_ImpactDebris)，物理材质(M_StoneImpact)，地面裂缝Decal，尘埃扬起效果；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_083",
@@ -1380,7 +1608,11 @@
       "单体",
       "持续",
       "诅咒"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长；目标标记光环(P_CurseAura)，蒙皮后处理轮廓高亮(Outline PostProcess)，连线Beam效果",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_084",
@@ -1398,7 +1630,11 @@
       "范围",
       "投射物",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 火焰粒子(P_FireBurst)，橙红色发光材质(M_EmissiveFire)，动态火焰形变，烟雾残留效果；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_085",
@@ -1415,7 +1651,11 @@
     "tags": [
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冰晶碎片(P_IceShard)，冰蓝色折射材质(M_IceRefraction)，冻结结晶扩散，寒气雾粒；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_086",
@@ -1432,7 +1672,11 @@
     "tags": [
       "范围",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 闪电弧光(P_LightningArc)，电光蓝材质(M_ElectricEmissive)，随机电弧分叉，电磁扭曲Post-Process；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_087",
@@ -1449,7 +1693,11 @@
     "tags": [
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 毒雾粒子(P_PoisonCloud)，酸绿色半透明材质(M_PoisonGas)，毒液滴落Decal，腐蚀气泡；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_088",
@@ -1466,7 +1714,11 @@
     "tags": [
       "近战",
       "单体"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 圣光粒子(P_HolyLight)，金白色辉光材质(M_HolyGlow)，光柱照射，光环Decal投影；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)",
+    "magic": {
+      "delivery": "instant"
+    }
   },
   {
     "id": "skill_089",
@@ -1483,7 +1735,11 @@
     "tags": [
       "移动",
       "瞬发"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 虚空涡旋(P_VoidVortex)，深紫扭曲材质(M_VoidDistortion)，空间撕裂后处理，星空粒子",
+    "magic": {
+      "delivery": "instant"
+    }
   },
   {
     "id": "skill_090",
@@ -1500,7 +1756,11 @@
     "tags": [
       "召唤",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 骨灰粒子(P_BoneAsh)，绿幽灵色材质(M_NecroEmissive)，腐蚀残留Decal，灵魂飘散效果；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长；召唤传送阵动画(P_SummonCircle)，被召唤物SpawnActor生成动画，Dissolve材质淡入效果",
+    "magic": {
+      "delivery": "summon"
+    }
   },
   {
     "id": "skill_091",
@@ -1516,7 +1776,11 @@
     "icon": "/icons/skillicon_01_20260302_151309_95c73784.png",
     "tags": [
       "范围"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冲击碎片(P_ImpactDebris)，物理材质(M_StoneImpact)，地面裂缝Decal，尘埃扬起效果；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_092",
@@ -1533,7 +1797,11 @@
     "tags": [
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_093",
@@ -1647,7 +1915,11 @@
     "tags": [
       "范围",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 虚空涡旋(P_VoidVortex)，深紫扭曲材质(M_VoidDistortion)，空间撕裂后处理，星空粒子；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_100",
@@ -1664,7 +1936,11 @@
     "tags": [
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_101",
@@ -1682,7 +1958,11 @@
       "范围",
       "爆炸",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 火焰粒子(P_FireBurst)，橙红色发光材质(M_EmissiveFire)，动态火焰形变，烟雾残留效果；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_102",
@@ -1699,7 +1979,11 @@
     "tags": [
       "范围",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冰晶碎片(P_IceShard)，冰蓝色折射材质(M_IceRefraction)，冻结结晶扩散，寒气雾粒；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_103",
@@ -1716,7 +2000,11 @@
     "tags": [
       "链接",
       "单体"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 闪电弧光(P_LightningArc)，电光蓝材质(M_ElectricEmissive)，随机电弧分叉，电磁扭曲Post-Process；目标标记光环(P_CurseAura)，蒙皮后处理轮廓高亮(Outline PostProcess)，连线Beam效果",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_104",
@@ -1734,7 +2022,11 @@
       "移动",
       "单体",
       "瞬发"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理",
+    "magic": {
+      "delivery": "instant"
+    }
   },
   {
     "id": "skill_105",
@@ -1751,7 +2043,11 @@
     "tags": [
       "范围",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 圣光粒子(P_HolyLight)，金白色辉光材质(M_HolyGlow)，光柱照射，光环Decal投影；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_106",
@@ -1768,7 +2064,11 @@
     "tags": [
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 藤蔓孢子(P_NatureSpore)，翠绿生机材质(M_NatureGlow)，植物生长动画，花瓣飘散效果；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_107",
@@ -1786,7 +2086,11 @@
       "范围",
       "爆炸",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 虚空涡旋(P_VoidVortex)，深紫扭曲材质(M_VoidDistortion)，空间撕裂后处理，星空粒子；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_108",
@@ -1804,7 +2108,11 @@
       "范围",
       "投射物",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 火焰粒子(P_FireBurst)，橙红色发光材质(M_EmissiveFire)，动态火焰形变，烟雾残留效果；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_109",
@@ -1821,7 +2129,11 @@
     "tags": [
       "投射物",
       "单体"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冰晶碎片(P_IceShard)，冰蓝色折射材质(M_IceRefraction)，冻结结晶扩散，寒气雾粒；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_110",
@@ -1839,7 +2151,11 @@
       "投射物",
       "范围",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 闪电弧光(P_LightningArc)，电光蓝材质(M_ElectricEmissive)，随机电弧分叉，电磁扭曲Post-Process；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_111",
@@ -1857,7 +2173,11 @@
       "单体",
       "持续",
       "诅咒"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长；目标标记光环(P_CurseAura)，蒙皮后处理轮廓高亮(Outline PostProcess)，连线Beam效果",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_112",
@@ -1874,7 +2194,11 @@
     "tags": [
       "范围",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 圣光粒子(P_HolyLight)，金白色辉光材质(M_HolyGlow)，光柱照射，光环Decal投影；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_113",
@@ -1891,7 +2215,11 @@
     "tags": [
       "单体",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 藤蔓孢子(P_NatureSpore)，翠绿生机材质(M_NatureGlow)，植物生长动画，花瓣飘散效果；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_114",
@@ -1909,7 +2237,11 @@
       "单体",
       "持续",
       "诅咒"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 虚空涡旋(P_VoidVortex)，深紫扭曲材质(M_VoidDistortion)，空间撕裂后处理，星空粒子；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长；目标标记光环(P_CurseAura)，蒙皮后处理轮廓高亮(Outline PostProcess)，连线Beam效果",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_115",
@@ -1927,7 +2259,11 @@
       "移动",
       "近战",
       "范围"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 火焰粒子(P_FireBurst)，橙红色发光材质(M_EmissiveFire)，动态火焰形变，烟雾残留效果；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_116",
@@ -1944,7 +2280,11 @@
     "tags": [
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冰晶碎片(P_IceShard)，冰蓝色折射材质(M_IceRefraction)，冻结结晶扩散，寒气雾粒；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_117",
@@ -1963,7 +2303,11 @@
       "范围",
       "爆炸",
       "近战"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 闪电弧光(P_LightningArc)，电光蓝材质(M_ElectricEmissive)，随机电弧分叉，电磁扭曲Post-Process；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_118",
@@ -1980,7 +2324,11 @@
     "tags": [
       "召唤",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长；召唤传送阵动画(P_SummonCircle)，被召唤物SpawnActor生成动画，Dissolve材质淡入效果",
+    "magic": {
+      "delivery": "summon"
+    }
   },
   {
     "id": "skill_119",
@@ -1997,7 +2345,11 @@
     "tags": [
       "范围",
       "近战"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 圣光粒子(P_HolyLight)，金白色辉光材质(M_HolyGlow)，光柱照射，光环Decal投影；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_120",
@@ -2015,7 +2367,11 @@
       "投射物",
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 藤蔓孢子(P_NatureSpore)，翠绿生机材质(M_NatureGlow)，植物生长动画，花瓣飘散效果；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_121",
@@ -2033,7 +2389,11 @@
       "范围",
       "爆炸",
       "投射物"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 虚空涡旋(P_VoidVortex)，深紫扭曲材质(M_VoidDistortion)，空间撕裂后处理，星空粒子；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_122",
@@ -2051,7 +2411,11 @@
       "范围",
       "持续",
       "近战"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 火焰粒子(P_FireBurst)，橙红色发光材质(M_EmissiveFire)，动态火焰形变，烟雾残留效果；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_123",
@@ -2069,7 +2433,11 @@
       "范围",
       "持续",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冰晶碎片(P_IceShard)，冰蓝色折射材质(M_IceRefraction)，冻结结晶扩散，寒气雾粒；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_124",
@@ -2086,7 +2454,11 @@
     "tags": [
       "范围",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 闪电弧光(P_LightningArc)，电光蓝材质(M_ElectricEmissive)，随机电弧分叉，电磁扭曲Post-Process；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_125",
@@ -2103,7 +2475,11 @@
     "tags": [
       "单体",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_126",
@@ -2121,7 +2497,11 @@
       "范围",
       "持续",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 圣光粒子(P_HolyLight)，金白色辉光材质(M_HolyGlow)，光柱照射，光环Decal投影；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_127",
@@ -2138,7 +2518,11 @@
     "tags": [
       "链接",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 藤蔓孢子(P_NatureSpore)，翠绿生机材质(M_NatureGlow)，植物生长动画，花瓣飘散效果；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长；目标标记光环(P_CurseAura)，蒙皮后处理轮廓高亮(Outline PostProcess)，连线Beam效果",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_128",
@@ -2155,7 +2539,11 @@
     "tags": [
       "范围",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 虚空涡旋(P_VoidVortex)，深紫扭曲材质(M_VoidDistortion)，空间撕裂后处理，星空粒子；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_129",
@@ -2172,7 +2560,11 @@
     "tags": [
       "投射物",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 火焰粒子(P_FireBurst)，橙红色发光材质(M_EmissiveFire)，动态火焰形变，烟雾残留效果；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_130",
@@ -2189,7 +2581,11 @@
     "tags": [
       "范围",
       "投射物"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冰晶碎片(P_IceShard)，冰蓝色折射材质(M_IceRefraction)，冻结结晶扩散，寒气雾粒；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_131",
@@ -2206,7 +2602,11 @@
     "tags": [
       "单体",
       "诅咒"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 闪电弧光(P_LightningArc)，电光蓝材质(M_ElectricEmissive)，随机电弧分叉，电磁扭曲Post-Process；目标标记光环(P_CurseAura)，蒙皮后处理轮廓高亮(Outline PostProcess)，连线Beam效果",
+    "magic": {
+      "delivery": "instant"
+    }
   },
   {
     "id": "skill_132",
@@ -2223,7 +2623,11 @@
     "tags": [
       "单体",
       "近战"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)",
+    "magic": {
+      "delivery": "instant"
+    }
   },
   {
     "id": "skill_133",
@@ -2241,7 +2645,11 @@
       "范围",
       "爆炸",
       "近战"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 圣光粒子(P_HolyLight)，金白色辉光材质(M_HolyGlow)，光柱照射，光环Decal投影；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_134",
@@ -2258,7 +2666,11 @@
     "tags": [
       "范围",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 藤蔓孢子(P_NatureSpore)，翠绿生机材质(M_NatureGlow)，植物生长动画，花瓣飘散效果；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_135",
@@ -2275,7 +2687,11 @@
     "tags": [
       "投射物",
       "爆炸"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 虚空涡旋(P_VoidVortex)，深紫扭曲材质(M_VoidDistortion)，空间撕裂后处理，星空粒子；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_136",
@@ -2292,7 +2708,11 @@
     "tags": [
       "投射物",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 火焰粒子(P_FireBurst)，橙红色发光材质(M_EmissiveFire)，动态火焰形变，烟雾残留效果；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_137",
@@ -2310,7 +2730,11 @@
       "投射物",
       "单体",
       "持续"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 冰晶碎片(P_IceShard)，冰蓝色折射材质(M_IceRefraction)，冻结结晶扩散，寒气雾粒；投射物蓝图(BP_Projectile)：飞行轨迹粒子尾迹，命中爆炸效果(P_HitExplosion)，SphereTrace碰撞检测；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长",
+    "magic": {
+      "delivery": "projectile"
+    }
   },
   {
     "id": "skill_138",
@@ -2328,7 +2752,11 @@
       "移动",
       "近战",
       "范围"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 闪电弧光(P_LightningArc)，电光蓝材质(M_ElectricEmissive)，随机电弧分叉，电磁扭曲Post-Process；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；武器挥动拖尾(P_WeaponTrail)，命中音效CUE，CameraShake(BP_MeleeShake)",
+    "magic": {
+      "delivery": "area"
+    }
   },
   {
     "id": "skill_139",
@@ -2346,7 +2774,11 @@
       "单体",
       "持续",
       "诅咒"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 暗影粒子(P_ShadowDust)，深紫黑渐变材质(M_ShadowVoid)，黑雾扩散，暗影扭曲后处理；持续Tick特效循环(P_DOTLoop)，Timeline驱动强度渐变，TimerHandle控制持续时长；目标标记光环(P_CurseAura)，蒙皮后处理轮廓高亮(Outline PostProcess)，连线Beam效果",
+    "magic": {
+      "delivery": "persistent"
+    }
   },
   {
     "id": "skill_140",
@@ -2363,6 +2795,10 @@
     "tags": [
       "范围",
       "诅咒"
-    ]
+    ],
+    "ue_effect": "Niagara粒子系统: 圣光粒子(P_HolyLight)，金白色辉光材质(M_HolyGlow)，光柱照射，光环Decal投影；范围指示Decal(M_AOEIndicator)圆形地面投影，SphereOverlapActors批量命中检测；目标标记光环(P_CurseAura)，蒙皮后处理轮廓高亮(Outline PostProcess)，连线Beam效果",
+    "magic": {
+      "delivery": "area"
+    }
   }
 ]

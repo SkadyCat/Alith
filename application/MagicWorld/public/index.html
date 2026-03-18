@@ -83,6 +83,54 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .effect-list li:last-child{border-bottom:none}
 .effect-list li::before{content:"✦ ";color:var(--accent)}
 
+/* ── SKILL LINK SYSTEM ── */
+.link-header{display:flex;align-items:center;justify-content:space-between;margin:12px 0 5px}
+.link-title{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3)}
+.link-count{font-size:10px;padding:1px 7px;border-radius:8px;background:var(--bg3);color:var(--accent2);border:1px solid var(--border)}
+.link-slots{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.link-slot-empty{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;border:1px dashed var(--border);color:var(--text3);font-size:11px}
+.link-slot-filled{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;border:1px solid rgba(250,204,21,.5);background:rgba(250,204,21,.07);cursor:pointer;transition:.15s}
+.link-slot-filled:hover{border-color:var(--danger);background:rgba(239,68,68,.08)}
+.link-slot-name{flex:1;font-size:12px;font-weight:600;color:#fcd34d}
+.link-slot-eff{font-size:10px;color:var(--text2);line-height:1.35;margin-top:1px}
+.link-slot-remove{font-size:15px;color:var(--text3);flex-shrink:0;line-height:1}
+.link-slot-filled:hover .link-slot-remove{color:var(--danger)}
+.avail-sup-list{display:flex;flex-direction:column;gap:4px}
+.avail-sup-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:7px;background:var(--bg3);border:1px solid var(--border);cursor:pointer;transition:.15s}
+.avail-sup-item:hover:not(.linked){border-color:var(--accent);background:rgba(124,92,252,.1)}
+.avail-sup-item.linked{border-color:rgba(250,204,21,.45);background:rgba(250,204,21,.06);cursor:default}
+.avail-sup-item.disabled{opacity:.35;pointer-events:none}
+.avail-sup-name{font-size:12px;font-weight:600;color:var(--text);flex:1}
+.avail-sup-eff{font-size:10px;color:var(--text2);line-height:1.3;margin-top:1px}
+.avail-sup-add{font-size:16px;color:var(--accent);flex-shrink:0;line-height:1}
+.avail-sup-item.linked .avail-sup-add{color:#fcd34d;font-size:12px}
+.avail-sup-item.incompat{opacity:.6;border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.06)}
+.magic-mod-badge{display:inline-block;font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(124,92,252,.18);color:var(--accent);font-weight:600;margin-left:4px;vertical-align:middle;line-height:1.5}
+.magic-mod-badge.incompat{background:rgba(239,68,68,.18);color:#f87171}
+
+/* ── BUILD VIEW ── */
+#build-view{display:none;flex:1;min-height:0;overflow-y:auto;padding:20px}
+#build-view.active{display:block}
+.build-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.build-title{font-size:16px;font-weight:600}
+.build-clear-btn{margin-left:auto;padding:5px 12px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:12px;cursor:pointer;transition:.15s}
+.build-clear-btn:hover{border-color:var(--danger);color:var(--danger)}
+.build-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.build-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;transition:.15s}
+.build-card.has-links{border-color:rgba(250,204,21,.4)}
+.build-card-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.build-card-icon{width:38px;height:38px;border-radius:7px;object-fit:contain;background:var(--bg3);flex-shrink:0}
+.build-card-icon-ph{width:38px;height:38px;border-radius:7px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.build-card-meta{min-width:0}
+.build-card-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.build-card-sub{font-size:10px;color:var(--text2)}
+.build-links{display:flex;flex-direction:column;gap:3px}
+.build-link-row{display:flex;align-items:flex-start;gap:6px;font-size:11px;padding:4px 7px;border-radius:5px;background:rgba(250,204,21,.07);border:1px solid rgba(250,204,21,.2)}
+.build-link-name{font-weight:600;color:#fcd34d;flex-shrink:0}
+.build-link-sep{color:var(--text3);flex-shrink:0}
+.build-link-eff{color:var(--text2);font-size:10px;line-height:1.4}
+.build-empty-row{color:var(--text3);font-size:11px;font-style:italic;padding:2px 0}
+
 /* ── MAGIC SYSTEM ── */
 #magic-view{display:none;flex:1;overflow:hidden;flex-direction:column}
 #magic-view.active{display:flex}
@@ -161,6 +209,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
     <button class="top-tab" onclick="switchSection('equipment')" id="tab-equipment">⚔️ 装备</button>
     <button class="top-tab" onclick="switchSection('items')" id="tab-items">🎒 道具</button>
     <button class="top-tab" onclick="switchMagic()" id="tab-magic">🔮 魔法系统</button>
+    <button class="top-tab" onclick="switchBuild()" id="tab-build">🔗 配装</button>
   </div>
   <div class="top-spacer"></div>
   <div id="cos-status">COS 检测中…</div>
@@ -237,6 +286,19 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 <!-- BOTTOM BAR -->
 <div id="bottom-bar">
+
+<!-- BUILD VIEW -->
+<div id="build-view">
+  <div class="build-toolbar">
+    <div class="build-title">🔗 技能配装方案</div>
+    <button class="build-clear-btn" onclick="clearAllLinks()">清空全部连接</button>
+  </div>
+  <div id="build-grid-content" class="build-grid">
+    <div class="loading"><div class="spinner"></div>加载中…</div>
+  </div>
+</div>
+
+<!-- BOTTOM BAR -->
   <div id="status-msg">就绪</div>
   <div id="item-count-bar"></div>
 </div>
@@ -248,6 +310,37 @@ let currentSection = 'skills';
 let selectedCard = null;
 let activeTypeFilter = null;
 let activeRarityFilter = null;
+
+// ── SKILL LINK STATE ────────────────────────────────────────────────────────
+const MAX_LINKS = 4;
+let skillLinks = {};
+try { skillLinks = JSON.parse(localStorage.getItem('mw_skillLinks') || '{}'); } catch {}
+function saveSkillLinks() {
+  localStorage.setItem('mw_skillLinks', JSON.stringify(skillLinks));
+}
+function toggleSkillLink(skillId, supId) {
+  const links = skillLinks[skillId] || [];
+  const idx = links.indexOf(supId);
+  if (idx >= 0) {
+    links.splice(idx, 1);
+  } else {
+    if (links.length >= MAX_LINKS) { setStatus('⚠️ 已达最大连接数 (4)'); return; }
+    links.push(supId);
+  }
+  skillLinks[skillId] = links;
+  saveSkillLinks();
+  if (window._curLinkSkillId === skillId && window._curLinkSupports) {
+    renderSkillSupports(skillId, window._curLinkSupports);
+  }
+  setStatus(`技能连接已${idx >= 0 ? '移除' : '添加'}`);
+}
+function clearAllLinks() {
+  if (!confirm('确定要清空所有技能连接吗？')) return;
+  skillLinks = {};
+  saveSkillLinks();
+  renderBuildView();
+  setStatus('✅ 已清空所有连接');
+}
 
 const SECTION_META = {
   skills:    { title: '技能', emoji: '⚡', typeKey: 'type', nameKey: 'name' },
@@ -349,7 +442,7 @@ function renderCards(data, name) {
     const sub = name === 'skills' ? `${item.element||''} ${item.type||''}`.trim()
               : name === 'equipment' ? `${item.slot||''} Lv${item.level||1}`
               : `Lv${item.level||1}`;
-    return `<div class="card${isSelected?' selected':''}" onclick="selectCard(${JSON.stringify(JSON.stringify(item))}, '${name}')" data-id="${item.id}">
+    return `<div class="card${isSelected?' selected':''}" onclick='selectCard(${JSON.stringify(JSON.stringify(item)).replace(/'/g,"&#39;")}, "${name}")' data-id="${item.id}">
       ${icon}
       <div class="card-name">${item.name}</div>
       <div class="card-sub">${sub}</div>
@@ -389,8 +482,10 @@ function renderDetail(item, section) {
     if (item.tags?.length) {
       const tagChips = item.tags.map(t=>`<span class="stat-tag" style="background:rgba(100,200,255,0.15);color:#7dd3fc;border:1px solid rgba(100,200,255,0.3)">${t}</span>`).join('');
       rows += `<div class="detail-section">特性标签</div><div class="stat-list">${tagChips}</div>`;
-      rows += `<div id="skill-supports-area" style="margin-top:8px"><span style="opacity:0.5;font-size:12px">加载辅助宝石…</span></div>`;
-      fetchSkillSupports(item.id);
+    }
+    if (item.ue_effect) {
+      rows += `<div class="detail-section" style="cursor:pointer;user-select:none" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">🎮 UE 特效 <span style="font-size:10px;color:var(--text3)">(点击展开/折叠)</span></div>
+        <div style="display:none"><div class="detail-desc" style="font-size:11px;line-height:1.7;color:var(--accent2)">${item.ue_effect}</div></div>`;
     }
   } else if (section === 'equipment') {
     rows = [
@@ -417,6 +512,9 @@ function renderDetail(item, section) {
 
   const desc = item.description ? `<div class="detail-desc">${item.description}</div>` : '';
   const lore = item.lore ? `<div class="detail-section">传说</div><div class="detail-desc" style="font-style:italic">${item.lore}</div>` : '';
+  const supportsArea = (section === 'skills' && item.tags?.length)
+    ? `<div id="skill-supports-area" style="margin-top:4px"><div style="display:flex;align-items:center;gap:6px;padding:8px 0"><div class="spinner" style="width:14px;height:14px;border-width:2px"></div><span style="font-size:11px;color:var(--text3)">加载辅助技能…</span></div></div>`
+    : '';
 
   document.getElementById('detail-content').innerHTML = `
     ${iconHtml}
@@ -425,7 +523,10 @@ function renderDetail(item, section) {
     <div style="margin-top:12px">${rows}</div>
     ${desc}
     ${lore}
+    ${supportsArea}
   `;
+
+  if (section === 'skills' && item.tags?.length) fetchSkillSupports(item.id);
 }
 
 function clearDetail() {
@@ -438,13 +539,69 @@ async function fetchSkillSupports(skillId) {
     const r = await fetch(`/api/dict/skills/${encodeURIComponent(skillId)}/supports`).then(x=>x.json());
     const area = document.getElementById('skill-supports-area');
     if (!area) return;
-    if (!r.success || !r.data.length) {
-      area.innerHTML = `<span style="opacity:0.4;font-size:12px">无匹配辅助宝石</span>`;
-      return;
-    }
-    const chips = r.data.map(s=>`<span class="stat-tag" title="${s.desc||''}" style="cursor:default;background:rgba(255,180,80,0.12);color:#fcd34d;border:1px solid rgba(255,180,80,0.3)">${s.name}</span>`).join('');
-    area.innerHTML = `<div class="detail-section">可用辅助宝石 (${r.data.length})</div><div class="stat-list">${chips}</div>`;
+    window._curLinkSkillId = skillId;
+    window._curLinkSupports = r.data || [];
+    renderSkillSupports(skillId, window._curLinkSupports);
   } catch(e) { /* ignore */ }
+}
+
+function renderSkillSupports(skillId, allSupports) {
+  const area = document.getElementById('skill-supports-area');
+  if (!area) return;
+  const links = skillLinks[skillId] || [];
+  const supMap = Object.fromEntries(allSupports.map(s => [s.id, s]));
+
+  // Render 4 slots
+  const slotsHtml = Array.from({length: MAX_LINKS}, (_, i) => {
+    const supId = links[i];
+    if (supId) {
+      const sup = supMap[supId] || { name: supId, effect: '' };
+      return `<div class="link-slot-filled" onclick="toggleSkillLink('${skillId}','${supId}')" title="点击移除">
+        <span style="font-size:14px;flex-shrink:0">💎</span>
+        <div style="flex:1;min-width:0">
+          <div class="link-slot-name">${sup.name}</div>
+          <div class="link-slot-eff">${sup.effect || ''}</div>
+        </div>
+        <span class="link-slot-remove">×</span>
+      </div>`;
+    } else {
+      return `<div class="link-slot-empty"><span style="font-size:12px">◇</span> 空槽 ${i + 1}</div>`;
+    }
+  }).join('');
+
+  // Render available supports
+  const availHtml = allSupports.length === 0
+    ? `<div style="color:var(--text3);font-size:11px;padding:4px 0">此技能无匹配辅助技能</div>`
+    : `<div class="avail-sup-list">${allSupports.map(sup => {
+        const isLinked = links.includes(sup.id);
+        const isFull   = !isLinked && links.length >= MAX_LINKS;
+        const mmi = sup.magic_modifier_info;
+        const incompatible = mmi && !mmi.compatible;
+        const magicBadge = mmi
+          ? `<span class="magic-mod-badge${incompatible ? ' incompat' : ''}" title="${mmi.desc || ''}">${mmi.name}${incompatible ? ' ⚠' : ' ✦'}</span>`
+          : '';
+        return `<div class="avail-sup-item${isLinked ? ' linked' : ''}${isFull ? ' disabled' : ''}${incompatible ? ' incompat' : ''}"
+          onclick="${isLinked || isFull ? '' : `toggleSkillLink('${skillId}','${sup.id}')`}"
+          title="${mmi && incompatible ? '⚠ 投射类型不支持此修饰符: 缺少 ' + mmi.missing_caps.join(', ') : (sup.desc || '')}">
+          <div style="flex:1;min-width:0">
+            <div class="avail-sup-name">${sup.name} ${magicBadge}</div>
+            <div class="avail-sup-eff">${sup.effect || ''}</div>
+          </div>
+          <span class="avail-sup-add">${isLinked ? '✓' : incompatible ? '✕' : '+'}</span>
+        </div>`;
+      }).join('')}</div>`;
+
+  area.innerHTML = `
+    <div class="link-header">
+      <span class="link-title">🔗 技能连接槽</span>
+      <span class="link-count">${links.length} / ${MAX_LINKS}</span>
+    </div>
+    <div class="link-slots">${slotsHtml}</div>
+    <div class="link-header">
+      <span class="link-title">可连接辅助技能 (${allSupports.length})</span>
+    </div>
+    ${availHtml}
+  `;
 }
 
 function setStatus(msg) {
@@ -464,6 +621,7 @@ async function switchMagic() {
   document.getElementById('tab-magic').classList.add('active');
   document.getElementById('main').style.display = 'none';
   document.getElementById('magic-view').classList.add('active');
+  document.getElementById('build-view').classList.remove('active');
   if (!magicLoaded) { await loadMagicData(); magicLoaded = true; }
   magicTab('spells');
 }
@@ -471,15 +629,17 @@ async function switchMagic() {
 function switchSection(name) {
   currentSection = name;
   document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById(`tab-${name}`).classList.add('active');
+  document.getElementById(`tab-${name}`)?.classList.add('active');
   document.getElementById('main').style.display = 'flex';
   document.getElementById('magic-view').classList.remove('active');
+  document.getElementById('build-view').classList.remove('active');
   activeTypeFilter = null; activeRarityFilter = null;
   document.getElementById('search-input').value = '';
   clearDetail(); renderSection(name);
 }
 
 async function loadMagicData() {
+  try {
   const [spells, elements, delivery, modifiers, effects] = await Promise.all([
     fetch('/api/magic/spells').then(r=>r.json()),
     fetch('/api/magic/elements').then(r=>r.json()),
@@ -496,6 +656,11 @@ async function loadMagicData() {
   };
   // Build filter sidebars
   buildMagicFilters();
+  } catch(e) {
+    document.getElementById('magic-content').innerHTML =
+      `<div style="color:var(--danger);padding:40px;text-align:center">⚠️ 魔法数据加载失败: ${e.message}<br><button onclick="magicLoaded=false;switchMagic()" style="margin-top:12px;padding:6px 16px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer">重试</button></div>`;
+    throw e;
+  }
 }
 
 function buildMagicFilters() {
@@ -552,7 +717,7 @@ function magicTab(tab) {
     document.getElementById('magic-count-badge').textContent = `${magicData.elements.length} 种元素`;
     mc.innerHTML = `<div class="section-h2">元素克制关系</div>
     <div class="elem-grid">${magicData.elements.map(e => `
-      <div class="elem-card" onclick="showElemDetail(${JSON.stringify(JSON.stringify(e))})">
+      <div class="elem-card" onclick='showElemDetail(${JSON.stringify(JSON.stringify(e)).replace(/'/g,"&#39;")})'>
         <div class="elem-icon">${e.icon}</div>
         <div class="elem-name" style="color:${e.color}">${e.name}</div>
         <div class="elem-desc">${e.desc}</div>
@@ -561,7 +726,7 @@ function magicTab(tab) {
   } else if (tab === 'delivery') {
     document.getElementById('magic-count-badge').textContent = `${magicData.delivery.length} 种类型`;
     mc.innerHTML = `<div class="delivery-list">${magicData.delivery.map(d => `
-      <div class="dt-card" onclick="showDeliveryDetail(${JSON.stringify(JSON.stringify(d))})">
+      <div class="dt-card" onclick='showDeliveryDetail(${JSON.stringify(JSON.stringify(d)).replace(/'/g,"&#39;")})'>
         <div class="dt-header"><span class="dt-icon">${d.icon}</span><span class="dt-name">${d.name}</span></div>
         <div class="dt-desc">${d.desc}</div>
         <div class="compat-mods">支持修饰符：${(d.compatible_modifiers||[]).slice(0,5).join('、')}${d.compatible_modifiers?.length>5?'…':''}</div>
@@ -574,7 +739,7 @@ function magicTab(tab) {
       const catNames = {trajectory:'轨迹',area:'范围',persistent:'持续',trigger:'触发',amplifier:'强化',tempo:'节奏'};
       return `<div class="section-h2">${catNames[cat]||cat} <span style="font-weight:400;font-size:11px;color:var(--text3)">(${mods.length})</span></div>
         <div class="spell-grid" style="margin-bottom:20px">${mods.map(m => `
-        <div class="spell-card" onclick="showModDetail(${JSON.stringify(JSON.stringify(m))})">
+        <div class="spell-card" onclick='showModDetail(${JSON.stringify(JSON.stringify(m)).replace(/'/g,"&#39;")})'>
           <div class="spell-header">
             <span class="spell-emoji">${iconHtml(m.icon, 36)}</span>
             <span class="spell-name">${m.name}</span>
@@ -587,7 +752,7 @@ function magicTab(tab) {
   } else if (tab === 'effects') {
     document.getElementById('magic-count-badge').textContent = `${magicData.effects.length} 种效果`;
     mc.innerHTML = `<div class="spell-grid">${magicData.effects.map(e => `
-      <div class="spell-card" onclick="showEffectDetail(${JSON.stringify(JSON.stringify(e))})">
+      <div class="spell-card" onclick='showEffectDetail(${JSON.stringify(JSON.stringify(e)).replace(/'/g,"&#39;")})'>
         <div class="spell-header"><span class="spell-emoji">${e.icon}</span><span class="spell-name">${e.name}</span></div>
         <div class="spell-desc">${e.desc}</div>
       </div>`).join('')}</div>`;
@@ -607,7 +772,7 @@ function renderSpellCard(s, modMap) {
   const deliveryLine = s.delivery?.type
     ? `${dt.icon||''} ${dt.name||s.delivery.type} · Lv${s.level} · ⚡${s.cooldown}s`
     : `${s.tags?.slice(0,2).join('·') || s.type || '技能'} · Lv${s.level} · ⚡${s.cooldown}s`;
-  return `<div class="spell-card" onclick="showSpellDetail(${JSON.stringify(JSON.stringify(s))})">
+  return `<div class="spell-card" onclick='showSpellDetail(${JSON.stringify(JSON.stringify(s)).replace(/'/g,"&#39;")})'>
     <div class="spell-header">
       <span class="spell-emoji">${iconHtmlStr}</span>
       <div><div class="spell-name">${s.name}</div>
@@ -661,6 +826,7 @@ function showSpellDetail(jsonStr) {
     <div class="detail-field-label" style="margin-top:8px">命中效果</div>
     <div class="on-hit-block">${onHit}</div>
     ${s.on_tick_ally ? `<div class="detail-field-label">友军光环</div><div class="on-hit-block">${(s.on_tick_ally||[]).map(h=>`<div class="effect-row"><span class="effect-name">${h.effect}</span><span>${Object.entries(h.params||{}).map(([k,v])=>`${k}=${v}`).join(' · ')}</span></div>`).join('')}</div>` : ''}
+    ${s.ue_effect ? `<div class="detail-field-label" style="margin-top:12px">🎮 UE 特效</div><div class="detail-desc" style="font-size:11px;line-height:1.7;color:var(--accent2)">${s.ue_effect}</div>` : ''}
   `;
 }
 
@@ -721,6 +887,82 @@ function showEffectDetail(jsonStr) {
     <div class="detail-field-label">参数</div>
     <table class="param-table"><thead><tr><th>参数</th><th>默认值</th><th>说明</th></tr></thead><tbody>${params}</tbody></table>
   `;
+}
+
+// ═══ BUILD VIEW ═════════════════════════════════════════════════════════════
+function selectSkillById(skillId) {
+  const skill = allData.skills.find(s => s.id === skillId);
+  if (skill) selectCard(JSON.stringify(skill), 'skills');
+}
+function switchBuild() {
+  currentSection = 'build';
+  document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-build').classList.add('active');
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('magic-view').classList.remove('active');
+  document.getElementById('build-view').classList.add('active');
+  renderBuildView();
+}
+
+async function renderBuildView() {
+  const container = document.getElementById('build-grid-content');
+  if (!container) return;
+
+  // Ensure skills are loaded
+  if (!allData.skills.length) await loadSection('skills');
+  // Ensure supports are loaded
+  let allSupports = [];
+  try {
+    const r = await fetch('/api/dict/supports').then(x => x.json());
+    allSupports = r.data || [];
+  } catch {}
+
+  const supMap = Object.fromEntries(allSupports.map(s => [s.id, s]));
+  const skills = allData.skills;
+  const linkedSkillIds = Object.keys(skillLinks).filter(id => (skillLinks[id] || []).length > 0);
+
+  // Skills with links first, then all skills
+  const ordered = [
+    ...skills.filter(s => linkedSkillIds.includes(s.id)),
+    ...skills.filter(s => !linkedSkillIds.includes(s.id)),
+  ];
+
+  if (ordered.length === 0) {
+    container.innerHTML = '<div style="color:var(--text3);padding:40px;text-align:center">暂无技能数据</div>';
+    return;
+  }
+
+  container.innerHTML = ordered.map(skill => {
+    const links = skillLinks[skill.id] || [];
+    const hasLinks = links.length > 0;
+    const iconHtml = skill.icon
+      ? `<img class="build-card-icon" src="${skill.icon}" alt="${skill.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+         <div class="build-card-icon-ph" style="display:none">⚡</div>`
+      : `<div class="build-card-icon-ph">⚡</div>`;
+
+    const linksHtml = hasLinks
+      ? links.map(supId => {
+          const sup = supMap[supId] || { name: supId, effect: '' };
+          return `<div class="build-link-row">
+            <span class="build-link-name">💎 ${sup.name}</span>
+            <span class="build-link-sep">—</span>
+            <span class="build-link-eff">${sup.effect || ''}</span>
+          </div>`;
+        }).join('')
+      : `<div class="build-empty-row">未连接辅助技能</div>`;
+
+    return `<div class="build-card${hasLinks ? ' has-links' : ''}" onclick="switchSection('skills');setTimeout(()=>selectSkillById('${skill.id}'),300)">
+      <div class="build-card-header">
+        ${iconHtml}
+        <div class="build-card-meta">
+          <div class="build-card-name">${skill.name}</div>
+          <div class="build-card-sub">${skill.element || ''} · ${skill.type || ''} · ${(skill.tags || []).join(' ')}</div>
+        </div>
+        ${hasLinks ? `<span class="link-count">${links.length}/${MAX_LINKS}</span>` : ''}
+      </div>
+      <div class="build-links">${linksHtml}</div>
+    </div>`;
+  }).join('');
 }
 
 init();

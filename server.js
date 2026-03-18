@@ -25,6 +25,7 @@ const routeModules = {
   tools:     { file: './routes/tools',     router: null },
   nodeflow:  { file: './routes/nodeflow',  router: null },
   pyagent:   { file: './routes/pyagent',   router: null },
+  gameaim:   { file: './routes/gameaim',   router: null },
 };
 
 function loadRoute(key) {
@@ -198,6 +199,9 @@ app.use('/nodeflow', (req, res, next) => routeModules.nodeflow.router(req, res, 
 
 // ─── PyAgent Socket 服务接口 ──────────────────────────────────
 app.use('/pyagent', (req, res, next) => routeModules.pyagent.router(req, res, next));
+
+// ─── 2D 游戏动画生成器 ────────────────────────────────────────
+app.use('/game-animation', (req, res, next) => routeModules.gameaim.router(req, res, next));
 
 // ─── Applications ────────────────────────────────────────────
 app.use('/jump_game', express.static(path.join(__dirname, 'application', 'jump_game')));

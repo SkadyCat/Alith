@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🗡️ 游戏精灵动画生成器</title>
+<style>
+:root {
+  --bg:#080b12;--surface:#0f1420;--panel:#141927;--border:#1e2535;
+  --accent:#7c3aed;--accent2:#06b6d4;--green:#10b981;--red:#ef4444;
+  --yellow:#f59e0b;--text:#e2e8f0;--muted:#4b5a72;--card:#111827;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI','Microsoft YaHei',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column}
+header{background:linear-gradient(135deg,#0d0622,#071220);
+  border-bottom:1px solid var(--border);padding:10px 20px;
+  display:flex;align-items:center;gap:10px}
+header h1{font-size:15px;color:#c4b5fd}
+.badge{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:8px;
+  background:linear-gradient(90deg,#f59e0b,#ef4444);color:#fff;font-size:9px;font-weight:700}
+.nav-pills{display:flex;gap:6px;margin-left:auto}
+.nav-pill{padding:4px 11px;border-radius:20px;border:1px solid var(--border);
+  background:var(--surface);color:var(--muted);font-size:11px;text-decoration:none;transition:all .2s}
+.nav-pill:hover,.nav-pill.active{border-color:var(--accent);color:#c4b5fd;background:#1e0a40}
+
+.layout{display:grid;grid-template-columns:300px 1fr;flex:1;overflow:hidden}
+.left{border-right:1px solid var(--border);overflow-y:auto;background:var(--surface);
+  padding:16px;display:flex;flex-direction:column;gap:12px}
+.sec-title{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px}
+label{font-size:11px;color:#94a3b8;display:block;margin-bottom:3px}
+textarea,select{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);
+  border-radius:5px;font-family:inherit;font-size:12px;padding:7px 10px;outline:none;transition:border-color .15s}
+textarea{resize:vertical;min-height:65px;line-height:1.5}
+textarea:focus,select:focus{border-color:var(--accent)}
+
+/* Action chips */
+.chip-row{display:flex;flex-wrap:wrap;gap:5px}
+.chip{padding:4px 10px;border-radius:16px;border:1px solid var(--border);
+  background:var(--card);color:var(--muted);font-size:11px;cursor:pointer;transition:all .15s}
+.chip:hover,.chip.on{border-color:var(--accent2);color:#67e8f9;background:rgba(6,182,212,.1);font-weight:600}
+
+.gen-btn{width:100%;padding:12px;
+  background:linear-gradient(135deg,#b45309,#7c3aed);
+  border:none;border-radius:7px;color:#fff;font-size:13px;font-weight:700;
+  cursor:pointer;font-family:inherit;letter-spacing:.5px;transition:all .2s}
+.gen-btn:hover:not(:disabled){box-shadow:0 0 24px rgba(245,158,11,.4);opacity:.9}
+.gen-btn:disabled{opacity:.4;cursor:not-allowed}
+.log-box{background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  padding:8px;font-size:10px;font-family:monospace;color:var(--muted);
+  max-height:120px;overflow-y:auto;line-height:1.6}
+.log-box .lok{color:var(--green)} .log-box .lerr{color:var(--red)} .log-box .li{color:var(--accent2)} .log-box .linfo{color:#aaa;font-size:11px}
+
+/* Right */
+.right{display:flex;flex-direction:column;overflow:hidden}
+
+/* Stage */
+.stage{flex:1;background:#030508;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;position:relative;overflow:hidden;gap:0}
+
+/* Parallax BG layers */
+.sky{position:absolute;inset:0;
+  background:linear-gradient(180deg,#06090f 0%,#0a1020 60%,#0d1a10 100%)}
+.ground-strip{position:absolute;bottom:0;left:0;right:0;height:90px;
+  background:linear-gradient(180deg,rgba(15,35,15,.8) 0%,#061006 100%);
+  border-top:2px solid #1a3d1a}
+
+/* Character display */
+.char-stage{position:relative;z-index:5;display:flex;flex-direction:column;align-items:center;gap:12px}
+#char-canvas{display:block;image-rendering:pixelated;
+  filter:drop-shadow(0 0 16px rgba(124,58,237,.5))}
+.char-shadow{width:80%;height:14px;
+  background:radial-gradient(ellipse,rgba(0,0,0,.7) 0%,transparent 70%);
+  border-radius:50%}
+
+/* Empty state */
+.empty{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:8px;pointer-events:none}
+.empty .icon{font-size:64px;opacity:.25}
+.empty p{font-size:13px;color:var(--muted);text-align:center;line-height:1.8}
+
+/* Loading overlay */
+#loading-overlay{display:none;position:absolute;inset:0;z-index:20;
+  background:rgba(3,5,8,.92);flex-direction:column;align-items:center;
+  justify-content:center;gap:14px}
+.spin{width:48px;height:48px;border:3px solid #1a0a40;border-top-color:#a78bfa;
+  border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.prog-wrap{width:260px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+#prog{height:100%;width:0%;background:linear-gradient(90deg,#f59e0b,#7c3aed);
+  border-radius:2px;transition:width .5s}
+
+/* Controls */
+.ctrl{border-top:1px solid var(--border);background:#08090f;padding:10px 16px;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0}
+.ctrl-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);
+  background:var(--card);color:var(--muted);font-size:11px;cursor:pointer;
+  font-family:inherit;transition:all .15s}
+.ctrl-btn.on{border-color:var(--accent2);color:#67e8f9;background:rgba(6,182,212,.1)}
+.ctrl-btn:hover{border-color:var(--accent2)}
+.speed-wrap{display:flex;align-items:center;gap:6px;margin-left:auto}
+input[type=range]{width:80px;accent-color:var(--accent2)}
+
+/* Sheet viewer */
+.sheet-panel{border-top:1px solid var(--border);background:#06080d;padding:10px 16px;flex-shrink:0}
+.sheet-title{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px}
+#sheet-img{max-width:100%;border-radius:6px;border:1px solid var(--border);display:none}
+#frame-strip{display:flex;gap:4px;overflow-x:auto;padding:2px}
+.fthumb{width:56px;height:56px;object-fit:contain;border-radius:4px;border:2px solid transparent;
+  cursor:pointer;transition:border-color .15s;image-rendering:pixelated}
+.fthumb.cur{border-color:var(--accent2)}
+
+/* Result actions */
+.res-actions{display:flex;gap:6px;margin-top:6px}
+.res-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);font-size:11px;cursor:pointer;
+  font-family:inherit;transition:all .15s;text-decoration:none}
+.res-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+
+.statusbar{border-top:1px solid var(--border);background:#06080e;
+  padding:4px 16px;font-size:10px;color:var(--muted);display:flex;gap:16px;align-items:center;flex-shrink:0}
+::-webkit-scrollbar{width:4px;height:4px} ::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+<header>
+  <span style="font-size:20px">🗡️</span>
+  <h1>游戏精灵动画生成器 <span class="badge">GAME READY</span></h1>
+  <div class="nav-pills">
+    <a href="/" class="nav-pill">🎮 像素</a>
+    <a href="/char" class="nav-pill">🎭 AI角色</a>
+    <a href="/video" class="nav-pill">🎬 视频</a>
+    <span class="nav-pill active">🗡️ 精灵动画</span>
+  </div>
+</header>
+
+<div class="layout">
+<div class="left">
+
+  <div>
+    <div class="sec-title">📝 角色描述</div>
+    <textarea id="prompt">warrior knight in silver armor, holding glowing sword, detailed, clean</textarea>
+  </div>
+
+  <div>
+    <div class="sec-title">⚔️ 动作类型</div>
+    <div class="chip-row" id="action-chips">
+      <div class="chip on"  data-v="attack">⚔️ 攻击</div>
+      <div class="chip"     data-v="skill">✨ 技能</div>
+      <div class="chip"     data-v="idle">💤 待机</div>
+      <div class="chip"     data-v="walk">🚶 行走</div>
+      <div class="chip"     data-v="run">🏃 奔跑</div>
+      <div class="chip"     data-v="hurt">💢 受击</div>
+      <div class="chip"     data-v="die">💀 死亡</div>
+      <div class="chip"     data-v="cast">🔮 施法</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="sec-title">🎨 角色风格</div>
+    <div class="chip-row" id="style-chips">
+      <div class="chip"     data-v="pixel">🟫 像素</div>
+      <div class="chip on"  data-v="anime">🌸 动漫</div>
+      <div class="chip"     data-v="cartoon">🎨 卡通</div>
+      <div class="chip"     data-v="realistic">⚡ 写实</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div>
+      <div class="sec-title">🎞 帧数</div>
+      <select id="cols">
+        <option value="4" selected>4帧</option>
+        <option value="6">6帧</option>
+        <option value="8">8帧</option>
+      </select>
+    </div>
+    <div>
+      <div class="sec-title">📐 帧尺寸</div>
+      <select id="frame_size">
+        <option value="192">192px</option>
+        <option value="256" selected>256px</option>
+        <option value="320">320px</option>
+      </select>
+    </div>
+  </div>
+
+  <div>
+    <div class="sec-title">🔢 推理步数</div>
+    <select id="steps">
+      <option value="20">20 (快)</option>
+      <option value="25" selected>25</option>
+      <option value="30">30 (质量最好)</option>
+    </select>
+  </div>
+
+  <div>
+    <div class="sec-title">🎲 种子 (留空=随机)</div>
+    <input id="seed-input" type="number" placeholder="随机" style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg1);color:var(--fg);font-size:13px">
+  </div>
+
+  <div style="margin-top:auto">
+    <button class="gen-btn" id="gen-btn" onclick="startGen()">
+      🗡️ 生成游戏精灵动画
+    </button>
+  </div>
+
+  <div>
+    <div class="sec-title">📋 日志</div>
+    <div class="log-box" id="log"></div>
+  </div>
+
+</div>
+
+<!-- RIGHT -->
+<div class="right">
+
+  <div class="stage" id="stage">
+    <div class="sky"></div>
+    <div class="ground-strip"></div>
+
+    <div class="empty" id="empty">
+      <div class="icon">🗡️</div>
+      <p>SDXL 将生成精灵图集<br>自动切割 → 逐帧动画<br><br>
+        <small style="font-size:10px;color:var(--muted)">生成后可在游戏引擎中直接使用</small></p>
+    </div>
+
+    <div id="loading-overlay">
+      <div class="spin"></div>
+      <div style="font-size:13px;color:#c4b5fd" id="load-msg">初始化 SDXL...</div>
+      <div class="prog-wrap"><div id="prog"></div></div>
+      <div style="font-size:10px;color:var(--muted)">首次约 30-60 秒 (加载模型)</div>
+    </div>
+
+    <div class="char-stage" id="char-stage" style="display:none">
+      <canvas id="char-canvas" width="256" height="256"></canvas>
+      <div class="char-shadow"></div>
+    </div>
+  </div>
+
+  <div class="ctrl" id="ctrl-bar">
+    <span style="font-size:11px;color:var(--muted)">播放:</span>
+    <button class="ctrl-btn on" id="btn-play" onclick="togglePlay()">⏸ 暂停</button>
+    <button class="ctrl-btn" onclick="prevFrame()">⏮ 上帧</button>
+    <button class="ctrl-btn" onclick="nextFrame()">下帧 ⏭</button>
+    <span style="font-size:11px;color:var(--muted)" id="frame-info">—</span>
+    <div class="speed-wrap">
+      <span style="font-size:11px;color:var(--muted)">FPS:</span>
+      <input type="range" min="2" max="24" value="8" oninput="setFps(+this.value)" id="fps-range">
+      <span style="font-size:11px;color:var(--accent2)" id="fps-label">8 fps</span>
+    </div>
+  </div>
+
+  <div class="sheet-panel">
+    <div class="sheet-title">精灵图集 & 帧预览</div>
+    <div id="frame-strip"></div>
+    <div class="res-actions" id="res-actions" style="display:none">
+      <a id="dl-sheet" class="res-btn" download="sprite_sheet.png">⬇ 下载图集</a>
+      <a id="dl-frame" class="res-btn" download="frame.png">⬇ 当前帧</a>
+      <button class="res-btn" onclick="uploadCOS()">☁ 上传 COS</button>
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <div id="sb-model" style="color:var(--muted)">SDXL 未加载</div>
+    <div id="sb-info" style="margin-left:auto">—</div>
+  </div>
+</div>
+</div>
+
+<script>
+const S = {
+  action: 'attack',
+  style: 'anime',
+  frames: [],   // full-res PNG data URLs
+  thumbs: [],   // thumbnail data URLs
+  sheetUrl: null,
+  cur: 0,
+  playing: false,
+  fps: 8,
+  raf: null,
+  lastTick: 0,
+  running: false,
+};
+
+// Chip selection
+function initChips(groupId, stateKey) {
+  document.querySelectorAll(`#${groupId} .chip`).forEach(c => {
+    c.addEventListener('click', () => {
+      document.querySelectorAll(`#${groupId} .chip`).forEach(x => x.classList.remove('on'));
+      c.classList.add('on');
+      S[stateKey] = c.dataset.v;
+    });
+  });
+}
+initChips('action-chips', 'action');
+initChips('style-chips', 'style');
+
+function log(msg, cls='') {
+  const b = document.getElementById('log');
+  const d = document.createElement('div');
+  if (cls) d.className = cls;
+  d.textContent = msg.replace(/^\[sprite_gen\] /, '');
+  b.appendChild(d); b.scrollTop = b.scrollHeight;
+}
+
+async function startGen() {
+  if (S.running) return;
+  S.running = true;
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true; btn.textContent = '⏳ 生成中...';
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('empty').style.display = 'none';
+  document.getElementById('char-stage').style.display = 'none';
+  document.getElementById('res-actions').style.display = 'none';
+  document.getElementById('frame-strip').innerHTML = '';
+
+  const ov = document.getElementById('loading-overlay');
+  ov.style.display = 'flex';
+  const prog = document.getElementById('prog');
+  let pv = 5; prog.style.width = '5%';
+
+  const body = {
+    prompt:     document.getElementById('prompt').value,
+    action:     S.action,
+    char_style: S.style,
+    cols:       +document.getElementById('cols').value,
+    frame_size: +document.getElementById('frame_size').value,
+    steps:      +document.getElementById('steps').value,
+  };
+  const seedVal = document.getElementById('seed-input').value.trim();
+  if (seedVal) body.seed = parseInt(seedVal);
+
+  log(`▶ 每帧独立生成 · 动作:${S.action} 风格:${S.style} ${body.cols}帧 ${body.frame_size}px${body.seed?' seed:'+body.seed:''}`, 'li');
+
+  try {
+    const resp = await fetch('/api/gen-sprite', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream:true});
+      const lines = buf.split('\n'); buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        let ev; try { ev = JSON.parse(line.slice(5).trim()); } catch { continue; }
+        if (ev.type === 'log') {
+          log(ev.msg, ev.msg.includes('ERROR') ? 'lerr' : 'li');
+          document.getElementById('load-msg').textContent = ev.msg.replace(/^\[sprite_gen\] /,'').substring(0,55);
+          pv = Math.min(pv + 6, 92); prog.style.width = pv + '%';
+        } else if (ev.type === 'start') {
+          log('▶ ' + ev.msg, 'li');
+        } else if (ev.type === 'done') {
+          prog.style.width = '100%';
+          if (ev.success && ev.frames && ev.frames.length) {
+            loadSprite(ev);
+            document.getElementById('sb-model').textContent = 'SDXL 就绪';
+            document.getElementById('sb-info').textContent = `${ev.frame_count}帧 · ${ev.frame_w}×${ev.frame_h}px · ${S.action} · seed:${ev.seed||'?'}`;
+          } else {
+            log('✗ ' + (ev.error || '生成失败'), 'lerr');
+            document.getElementById('empty').style.display = '';
+          }
+          ov.style.display = 'none';
+        } else if (ev.type === 'error') {
+          log('✗ ' + ev.msg, 'lerr');
+          ov.style.display = 'none';
+          document.getElementById('empty').style.display = '';
+        }
+      }
+    }
+  } catch (e) {
+    log('✗ ' + e.message, 'lerr');
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('empty').style.display = '';
+  }
+
+  S.running = false;
+  btn.disabled = false; btn.textContent = '🗡️ 生成游戏精灵动画';
+}
+
+function loadSprite(data) {
+  S.frames  = data.frames;
+  S.thumbs  = data.thumbs || data.frames;
+  S.sheetUrl = data.sheet;
+  S.keyframes = data.keyframes || [];
+  S.cur = 0;
+
+  // Build thumb strip
+  const strip = document.getElementById('frame-strip');
+  strip.innerHTML = '';
+  S.thumbs.forEach((t, i) => {
+    const img = document.createElement('img');
+    img.src = t; img.className = 'fthumb' + (i===0?' cur':'');
+    img.title = S.keyframes[i] ? `帧${i+1}: ${S.keyframes[i]}` : `帧 ${i+1}`;
+    img.onclick = () => { S.cur = i; jumpFrame(i); };
+    strip.appendChild(img);
+  });
+  if (data.seed) log(`种子: ${data.seed} (可复现相同角色)`, 'linfo');
+
+  // Download links
+  if (data.sheet) {
+    document.getElementById('dl-sheet').href = data.sheet;
+  }
+  document.getElementById('res-actions').style.display = 'flex';
+
+  // Show seed so user can reproduce
+  if (data.seed) {
+    document.getElementById('seed-input').value = data.seed;
+  }
+
+  // Setup canvas
+  const cv = document.getElementById('char-canvas');
+  cv.width  = data.frame_w;
+  cv.height = data.frame_h;
+
+  document.getElementById('char-stage').style.display = 'flex';
+  log(`✓ ${data.frame_count}帧精灵动画准备好！每帧用独立关键帧提示词生成`, 'lok');
+
+  // Start playback
+  S.playing = true;
+  document.getElementById('btn-play').textContent = '⏸ 暂停';
+  document.getElementById('btn-play').classList.add('on');
+  animLoop();
+}
+
+function animLoop() {
+  if (S.raf) cancelAnimationFrame(S.raf);
+  const step = () => {
+    const now = performance.now();
+    if (S.playing && now - S.lastTick > 1000/S.fps) {
+      S.lastTick = now;
+      S.cur = (S.cur + 1) % S.frames.length;
+      drawFrame(S.cur);
+    }
+    S.raf = requestAnimationFrame(step);
+  };
+  S.raf = requestAnimationFrame(step);
+  drawFrame(0);
+}
+
+function drawFrame(i) {
+  if (!S.frames[i]) return;
+  const cv = document.getElementById('char-canvas');
+  const ctx = cv.getContext('2d');
+  const img = new Image();
+  img.onload = () => {
+    ctx.clearRect(0,0,cv.width,cv.height);
+    // Draw checkerboard so transparent areas are visible
+    const cs = 16;
+    for (let y=0; y<cv.height; y+=cs) for (let x=0; x<cv.width; x+=cs) {
+      ctx.fillStyle = ((x/cs+y/cs)%2===0) ? '#3a3a3a' : '#2a2a2a';
+      ctx.fillRect(x,y,cs,cs);
+    }
+    ctx.drawImage(img,0,0,cv.width,cv.height);
+  };
+  img.src = S.frames[i];
+  // Update thumbnail highlight
+  document.querySelectorAll('.fthumb').forEach((t,j) => t.classList.toggle('cur', j===i));
+  document.getElementById('frame-info').textContent = `帧 ${i+1}/${S.frames.length}`;
+  // Update dl-frame
+  document.getElementById('dl-frame').href = S.frames[i];
+}
+
+function jumpFrame(i) { S.cur = i; drawFrame(i); }
+function prevFrame() { if (S.frames.length) { S.cur = (S.cur - 1 + S.frames.length) % S.frames.length; drawFrame(S.cur); } }
+function nextFrame() { if (S.frames.length) { S.cur = (S.cur + 1) % S.frames.length; drawFrame(S.cur); } }
+
+function togglePlay() {
+  S.playing = !S.playing;
+  const btn = document.getElementById('btn-play');
+  btn.textContent = S.playing ? '⏸ 暂停' : '▶ 播放';
+  btn.classList.toggle('on', S.playing);
+}
+
+function setFps(v) {
+  S.fps = v;
+  document.getElementById('fps-label').textContent = v + ' fps';
+}
+
+async function uploadCOS() {
+  if (!S.sheetUrl) return;
+  log('☁ 上传图集到 COS...', 'li');
+  try {
+    const resp = await fetch('/api/cos/upload', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        data: S.sheetUrl.replace(/^data:image\/png;base64,/,''),
+        filename: `sprite_${S.action}_${Date.now()}.png`,
+        contentType: 'image/png',
+      }),
+    });
+    const r = await resp.json();
+    if (r.success) log(`✓ COS: ${r.url}`, 'lok');
+    else log('✗ ' + r.error, 'lerr');
+  } catch(e) { log('✗ ' + e.message, 'lerr'); }
+}
+</script>
+</body>
+</html>

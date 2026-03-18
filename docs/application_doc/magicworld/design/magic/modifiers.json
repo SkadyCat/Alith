@@ -4,10 +4,6 @@
     "name": "分裂",
     "icon": "/icons/modifiers/split.png",
     "category": "trajectory",
-    "applies_to": [
-      "projectile",
-      "beam"
-    ],
     "desc": "弹体在命中或到达中途时分裂为多枚子弹体。",
     "params": {
       "count": {
@@ -41,6 +37,9 @@
     "tags": [
       "multishot",
       "secondary_projectile"
+    ],
+    "requires_caps": [
+      "has_impact"
     ]
   },
   {
@@ -48,10 +47,6 @@
     "name": "弹跳",
     "icon": "/icons/modifiers/bounce.png",
     "category": "trajectory",
-    "applies_to": [
-      "projectile",
-      "beam"
-    ],
     "desc": "弹体命中后反弹到附近目标或墙壁，继续造成伤害。",
     "params": {
       "count": {
@@ -79,6 +74,9 @@
     "tags": [
       "chaining",
       "multi_target"
+    ],
+    "requires_caps": [
+      "has_trajectory"
     ]
   },
   {
@@ -86,10 +84,6 @@
     "name": "穿透",
     "icon": "/icons/modifiers/pierce.png",
     "category": "trajectory",
-    "applies_to": [
-      "projectile",
-      "beam"
-    ],
     "desc": "弹体穿过目标，继续飞行并命中路径上的其他目标。",
     "params": {
       "count": {
@@ -107,6 +101,9 @@
     "tags": [
       "multi_target",
       "linear"
+    ],
+    "requires_caps": [
+      "has_trajectory"
     ]
   },
   {
@@ -114,11 +111,6 @@
     "name": "连锁",
     "icon": "/icons/modifiers/chain.png",
     "category": "trajectory",
-    "applies_to": [
-      "projectile",
-      "instant",
-      "area"
-    ],
     "desc": "命中后自动弹射到附近敌人，类似闪电连锁效果。",
     "params": {
       "chains": {
@@ -146,6 +138,9 @@
     "tags": [
       "chaining",
       "multi_target"
+    ],
+    "requires_caps": [
+      "has_impact"
     ]
   },
   {
@@ -153,9 +148,6 @@
     "name": "追踪",
     "icon": "/icons/modifiers/homing.png",
     "category": "trajectory",
-    "applies_to": [
-      "projectile"
-    ],
     "desc": "弹体自动追踪最近的敌人，命中率极高。",
     "params": {
       "turn_rate": {
@@ -178,6 +170,10 @@
     "tags": [
       "guidance",
       "single_target_focus"
+    ],
+    "requires_caps": [
+      "has_trajectory",
+      "has_motion"
     ]
   },
   {
@@ -185,10 +181,6 @@
     "name": "分叉",
     "icon": "/icons/modifiers/fork.png",
     "category": "trajectory",
-    "applies_to": [
-      "projectile",
-      "beam"
-    ],
     "desc": "发射时即分叉为多条路径，各自独立飞行，不共享命中。",
     "params": {
       "count": {
@@ -208,6 +200,9 @@
     ],
     "tags": [
       "multishot"
+    ],
+    "requires_caps": [
+      "has_impact"
     ]
   },
   {
@@ -215,9 +210,6 @@
     "name": "回旋",
     "icon": "/icons/modifiers/returning.png",
     "category": "trajectory",
-    "applies_to": [
-      "projectile"
-    ],
     "desc": "弹体到达最远点后返回施法者，命中路径上的目标。",
     "params": {
       "hit_on_return": {
@@ -237,6 +229,10 @@
     "tags": [
       "trajectory",
       "boomerang"
+    ],
+    "requires_caps": [
+      "has_trajectory",
+      "has_motion"
     ]
   },
   {
@@ -244,9 +240,6 @@
     "name": "减速弹",
     "icon": "/icons/modifiers/slow_projectile.png",
     "category": "trajectory",
-    "applies_to": [
-      "projectile"
-    ],
     "desc": "弹体速度降低，但体积和伤害增大。",
     "params": {
       "speed_mult": {
@@ -270,6 +263,10 @@
     ],
     "tags": [
       "amplified"
+    ],
+    "requires_caps": [
+      "has_trajectory",
+      "has_motion"
     ]
   },
   {
@@ -277,10 +274,6 @@
     "name": "旋转",
     "icon": "/icons/modifiers/rotating.png",
     "category": "trajectory",
-    "applies_to": [
-      "persistent",
-      "beam"
-    ],
     "desc": "效果围绕施法者或目标旋转。",
     "params": {
       "speed_deg": {
@@ -303,6 +296,9 @@
     "tags": [
       "orbit",
       "multi_target"
+    ],
+    "requires_caps": [
+      "has_timing"
     ]
   },
   {
@@ -310,10 +306,6 @@
     "name": "螺旋",
     "icon": "/icons/modifiers/spiral.png",
     "category": "trajectory",
-    "applies_to": [
-      "projectile",
-      "beam"
-    ],
     "desc": "弹体以螺旋轨迹飞行，覆盖更宽的判定路径，难以躲避。",
     "params": {
       "radius": {
@@ -338,6 +330,10 @@
     "tags": [
       "multi_target",
       "wide_path"
+    ],
+    "requires_caps": [
+      "has_trajectory",
+      "has_motion"
     ]
   },
   {
@@ -345,10 +341,6 @@
     "name": "扩大",
     "icon": "/icons/modifiers/expand.png",
     "category": "area",
-    "applies_to": [
-      "area",
-      "persistent"
-    ],
     "desc": "范围随时间逐渐扩大。",
     "params": {
       "final_radius_mult": {
@@ -366,6 +358,9 @@
     "tags": [
       "aoe",
       "scaling"
+    ],
+    "requires_caps": [
+      "has_geometry"
     ]
   },
   {
@@ -373,10 +368,6 @@
     "name": "残留",
     "icon": "/icons/modifiers/linger.png",
     "category": "area",
-    "applies_to": [
-      "area",
-      "projectile"
-    ],
     "desc": "效果在命中点留下持续区域，持续伤害或减速。",
     "params": {
       "duration": {
@@ -399,6 +390,9 @@
     "tags": [
       "persistent",
       "hazard"
+    ],
+    "requires_caps": [
+      "has_impact"
     ]
   },
   {
@@ -406,9 +400,6 @@
     "name": "级联",
     "icon": "/icons/modifiers/cascade.png",
     "category": "area",
-    "applies_to": [
-      "area"
-    ],
     "desc": "爆炸在命中的每个目标位置再次触发小型爆炸。",
     "params": {
       "depth": {
@@ -431,6 +422,9 @@
     "tags": [
       "aoe",
       "chain_reaction"
+    ],
+    "requires_caps": [
+      "has_geometry"
     ]
   },
   {
@@ -438,9 +432,6 @@
     "name": "地面效果",
     "icon": "/icons/modifiers/ground_effect.png",
     "category": "area",
-    "applies_to": [
-      "area"
-    ],
     "desc": "在目标地面创建一个持续性区域（岩浆池、冰面、毒沼等）。",
     "params": {
       "duration": {
@@ -464,6 +455,9 @@
       "hazard",
       "persistent",
       "ground"
+    ],
+    "requires_caps": [
+      "has_impact"
     ]
   },
   {
@@ -471,9 +465,6 @@
     "name": "环形",
     "icon": "/icons/modifiers/ring.png",
     "category": "area",
-    "applies_to": [
-      "area"
-    ],
     "desc": "仅在圆环边缘区域造成伤害，中心为安全区，迫使目标移动到内圈。",
     "params": {
       "inner_radius": {
@@ -496,6 +487,9 @@
     "tags": [
       "aoe",
       "zoning"
+    ],
+    "requires_caps": [
+      "has_geometry"
     ]
   },
   {
@@ -503,10 +497,6 @@
     "name": "锥形",
     "icon": "/icons/modifiers/cone.png",
     "category": "area",
-    "applies_to": [
-      "area",
-      "beam"
-    ],
     "desc": "将圆形区域变为扇形锥形区域，前方伤害更集中。",
     "params": {
       "angle": {
@@ -529,6 +519,9 @@
     "tags": [
       "directional",
       "aoe"
+    ],
+    "requires_caps": [
+      "has_geometry"
     ]
   },
   {
@@ -536,9 +529,6 @@
     "name": "涟漪",
     "icon": "/icons/modifiers/ripple.png",
     "category": "area",
-    "applies_to": [
-      "area"
-    ],
     "desc": "多个同心圆波依次向外扩散，每波都能造成伤害。",
     "params": {
       "waves": {
@@ -566,6 +556,9 @@
     "tags": [
       "aoe",
       "multi_hit"
+    ],
+    "requires_caps": [
+      "has_geometry"
     ]
   },
   {
@@ -573,10 +566,6 @@
     "name": "引力井",
     "icon": "/icons/modifiers/gravity_well.png",
     "category": "area",
-    "applies_to": [
-      "area",
-      "persistent"
-    ],
     "desc": "将范围内敌人持续拉向中心，使其聚集便于集中打击。",
     "params": {
       "pull_force": {
@@ -599,6 +588,9 @@
     "tags": [
       "cc",
       "pull"
+    ],
+    "requires_caps": [
+      "has_spread"
     ]
   },
   {
@@ -606,10 +598,6 @@
     "name": "魔法墙",
     "icon": "/icons/modifiers/wall.png",
     "category": "area",
-    "applies_to": [
-      "area",
-      "instant"
-    ],
     "desc": "在指定位置创建一道线形魔法屏障，阻挡并伤害穿越的目标。",
     "params": {
       "length": {
@@ -638,6 +626,9 @@
       "obstacle",
       "zoning",
       "persistent"
+    ],
+    "requires_caps": [
+      "has_geometry"
     ]
   },
   {
@@ -645,9 +636,6 @@
     "name": "真空爆破",
     "icon": "/icons/modifiers/vacuum.png",
     "category": "area",
-    "applies_to": [
-      "area"
-    ],
     "desc": "先将范围内所有目标吸向中心，然后猛烈向外爆炸弹开。",
     "params": {
       "suck_duration": {
@@ -673,6 +661,9 @@
       "cc",
       "knockback",
       "burst"
+    ],
+    "requires_caps": [
+      "has_spread"
     ]
   },
   {
@@ -680,10 +671,6 @@
     "name": "脉冲",
     "icon": "/icons/modifiers/pulse.png",
     "category": "persistent",
-    "applies_to": [
-      "persistent",
-      "summon"
-    ],
     "desc": "定期向周围释放一次范围爆发。",
     "params": {
       "interval": {
@@ -706,6 +693,9 @@
     "tags": [
       "aoe",
       "tempo"
+    ],
+    "requires_caps": [
+      "has_timing"
     ]
   },
   {
@@ -713,11 +703,6 @@
     "name": "光环",
     "icon": "/icons/modifiers/aura.png",
     "category": "persistent",
-    "applies_to": [
-      "persistent",
-      "summon",
-      "instant"
-    ],
     "desc": "以施法者或目标为中心，持续对范围内生效。",
     "params": {
       "radius": {
@@ -745,6 +730,9 @@
       "buff",
       "debuff",
       "passive_area"
+    ],
+    "requires_caps": [
+      "has_timing"
     ]
   },
   {
@@ -752,10 +740,6 @@
     "name": "吸能场",
     "icon": "/icons/modifiers/drain.png",
     "category": "persistent",
-    "applies_to": [
-      "persistent",
-      "area"
-    ],
     "desc": "持续吸取范围内敌人的能量/法力，转化为施法者资源。",
     "params": {
       "drain_rate": {
@@ -778,6 +762,9 @@
     "tags": [
       "resource_steal",
       "sustain"
+    ],
+    "requires_caps": [
+      "has_timing"
     ]
   },
   {
@@ -785,10 +772,6 @@
     "name": "风暴核",
     "icon": "/icons/modifiers/storm.png",
     "category": "persistent",
-    "applies_to": [
-      "persistent",
-      "area"
-    ],
     "desc": "在范围内随机位置持续生成闪电/陨石/毒云等伤害点。",
     "params": {
       "hit_rate": {
@@ -812,6 +795,9 @@
       "random",
       "aoe",
       "persistent"
+    ],
+    "requires_caps": [
+      "has_timing"
     ]
   },
   {
@@ -819,9 +805,6 @@
     "name": "镜面域",
     "icon": "/icons/modifiers/mirror_field.png",
     "category": "persistent",
-    "applies_to": [
-      "persistent"
-    ],
     "desc": "在范围内创建镜面场，反射进入的敌方弹体并转化为友方攻击。",
     "params": {
       "reflect_chance": {
@@ -844,6 +827,10 @@
     "tags": [
       "reflect",
       "defensive"
+    ],
+    "requires_caps": [
+      "has_timing",
+      "has_geometry"
     ]
   },
   {
@@ -851,10 +838,6 @@
     "name": "结界",
     "icon": "/icons/modifiers/ward.png",
     "category": "persistent",
-    "applies_to": [
-      "persistent",
-      "instant"
-    ],
     "desc": "在区域边缘创建不可见阻挡屏障，敌人无法进入，友军可自由穿越。",
     "params": {
       "radius": {
@@ -878,6 +861,9 @@
       "defensive",
       "zoning",
       "barrier"
+    ],
+    "requires_caps": [
+      "has_timing"
     ]
   },
   {
@@ -885,10 +871,6 @@
     "name": "信标",
     "icon": "/icons/modifiers/beacon.png",
     "category": "persistent",
-    "applies_to": [
-      "persistent",
-      "summon"
-    ],
     "desc": "以信标为中心，增强范围内友方单位的伤害、防御和移速。",
     "params": {
       "radius": {
@@ -917,6 +899,9 @@
       "support",
       "buff",
       "aoe"
+    ],
+    "requires_caps": [
+      "has_timing"
     ]
   },
   {
@@ -924,10 +909,6 @@
     "name": "漩涡",
     "icon": "/icons/modifiers/vortex.png",
     "category": "persistent",
-    "applies_to": [
-      "persistent",
-      "area"
-    ],
     "desc": "持续吸引范围内的弹体和敌人向中心旋转汇聚，扭曲弹道轨迹。",
     "params": {
       "pull_radius": {
@@ -951,6 +932,10 @@
       "cc",
       "pull",
       "projectile_deflect"
+    ],
+    "requires_caps": [
+      "has_timing",
+      "has_geometry"
     ]
   },
   {
@@ -958,10 +943,6 @@
     "name": "成长",
     "icon": "/icons/modifiers/growth.png",
     "category": "persistent",
-    "applies_to": [
-      "persistent",
-      "summon"
-    ],
     "desc": "效果强度随时间逐渐增长，越到后期越强力。",
     "params": {
       "growth_rate": {
@@ -984,6 +965,9 @@
     "tags": [
       "scaling",
       "ramp_up"
+    ],
+    "requires_caps": [
+      "has_timing"
     ]
   },
   {
@@ -991,9 +975,6 @@
     "name": "爆散",
     "icon": "/icons/modifiers/nova_on_expire.png",
     "category": "trigger",
-    "applies_to": [
-      "projectile"
-    ],
     "desc": "弹体到达最大射程或命中时，向四周爆发多枚子弹。",
     "params": {
       "count": {
@@ -1015,6 +996,9 @@
     "tags": [
       "secondary_projectile",
       "aoe"
+    ],
+    "requires_caps": [
+      "has_trajectory"
     ]
   },
   {
@@ -1022,11 +1006,6 @@
     "name": "回响",
     "icon": "/icons/modifiers/echo.png",
     "category": "trigger",
-    "applies_to": [
-      "instant",
-      "area",
-      "projectile"
-    ],
     "desc": "技能触发后，延迟一段时间自动再次触发一次（伤害降低）。",
     "params": {
       "delay": {
@@ -1049,6 +1028,9 @@
     "tags": [
       "secondary_cast",
       "amplified"
+    ],
+    "requires_caps": [
+      "has_impact"
     ]
   },
   {
@@ -1056,11 +1038,6 @@
     "name": "灭杀连锁",
     "icon": "/icons/modifiers/chain_on_kill.png",
     "category": "trigger",
-    "applies_to": [
-      "projectile",
-      "instant",
-      "area"
-    ],
     "desc": "目标被击杀时，立即向附近敌人弹射一次额外攻击。",
     "params": {
       "chains": {
@@ -1083,6 +1060,9 @@
     "tags": [
       "kill_trigger",
       "chaining"
+    ],
+    "requires_caps": [
+      "has_impact"
     ]
   },
   {
@@ -1090,11 +1070,6 @@
     "name": "引爆器",
     "icon": "/icons/modifiers/detonator.png",
     "category": "trigger",
-    "applies_to": [
-      "projectile",
-      "area",
-      "persistent"
-    ],
     "desc": "在目标位置留下潜伏标记，可手动或在特定条件下触发范围爆炸。",
     "params": {
       "max_charges": {
@@ -1122,6 +1097,9 @@
       "delayed",
       "strategic",
       "aoe"
+    ],
+    "requires_caps": [
+      "has_impact"
     ]
   },
   {
@@ -1129,10 +1107,6 @@
     "name": "吸收反弹",
     "icon": "/icons/modifiers/absorb.png",
     "category": "trigger",
-    "applies_to": [
-      "instant",
-      "persistent"
-    ],
     "desc": "吸收一次伤害并储存，之后以加倍能量反弹给攻击者。",
     "params": {
       "max_absorb": {
@@ -1156,6 +1130,9 @@
       "defensive",
       "counter",
       "reflect"
+    ],
+    "requires_caps": [
+      "has_timing"
     ]
   },
   {
@@ -1163,12 +1140,6 @@
     "name": "暴击触发",
     "icon": "/icons/modifiers/on_crit.png",
     "category": "trigger",
-    "applies_to": [
-      "projectile",
-      "instant",
-      "area",
-      "beam"
-    ],
     "desc": "暴击命中时，额外触发一次特殊效果（爆炸、减速或诅咒）。",
     "params": {
       "bonus_effect": {
@@ -1191,6 +1162,9 @@
     "tags": [
       "crit_synergy",
       "conditional"
+    ],
+    "requires_caps": [
+      "has_impact"
     ]
   },
   {
@@ -1198,10 +1172,6 @@
     "name": "余震",
     "icon": "/icons/modifiers/aftershock.png",
     "category": "trigger",
-    "applies_to": [
-      "area",
-      "projectile"
-    ],
     "desc": "技能落地后，延迟0.5秒在相同位置再次触发一次较弱的余震。",
     "params": {
       "delay": {
@@ -1231,6 +1201,9 @@
     "tags": [
       "delayed",
       "aoe"
+    ],
+    "requires_caps": [
+      "has_impact"
     ]
   },
   {
@@ -1238,11 +1211,6 @@
     "name": "碎裂",
     "icon": "/icons/modifiers/shatter.png",
     "category": "trigger",
-    "applies_to": [
-      "projectile",
-      "instant",
-      "area"
-    ],
     "desc": "攻击被冰冻状态的目标时触发碎裂，造成大量范围伤害并清除冰冻。",
     "params": {
       "bonus_damage_mult": {
@@ -1266,6 +1234,9 @@
       "synergy",
       "freeze",
       "burst"
+    ],
+    "requires_caps": [
+      "has_impact"
     ]
   },
   {
@@ -1273,10 +1244,6 @@
     "name": "反击",
     "icon": "/icons/modifiers/counter.png",
     "category": "trigger",
-    "applies_to": [
-      "instant",
-      "persistent"
-    ],
     "desc": "受到伤害时自动触发一次反击，向攻击者释放技能。",
     "params": {
       "cooldown": {
@@ -1300,6 +1267,9 @@
       "reactive",
       "defensive",
       "counter"
+    ],
+    "requires_caps": [
+      "has_timing"
     ]
   },
   {
@@ -1307,14 +1277,6 @@
     "name": "强化",
     "icon": "/icons/modifiers/empowered.png",
     "category": "amplifier",
-    "applies_to": [
-      "summon",
-      "projectile",
-      "area",
-      "instant",
-      "beam",
-      "persistent"
-    ],
     "desc": "全面强化技能，提升伤害、范围和持续时间。",
     "params": {
       "damage_mult": {
@@ -1342,19 +1304,14 @@
     "tags": [
       "amplified",
       "global"
-    ]
+    ],
+    "requires_caps": []
   },
   {
     "id": "overcharge",
     "name": "超载",
     "icon": "/icons/modifiers/overcharge.png",
     "category": "amplifier",
-    "applies_to": [
-      "projectile",
-      "area",
-      "beam",
-      "instant"
-    ],
     "desc": "蓄力时间越长，技能伤害和范围越大，但超时会自伤。",
     "params": {
       "max_charge_time": {
@@ -1380,20 +1337,14 @@
       "charge",
       "high_risk",
       "amplified"
-    ]
+    ],
+    "requires_caps": []
   },
   {
     "id": "lifesteal",
     "name": "生命汲取",
     "icon": "/icons/modifiers/lifesteal.png",
     "category": "amplifier",
-    "applies_to": [
-      "projectile",
-      "area",
-      "instant",
-      "beam",
-      "persistent"
-    ],
     "desc": "造成的伤害转化为施法者的生命值。",
     "params": {
       "steal_ratio": {
@@ -1411,19 +1362,14 @@
     "tags": [
       "sustain",
       "drain"
-    ]
+    ],
+    "requires_caps": []
   },
   {
     "id": "critical",
     "name": "暴击强化",
     "icon": "/icons/modifiers/critical.png",
     "category": "amplifier",
-    "applies_to": [
-      "projectile",
-      "beam",
-      "instant",
-      "area"
-    ],
     "desc": "大幅提升暴击率和暴击伤害倍率。",
     "params": {
       "crit_chance_bonus": {
@@ -1441,6 +1387,9 @@
     "tags": [
       "crit",
       "amplified"
+    ],
+    "requires_caps": [
+      "has_impact"
     ]
   },
   {
@@ -1448,12 +1397,6 @@
     "name": "穿甲",
     "icon": "/icons/modifiers/penetrating.png",
     "category": "amplifier",
-    "applies_to": [
-      "projectile",
-      "area",
-      "beam",
-      "instant"
-    ],
     "desc": "技能完全无视目标的防御值和护盾层，直接造成真实伤害。",
     "params": {
       "penetration_pct": {
@@ -1471,6 +1414,9 @@
     "tags": [
       "true_damage",
       "anti_tank"
+    ],
+    "requires_caps": [
+      "has_impact"
     ]
   },
   {
@@ -1478,12 +1424,6 @@
     "name": "孪生施法",
     "icon": "/icons/modifiers/twin_cast.png",
     "category": "amplifier",
-    "applies_to": [
-      "projectile",
-      "area",
-      "instant",
-      "beam"
-    ],
     "desc": "技能触发时，同时在镜像位置生成一个副本，两者同时作用。",
     "params": {
       "offset_angle": {
@@ -1506,21 +1446,14 @@
     "tags": [
       "duplicate",
       "multishot"
-    ]
+    ],
+    "requires_caps": []
   },
   {
     "id": "ritual",
     "name": "血契仪式",
     "icon": "/icons/modifiers/ritual.png",
     "category": "amplifier",
-    "applies_to": [
-      "summon",
-      "projectile",
-      "area",
-      "instant",
-      "beam",
-      "persistent"
-    ],
     "desc": "施法时消耗施法者自身生命值，换取大幅强化的技能效果。",
     "params": {
       "hp_cost_pct": {
@@ -1544,20 +1477,14 @@
       "high_risk",
       "sacrifice",
       "amplified"
-    ]
+    ],
+    "requires_caps": []
   },
   {
     "id": "resonance",
     "name": "元素共鸣",
     "icon": "/icons/modifiers/resonance.png",
     "category": "amplifier",
-    "applies_to": [
-      "projectile",
-      "area",
-      "instant",
-      "beam",
-      "persistent"
-    ],
     "desc": "若目标已被相同元素效果命中，此次技能额外造成共鸣伤害。",
     "params": {
       "bonus_damage_mult": {
@@ -1576,21 +1503,14 @@
       "synergy",
       "element",
       "combo"
-    ]
+    ],
+    "requires_caps": []
   },
   {
     "id": "mastery",
     "name": "精通",
     "icon": "/icons/modifiers/mastery.png",
     "category": "amplifier",
-    "applies_to": [
-      "summon",
-      "projectile",
-      "area",
-      "instant",
-      "beam",
-      "persistent"
-    ],
     "desc": "每次成功命中为技能积累精通层数，层数越高冷却越短、效果越强。",
     "params": {
       "max_stacks": {
@@ -1619,21 +1539,14 @@
       "stack",
       "scaling",
       "sustain"
-    ]
+    ],
+    "requires_caps": []
   },
   {
     "id": "sacrifice",
     "name": "献祭",
     "icon": "/icons/modifiers/sacrifice.png",
     "category": "amplifier",
-    "applies_to": [
-      "summon",
-      "projectile",
-      "area",
-      "instant",
-      "beam",
-      "persistent"
-    ],
     "desc": "消耗当前存活的召唤物，每消耗一个大幅增强下一次技能。",
     "params": {
       "power_per_summon": {
@@ -1652,16 +1565,14 @@
       "sacrifice",
       "summon_synergy",
       "burst"
-    ]
+    ],
+    "requires_caps": []
   },
   {
     "id": "barrage",
     "name": "连射",
     "icon": "/icons/modifiers/barrage.png",
     "category": "tempo",
-    "applies_to": [
-      "projectile"
-    ],
     "desc": "快速连续发射多次，每次略有角度偏差。",
     "params": {
       "count": {
@@ -1686,6 +1597,10 @@
     "tags": [
       "multishot",
       "rapid"
+    ],
+    "requires_caps": [
+      "has_trajectory",
+      "has_motion"
     ]
   },
   {
@@ -1693,12 +1608,6 @@
     "name": "蓄力",
     "icon": "/icons/modifiers/charged.png",
     "category": "tempo",
-    "applies_to": [
-      "projectile",
-      "area",
-      "beam",
-      "instant"
-    ],
     "desc": "技能可以蓄力，按住时间越长效果越强（速度、伤害、范围递增）。",
     "params": {
       "min_charge_time": {
@@ -1721,16 +1630,14 @@
     "tags": [
       "charge",
       "scaling"
-    ]
+    ],
+    "requires_caps": []
   },
   {
     "id": "burst_fire",
     "name": "爆发连射",
     "icon": "/icons/modifiers/burst_fire.png",
     "category": "tempo",
-    "applies_to": [
-      "projectile"
-    ],
     "desc": "短时间内快速消耗所有弹药连发，之后进入较长冷却。",
     "params": {
       "burst_count": {
@@ -1756,6 +1663,10 @@
       "rapid",
       "multishot",
       "cooldown"
+    ],
+    "requires_caps": [
+      "has_trajectory",
+      "has_motion"
     ]
   },
   {
@@ -1763,11 +1674,6 @@
     "name": "延迟起爆",
     "icon": "/icons/modifiers/delayed.png",
     "category": "tempo",
-    "applies_to": [
-      "projectile",
-      "area",
-      "instant"
-    ],
     "desc": "技能延迟一段时间才在目标位置生效，期间可预判走位。",
     "params": {
       "delay": {
@@ -1790,17 +1696,14 @@
     "tags": [
       "delayed",
       "positional"
-    ]
+    ],
+    "requires_caps": []
   },
   {
     "id": "countdown",
     "name": "倒计时雷",
     "icon": "/icons/modifiers/countdown.png",
     "category": "tempo",
-    "applies_to": [
-      "projectile",
-      "area"
-    ],
     "desc": "弹体/区域到达目标位置后开始倒计时，时间到才爆炸，造成极大伤害。",
     "params": {
       "fuse_time": {
@@ -1824,16 +1727,14 @@
       "delayed",
       "high_burst",
       "aoe"
-    ]
+    ],
+    "requires_caps": []
   },
   {
     "id": "staggered",
     "name": "错位发射",
     "icon": "/icons/modifiers/staggered.png",
     "category": "tempo",
-    "applies_to": [
-      "projectile"
-    ],
     "desc": "多个弹体以不规则时间间隔发射，难以预判规律，令人措手不及。",
     "params": {
       "count": {
@@ -1859,6 +1760,9 @@
     "tags": [
       "multishot",
       "unpredictable"
+    ],
+    "requires_caps": [
+      "has_trajectory"
     ]
   },
   {
@@ -1866,13 +1770,6 @@
     "name": "超速模式",
     "icon": "/icons/modifiers/overdrive.png",
     "category": "tempo",
-    "applies_to": [
-      "projectile",
-      "area",
-      "beam",
-      "instant",
-      "persistent"
-    ],
     "desc": "暂时大幅提升施法速度和弹体速度，持续一段时间后进入超长冷却。",
     "params": {
       "duration": {
@@ -1900,19 +1797,14 @@
     "tags": [
       "speed",
       "burst_window"
-    ]
+    ],
+    "requires_caps": []
   },
   {
     "id": "cycle",
     "name": "元素循环",
     "icon": "/icons/modifiers/cycle.png",
     "category": "tempo",
-    "applies_to": [
-      "projectile",
-      "area",
-      "instant",
-      "beam"
-    ],
     "desc": "每次施法自动循环到下一个元素，形成连击组合效果。",
     "params": {
       "elements": {
@@ -1935,17 +1827,14 @@
       "rotation",
       "element",
       "combo"
-    ]
+    ],
+    "requires_caps": []
   },
   {
     "id": "snipe",
     "name": "狙击",
     "icon": "/icons/modifiers/snipe.png",
     "category": "tempo",
-    "applies_to": [
-      "projectile",
-      "beam"
-    ],
     "desc": "蓄力越久弹体速度和穿透力越高，停止蓄力后瞬间释放超高速弹体。",
     "params": {
       "max_charge_time": {
@@ -1977,6 +1866,9 @@
       "charge",
       "high_range",
       "pierce"
+    ],
+    "requires_caps": [
+      "has_trajectory"
     ]
   },
   {
@@ -1984,9 +1876,6 @@
     "name": "齐射",
     "icon": "/icons/modifiers/volley.png",
     "category": "tempo",
-    "applies_to": [
-      "projectile"
-    ],
     "desc": "积累多发弹药，全部同时发射，形成弹幕覆盖。",
     "params": {
       "volley_count": {
@@ -2012,6 +1901,10 @@
       "multishot",
       "simultaneous",
       "aoe"
+    ],
+    "requires_caps": [
+      "has_trajectory",
+      "has_motion"
     ]
   },
   {
@@ -2019,11 +1912,6 @@
     "name": "锁链",
     "icon": "/icons/modifiers/link.png",
     "category": "persistent",
-    "applies_to": [
-      "persistent",
-      "instant",
-      "summon"
-    ],
     "desc": "将多个目标彼此链接，链中一个受伤时其他目标也承受部分伤害，强制共享命运。",
     "params": {
       "max_targets": {
@@ -2052,6 +1940,9 @@
       "cc",
       "shared_damage",
       "utility"
+    ],
+    "requires_caps": [
+      "has_timing"
     ]
   },
   {
@@ -2059,11 +1950,6 @@
     "name": "标记引爆",
     "icon": "/icons/modifiers/mark_detonate.png",
     "category": "trigger",
-    "applies_to": [
-      "projectile",
-      "instant",
-      "area"
-    ],
     "desc": "每次命中在目标身上积累引爆标记，达到指定层数时一次性引爆所有标记造成爆炸伤害。",
     "params": {
       "stacks_to_detonate": {
@@ -2088,6 +1974,9 @@
       "delayed",
       "burst",
       "conditional"
+    ],
+    "requires_caps": [
+      "has_impact"
     ]
   }
 ]

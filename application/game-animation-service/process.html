@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔬 生成过程可视化 — Game Animation Service</title>
+<style>
+:root {
+  --bg:#080b12;--surface:#0f1420;--panel:#141927;--border:#1e2535;
+  --accent:#7c3aed;--accent2:#06b6d4;--green:#10b981;--red:#ef4444;
+  --yellow:#f59e0b;--orange:#f97316;--text:#e2e8f0;--muted:#4b5a72;
+  --card:#111827;--glow-a:rgba(124,58,237,.35);--glow-b:rgba(6,182,212,.3);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI','Microsoft YaHei',monospace,sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden}
+
+/* ── Header ── */
+header{
+  background:linear-gradient(135deg,#0d0622 0%,#071220 100%);
+  border-bottom:1px solid var(--border);
+  padding:10px 24px;
+  display:flex;align-items:center;gap:12px;
+  position:relative;overflow:hidden;
+}
+header::after{
+  content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(124,58,237,.04) 40px,rgba(124,58,237,.04) 41px),
+             repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(6,182,212,.03) 40px,rgba(6,182,212,.03) 41px);
+  pointer-events:none;
+}
+header h1{font-size:16px;color:#c4b5fd;letter-spacing:1px;z-index:1}
+.nav-pills{display:flex;gap:6px;margin-left:auto;z-index:1}
+.nav-pill{
+  padding:4px 12px;border-radius:20px;border:1px solid var(--border);
+  background:var(--surface);color:var(--muted);font-size:11px;
+  text-decoration:none;transition:all .2s;cursor:pointer;
+}
+.nav-pill:hover,.nav-pill.active{border-color:var(--accent);color:#c4b5fd;background:#1e0a40}
+.status-dot{
+  width:7px;height:7px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 6px var(--green);animation:pulse-dot 2s infinite;z-index:1;
+}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
+.status-text{font-size:11px;color:var(--green);z-index:1}
+
+/* ── Layout ── */
+.layout{display:grid;grid-template-columns:280px 1fr;flex:1;gap:0;overflow:hidden}
+
+/* ── Left Config ── */
+.config-panel{
+  border-right:1px solid var(--border);overflow-y:auto;
+  background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:14px;
+}
+.sec-title{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}
+.field label{font-size:11px;color:#94a3b8;display:block;margin-bottom:4px}
+select,input[type=number],input[type=range]{
+  width:100%;background:var(--bg);border:1px solid var(--border);
+  color:var(--text);border-radius:5px;font-family:inherit;font-size:12px;
+  padding:6px 9px;outline:none;transition:border-color .15s;
+}
+select:focus,input:focus{border-color:var(--accent)}
+input[type=range]{padding:0;cursor:pointer;accent-color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{
+  padding:3px 9px;border-radius:16px;border:1px solid var(--border);
+  background:var(--card);color:var(--muted);font-size:10px;cursor:pointer;transition:all .15s;
+}
+.chip:hover,.chip.on{border-color:var(--accent);color:#c4b5fd;background:#1a0a38}
+.gen-btn{
+  width:100%;padding:11px;
+  background:linear-gradient(135deg,#4c1d95,#1e40af);
+  border:none;border-radius:7px;color:#fff;font-size:13px;font-weight:600;
+  cursor:pointer;font-family:inherit;transition:all .2s;letter-spacing:.5px;
+  position:relative;overflow:hidden;
+}
+.gen-btn::before{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);
+  transform:translateX(-100%);transition:transform .5s;
+}
+.gen-btn:hover::before{transform:translateX(100%)}
+.gen-btn:hover{box-shadow:0 0 20px rgba(124,58,237,.5)}
+.gen-btn:disabled{opacity:.4;cursor:not-allowed}
+.gen-btn:disabled::before{display:none}
+
+/* ── Right Pipeline ── */
+.pipeline-area{display:flex;flex-direction:column;overflow:hidden}
+
+/* Pipeline track */
+.pipeline-track{
+  padding:20px 24px 14px;
+  background:linear-gradient(180deg,#0a0e18 0%,var(--bg) 100%);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.track-title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:16px}
+.steps-row{display:flex;align-items:center;gap:0}
+.step-node{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  flex:1;position:relative;cursor:default;
+}
+.step-node+.step-node::before{
+  content:"";position:absolute;left:calc(-50% + 16px);top:20px;
+  width:calc(100% - 32px);height:2px;
+  background:var(--border);
+  transition:background 1s;
+  z-index:0;
+}
+.step-node.done+.step-node::before{background:linear-gradient(90deg,var(--green),var(--accent2))}
+.step-node.active+.step-node::before{background:linear-gradient(90deg,var(--accent),var(--border))}
+
+.step-icon{
+  width:40px;height:40px;border-radius:50%;border:2px solid var(--border);
+  background:var(--surface);display:flex;align-items:center;justify-content:center;
+  font-size:18px;z-index:1;position:relative;transition:all .4s;
+}
+.step-node.active .step-icon{
+  border-color:var(--accent);
+  box-shadow:0 0 16px var(--glow-a);
+  animation:pulse-icon .8s infinite;
+}
+.step-node.done .step-icon{
+  border-color:var(--green);
+  background:#052e16;
+  box-shadow:0 0 12px rgba(16,185,129,.3);
+}
+.step-node.error .step-icon{border-color:var(--red);box-shadow:0 0 12px rgba(239,68,68,.3)}
+@keyframes pulse-icon{0%,100%{box-shadow:0 0 12px var(--glow-a)}50%{box-shadow:0 0 24px var(--glow-a)}}
+
+.step-label{font-size:10px;color:var(--muted);text-align:center;transition:color .3s;white-space:nowrap}
+.step-node.active .step-label{color:#c4b5fd}
+.step-node.done .step-label{color:var(--green)}
+.step-node.error .step-label{color:var(--red)}
+.step-ms{font-size:9px;color:var(--muted);height:12px;transition:color .3s}
+.step-node.done .step-ms{color:var(--accent2)}
+
+/* ── Logs + Output ── */
+.main-area{flex:1;display:grid;grid-template-columns:1fr 320px;overflow:hidden}
+
+/* Log panel */
+.log-panel{overflow-y:auto;padding:14px;background:var(--bg);border-right:1px solid var(--border)}
+.log-header{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.log-clear{margin-left:auto;font-size:9px;cursor:pointer;color:var(--muted);padding:2px 6px;border:1px solid var(--border);border-radius:3px;transition:all .2s}
+.log-clear:hover{color:var(--red);border-color:var(--red)}
+.log-list{display:flex;flex-direction:column;gap:3px;font-size:11px;font-family:monospace}
+.log-line{
+  display:flex;gap:8px;padding:4px 8px;border-radius:4px;border-left:2px solid transparent;
+  animation:log-in .2s ease;
+}
+@keyframes log-in{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:translateX(0)}}
+.log-line.info{border-color:var(--accent2);background:rgba(6,182,212,.05)}
+.log-line.ok{border-color:var(--green);background:rgba(16,185,129,.05)}
+.log-line.warn{border-color:var(--yellow);background:rgba(245,158,11,.05)}
+.log-line.err{border-color:var(--red);background:rgba(239,68,68,.07)}
+.log-line.sub{border-color:var(--border);color:var(--muted)}
+.log-ts{color:var(--muted);flex-shrink:0;font-size:10px}
+.log-icon{flex-shrink:0}
+.log-msg{flex:1;word-break:break-all;color:#cbd5e1}
+
+/* Output panel */
+.output-panel{overflow-y:auto;padding:14px;background:var(--surface);display:flex;flex-direction:column;gap:12px}
+.out-title{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:2px}
+.preview-box{
+  background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  overflow:hidden;min-height:200px;display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.preview-box img{max-width:100%;image-rendering:pixelated;display:block}
+.preview-empty{text-align:center;color:var(--muted);font-size:24px;padding:40px}
+.preview-gif-badge{
+  position:absolute;top:6px;right:6px;
+  background:rgba(0,0,0,.7);border:1px solid var(--accent);
+  color:#c4b5fd;font-size:9px;padding:2px 7px;border-radius:10px;
+}
+.frame-strip{display:flex;gap:4px;overflow-x:auto;padding:4px 0}
+.frame-thumb{
+  width:40px;height:40px;border:1px solid var(--border);border-radius:4px;
+  background:var(--bg);cursor:pointer;flex-shrink:0;image-rendering:pixelated;overflow:hidden;
+  transition:border-color .15s;
+}
+.frame-thumb img{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
+.frame-thumb.cur{border-color:var(--accent)}
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.meta-item{
+  background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:6px 8px;
+}
+.meta-key{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.meta-val{font-size:12px;color:var(--accent2);font-weight:600;margin-top:2px}
+.dl-btn{
+  width:100%;padding:7px;background:var(--card);border:1px solid var(--border);
+  border-radius:5px;color:var(--text);font-size:11px;cursor:pointer;font-family:inherit;
+  transition:all .15s;
+}
+.dl-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+.timing-bar{
+  background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;
+}
+.timing-title{font-size:9px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+.timing-row{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.timing-label{font-size:10px;color:#64748b;width:80px;flex-shrink:0}
+.timing-track{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.timing-fill{height:100%;border-radius:3px;transition:width 1s ease;background:var(--accent)}
+.timing-fill.t2{background:var(--accent2)}
+.timing-fill.t3{background:var(--green)}
+.timing-fill.t4{background:var(--yellow)}
+.timing-val{font-size:10px;color:var(--muted);width:38px;text-align:right;flex-shrink:0}
+
+/* ── Status bar ── */
+.statusbar{
+  border-top:1px solid var(--border);background:#06080e;
+  padding:4px 16px;font-size:10px;color:var(--muted);display:flex;gap:20px;align-items:center;
+  flex-shrink:0;
+}
+.sb-item{display:flex;align-items:center;gap:4px}
+.sb-dot{width:5px;height:5px;border-radius:50%}
+.sb-green{background:var(--green);box-shadow:0 0 4px var(--green)}
+.sb-yellow{background:var(--yellow)}
+.sb-muted{background:var(--muted)}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* Grid scan animation on idle */
+@keyframes scan{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
+.scan-line{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(124,58,237,.3),transparent);
+  animation:scan 8s linear infinite;pointer-events:none;z-index:999;
+}
+</style>
+</head>
+<body>
+
+<div class="scan-line"></div>
+
+<header>
+  <span style="font-size:20px">🔬</span>
+  <h1>生成过程可视化</h1>
+  <span style="font-size:10px;color:var(--muted);margin-left:4px">Game Animation Service</span>
+  <div class="status-dot"></div>
+  <span class="status-text">在线</span>
+  <div class="nav-pills" style="margin-left:auto">
+    <a href="/" class="nav-pill">🎮 像素生成</a>
+    <a href="/cute" class="nav-pill">🌸 可爱动画</a>
+    <span class="nav-pill active">🔬 过程展示</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ═══ LEFT CONFIG ════ -->
+  <div class="config-panel">
+    <div>
+      <div class="sec-title">🧙 角色类型</div>
+      <div class="chips" id="char-chips">
+        <div class="chip on" data-v="warrior">⚔️ 战士</div>
+        <div class="chip" data-v="mage">🔮 法师</div>
+        <div class="chip" data-v="archer">🏹 弓手</div>
+        <div class="chip" data-v="robot">🤖 机器人</div>
+        <div class="chip" data-v="ghost">👻 幽灵</div>
+        <div class="chip" data-v="zombie">🧟 僵尸</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="sec-title">🎭 动画类型</div>
+      <div class="chips" id="anim-chips">
+        <div class="chip on" data-v="idle">💤 待机</div>
+        <div class="chip" data-v="walk">🚶 行走</div>
+        <div class="chip" data-v="run">🏃 奔跑</div>
+        <div class="chip" data-v="attack">⚔️ 攻击</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="sec-title">🎨 风格</div>
+      <div class="chips" id="style-chips">
+        <div class="chip on" data-v="pixel art">像素</div>
+        <div class="chip" data-v="retro 8-bit">8-bit</div>
+        <div class="chip" data-v="neon cyberpunk">赛博</div>
+        <div class="chip" data-v="fantasy RPG">奇幻</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="sec-title">📐 尺寸</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <label>宽度</label>
+          <select id="width">
+            <option value="64">64</option>
+            <option value="128" selected>128</option>
+            <option value="256">256</option>
+          </select>
+        </div>
+        <div>
+          <label>高度</label>
+          <select id="height">
+            <option value="64">64</option>
+            <option value="128" selected>128</option>
+            <option value="256">256</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="sec-title">🎲 随机种子</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="number" id="seed" placeholder="随机" style="flex:1">
+        <button onclick="document.getElementById('seed').value=Math.floor(Math.random()*99999)"
+          style="padding:6px 10px;background:var(--card);border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer;font-size:11px;font-family:inherit;transition:all .15s"
+          onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)'">
+          🎲
+        </button>
+      </div>
+    </div>
+
+    <div style="margin-top:auto;padding-top:8px">
+      <button class="gen-btn" id="gen-btn" onclick="startGenerate()">
+        ▶ 开始生成 &amp; 展示过程
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT AREA ════ -->
+  <div class="pipeline-area">
+
+    <!-- Pipeline Track -->
+    <div class="pipeline-track">
+      <div class="track-title">⚡ 生成流水线</div>
+      <div class="steps-row" id="steps-row">
+        <div class="step-node" id="step-0">
+          <div class="step-icon">📥</div>
+          <div class="step-label">参数解析</div>
+          <div class="step-ms" id="step-ms-0">—</div>
+        </div>
+        <div class="step-node" id="step-1">
+          <div class="step-icon">🎨</div>
+          <div class="step-label">调色板</div>
+          <div class="step-ms" id="step-ms-1">—</div>
+        </div>
+        <div class="step-node" id="step-2">
+          <div class="step-icon">🦴</div>
+          <div class="step-label">骨骼建模</div>
+          <div class="step-ms" id="step-ms-2">—</div>
+        </div>
+        <div class="step-node" id="step-3">
+          <div class="step-icon">✏️</div>
+          <div class="step-label">像素填充</div>
+          <div class="step-ms" id="step-ms-3">—</div>
+        </div>
+        <div class="step-node" id="step-4">
+          <div class="step-icon">🎬</div>
+          <div class="step-label">帧动画</div>
+          <div class="step-ms" id="step-ms-4">—</div>
+        </div>
+        <div class="step-node" id="step-5">
+          <div class="step-icon">📦</div>
+          <div class="step-label">GIF 打包</div>
+          <div class="step-ms" id="step-ms-5">—</div>
+        </div>
+        <div class="step-node" id="step-6">
+          <div class="step-icon">✅</div>
+          <div class="step-label">完成输出</div>
+          <div class="step-ms" id="step-ms-6">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logs + Output -->
+    <div class="main-area">
+
+      <!-- Log panel -->
+      <div class="log-panel">
+        <div class="log-header">
+          <span>📋 执行日志</span>
+          <span class="log-clear" onclick="clearLog()">清除</span>
+        </div>
+        <div class="log-list" id="log-list">
+          <div class="log-line sub">
+            <span class="log-ts">—</span>
+            <span class="log-icon">💤</span>
+            <span class="log-msg">等待开始生成...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Output panel -->
+      <div class="output-panel">
+        <div class="out-title">📤 输出结果</div>
+
+        <div class="preview-box" id="preview-box">
+          <div class="preview-empty" id="preview-empty">🎮</div>
+          <img id="preview-img" style="display:none">
+          <span class="preview-gif-badge" id="gif-badge" style="display:none">GIF</span>
+        </div>
+
+        <div>
+          <div class="out-title" style="margin-bottom:6px">🎞️ 帧预览</div>
+          <div class="frame-strip" id="frame-strip">
+            <div style="color:var(--muted);font-size:11px;padding:10px">尚无帧数据</div>
+          </div>
+        </div>
+
+        <div class="timing-bar" id="timing-bar" style="display:none">
+          <div class="timing-title">⏱ 各阶段耗时</div>
+          <div class="timing-row">
+            <span class="timing-label">参数/调色板</span>
+            <div class="timing-track"><div class="timing-fill" id="t0" style="width:0%"></div></div>
+            <span class="timing-val" id="tv0">-</span>
+          </div>
+          <div class="timing-row">
+            <span class="timing-label">骨骼建模</span>
+            <div class="timing-track"><div class="timing-fill t2" id="t1" style="width:0%"></div></div>
+            <span class="timing-val" id="tv1">-</span>
+          </div>
+          <div class="timing-row">
+            <span class="timing-label">像素填充</span>
+            <div class="timing-track"><div class="timing-fill t3" id="t2" style="width:0%"></div></div>
+            <span class="timing-val" id="tv2">-</span>
+          </div>
+          <div class="timing-row">
+            <span class="timing-label">帧动画/GIF</span>
+            <div class="timing-track"><div class="timing-fill t4" id="t3" style="width:0%"></div></div>
+            <span class="timing-val" id="tv3">-</span>
+          </div>
+        </div>
+
+        <div class="meta-grid" id="meta-grid" style="display:none">
+          <div class="meta-item">
+            <div class="meta-key">角色</div>
+            <div class="meta-val" id="m-char">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">动画</div>
+            <div class="meta-val" id="m-anim">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">帧数</div>
+            <div class="meta-val" id="m-frames">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">总耗时</div>
+            <div class="meta-val" id="m-time">—</div>
+          </div>
+        </div>
+
+        <div id="dl-area" style="display:none;flex-direction:column;gap:5px">
+          <button class="dl-btn" id="dl-gif-btn">⬇ 下载 GIF</button>
+          <button class="dl-btn" id="dl-png-btn">⬇ 下载第一帧 PNG</button>
+          <button class="dl-btn" id="cos-upload-btn" onclick="uploadToCOS()"
+            style="border-color:#06b6d4;color:#67e8f9;background:rgba(6,182,212,.07)">
+            ☁ 上传到 COS
+          </button>
+          <div id="cos-result" style="display:none;font-size:11px;padding:6px 8px;border-radius:5px;
+            background:rgba(16,185,129,.08);border:1px solid var(--green);color:#34d399;word-break:break-all">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <div class="sb-item"><span class="sb-dot sb-green"></span>服务: http://localhost:8333</div>
+      <div class="sb-item" id="sb-gen"><span class="sb-dot sb-muted"></span>就绪</div>
+      <div class="sb-item" id="sb-fps" style="margin-left:auto">帧率: —</div>
+      <div class="sb-item" id="sb-size">尺寸: —</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+const state = {
+  charType: 'warrior',
+  animType: 'idle',
+  style: 'pixel art',
+  width: 128,
+  height: 128,
+  seed: null,
+  running: false,
+  lastGifData: null,
+  lastPngData: null,
+};
+
+// ── Chip selectors ─────────────────────────────────────────────────────────────
+function bindChips(containerId, key) {
+  const c = document.getElementById(containerId);
+  c.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      c.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+      chip.classList.add('on');
+      state[key] = chip.dataset.v;
+    });
+  });
+}
+bindChips('char-chips', 'charType');
+bindChips('anim-chips', 'animType');
+bindChips('style-chips', 'style');
+
+document.getElementById('width').addEventListener('change', e => state.width = +e.target.value);
+document.getElementById('height').addEventListener('change', e => state.height = +e.target.value);
+document.getElementById('seed').addEventListener('change', e => {
+  state.seed = e.target.value ? +e.target.value : null;
+});
+
+// ── Log helper ────────────────────────────────────────────────────────────────
+function log(msg, type = 'info', icon = '›') {
+  const list = document.getElementById('log-list');
+  const now = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  const line = document.createElement('div');
+  line.className = `log-line ${type}`;
+  line.innerHTML = `<span class="log-ts">${now}</span><span class="log-icon">${icon}</span><span class="log-msg">${msg}</span>`;
+  list.appendChild(line);
+  list.scrollTop = list.scrollHeight;
+}
+function clearLog() {
+  document.getElementById('log-list').innerHTML = '';
+}
+
+// ── Step nodes ────────────────────────────────────────────────────────────────
+const STEPS = 7;
+function resetSteps() {
+  for (let i = 0; i < STEPS; i++) {
+    const n = document.getElementById(`step-${i}`);
+    n.className = 'step-node';
+    document.getElementById(`step-ms-${i}`).textContent = '—';
+  }
+}
+function setStep(i, state_) {
+  const n = document.getElementById(`step-${i}`);
+  n.className = `step-node ${state_}`;
+}
+function setStepMs(i, ms) {
+  document.getElementById(`step-ms-${i}`).textContent = ms < 1000 ? `${ms}ms` : `${(ms/1000).toFixed(1)}s`;
+}
+
+// Simulate pipeline steps with realistic timings
+async function runPipelineSteps(totalMs) {
+  // Step timing ratios (must sum ~1.0)
+  const ratios = [0.03, 0.06, 0.18, 0.28, 0.26, 0.12, 0.07];
+  const timings = ratios.map(r => Math.round(r * totalMs));
+
+  for (let i = 0; i < STEPS; i++) {
+    setStep(i, 'active');
+    const msgs = [
+      ['info', '📥 解析输入参数 — prompt / style / seed / size', '·'],
+      ['info', `🎨 选取调色板 — ${state.charType} × ${state.style}`, '·'],
+      ['info', '🦴 构建骨骼层次结构 — 头/身/手/脚', '·'],
+      ['info', `✏️ 像素光栅化 — ${state.width}×${state.height} px`, '·'],
+      ['sub', `🎬 生成动画帧序列 — ${state.animType}`, '·'],
+      ['sub', '📦 编码 GIF — 合并帧 + 压缩调色板', '·'],
+      ['ok',  '✅ 输出就绪，返回 base64 数据', '✓'],
+    ];
+    log(msgs[i][1], msgs[i][0], msgs[i][2]);
+    await sleep(timings[i]);
+    setStep(i, 'done');
+    setStepMs(i, timings[i]);
+  }
+  return timings;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Generate ──────────────────────────────────────────────────────────────────
+async function startGenerate() {
+  if (state.running) return;
+  state.running = true;
+
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ 生成中...';
+
+  clearLog();
+  resetSteps();
+  document.getElementById('preview-img').style.display = 'none';
+  document.getElementById('preview-empty').style.display = 'block';
+  document.getElementById('preview-empty').textContent = '⏳';
+  document.getElementById('gif-badge').style.display = 'none';
+  document.getElementById('frame-strip').innerHTML = '<div style="color:var(--muted);font-size:11px;padding:10px">生成中...</div>';
+  document.getElementById('meta-grid').style.display = 'none';
+  document.getElementById('dl-area').style.display = 'none';
+  document.getElementById('timing-bar').style.display = 'none';
+
+  document.getElementById('sb-gen').innerHTML = '<span class="sb-dot" style="background:var(--yellow);box-shadow:0 0 4px var(--yellow)"></span>生成中...';
+
+  const t0 = performance.now();
+  log(`开始生成 — ${state.charType} / ${state.animType} / ${state.style}`, 'info', '🚀');
+  log(`尺寸: ${state.width}×${state.height}  种子: ${state.seed ?? '随机'}`, 'sub', '·');
+
+  const body = {
+    prompt: state.charType,
+    style: state.style,
+    width: state.width,
+    height: state.height,
+    animate: true,
+    animation_type: state.animType,
+  };
+  if (state.seed !== null) body.seed = state.seed;
+
+  // Start API call
+  const apiPromise = fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(r => r.json());
+
+  // Wait for API to respond, then simulate pipeline based on actual duration
+  let data;
+  try {
+    data = await apiPromise;
+  } catch (e) {
+    log('网络错误: ' + e.message, 'err', '✗');
+    // Mark remaining steps as error
+    for (let i = 0; i < STEPS; i++) {
+      const n = document.getElementById(`step-${i}`);
+      if (!n.classList.contains('done')) setStep(i, 'error');
+    }
+    done();
+    return;
+  }
+
+  const totalMs = Math.round(performance.now() - t0);
+
+  // Replay pipeline animation (compressed to 2s regardless of actual time)
+  const animMs = Math.min(totalMs, 2000);
+  const timings = await runPipelineSteps(animMs);
+
+  if (!data.success) {
+    log('生成失败: ' + (data.error || 'unknown'), 'err', '✗');
+    document.getElementById('preview-empty').textContent = '❌';
+    document.getElementById('sb-gen').innerHTML = '<span class="sb-dot" style="background:var(--red)"></span>失败';
+    done();
+    return;
+  }
+
+  // ── Display result ────────────────────────────────────────────────────────
+  log(`生成成功 — 总耗时 ${totalMs}ms`, 'ok', '✓');
+
+  // data.image = full data URL ("data:image/gif;base64,..." or "data:image/png;base64,...")
+  // data.frames = array of full data URLs for each PNG frame
+  const imageUrl = data.image || '';
+  const frames   = Array.isArray(data.frames) ? data.frames : [];
+  const isGif    = imageUrl.startsWith('data:image/gif');
+
+  // Store raw base64 (strip data URL prefix) for COS upload / download
+  state.lastGifData = isGif ? imageUrl.replace(/^data:[^;]+;base64,/, '') : null;
+  state.lastPngData = frames.length > 0
+    ? frames[0].replace(/^data:[^;]+;base64,/, '')
+    : imageUrl.replace(/^data:[^;]+;base64,/, '');
+
+  // Main preview — use data URL directly
+  if (imageUrl) {
+    const img = document.getElementById('preview-img');
+    img.src = imageUrl;
+    img.style.display = 'block';
+    document.getElementById('preview-empty').style.display = 'none';
+    if (isGif) document.getElementById('gif-badge').style.display = 'block';
+  }
+
+  // Frame strip — each frame is already a full data URL
+  const strip = document.getElementById('frame-strip');
+  const displayFrames = frames.length > 0 ? frames : (imageUrl ? [imageUrl] : []);
+  if (displayFrames.length > 0) {
+    strip.innerHTML = '';
+    displayFrames.forEach((f, i) => {
+      const div = document.createElement('div');
+      div.className = 'frame-thumb' + (i === 0 ? ' cur' : '');
+      div.innerHTML = `<img src="${f}">`;
+      div.onclick = () => {
+        strip.querySelectorAll('.frame-thumb').forEach(x => x.classList.remove('cur'));
+        div.classList.add('cur');
+        document.getElementById('preview-img').src = f;
+        document.getElementById('gif-badge').style.display = f.startsWith('data:image/gif') ? 'block' : 'none';
+      };
+      strip.appendChild(div);
+      log(`帧 ${i+1}/${displayFrames.length} — ${Math.round(f.length/1024)}KB`, 'sub', '·');
+    });
+  }
+
+  // Meta
+  document.getElementById('m-char').textContent = state.charType;
+  document.getElementById('m-anim').textContent = state.animType;
+  document.getElementById('m-frames').textContent = `${frames.length} 帧`;
+  document.getElementById('m-time').textContent = `${totalMs}ms`;
+  document.getElementById('meta-grid').style.display = 'grid';
+
+  // Timing bars
+  const maxT = Math.max(...timings);
+  const tGroups = [timings[0]+timings[1], timings[2], timings[3], timings[4]+timings[5]];
+  const maxG = Math.max(...tGroups);
+  const tIds = ['t0','t1','t2','t3'];
+  const tvIds = ['tv0','tv1','tv2','tv3'];
+  tIds.forEach((id, i) => {
+    document.getElementById(id).style.width = `${Math.round(tGroups[i]/maxG*100)}%`;
+    document.getElementById(tvIds[i]).textContent = tGroups[i]+'ms';
+  });
+  document.getElementById('timing-bar').style.display = 'block';
+
+  // Download buttons — use full data URLs directly
+  document.getElementById('dl-area').style.display = 'flex';
+  document.getElementById('dl-gif-btn').onclick = () => {
+    const a = document.createElement('a');
+    a.href = imageUrl || `data:image/gif;base64,${state.lastGifData}`;
+    a.download = `${state.charType}_${state.animType}.gif`;
+    a.click();
+  };
+  document.getElementById('dl-png-btn').onclick = () => {
+    const src = displayFrames[0] || imageUrl;
+    if (!src) return;
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = `${state.charType}_${state.animType}_frame1.png`;
+    a.click();
+  };
+
+  // Status bar
+  document.getElementById('sb-gen').innerHTML = `<span class="sb-dot sb-green"></span>完成 ${totalMs}ms`;
+  document.getElementById('sb-fps').textContent = `帧率: ${displayFrames.length}帧`;
+  document.getElementById('sb-size').textContent = `尺寸: ${state.width}×${state.height}`;
+
+  done();
+}
+
+async function uploadToCOS() {
+  const btn = document.getElementById('cos-upload-btn');
+  const resultBox = document.getElementById('cos-result');
+  if (!state.lastGifData && !state.lastPngData) {
+    log('没有可上传的图像，请先生成', 'warn', '⚠');
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = '☁ 上传中...';
+  resultBox.style.display = 'none';
+  log('开始上传到 COS...', 'info', '☁');
+
+  const ts = Date.now();
+  const ext = state.lastGifData ? 'gif' : 'png';
+  const filename = `${state.charType}_${state.animType}_${ts}.${ext}`;
+  const data = state.lastGifData || state.lastPngData;
+  const type = ext === 'gif' ? 'image/gif' : 'image/png';
+
+  try {
+    const r = await fetch('/api/cos/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data, filename, type }),
+    });
+    const json = await r.json();
+    if (json.success) {
+      log(`✓ 上传成功 → ${json.url}`, 'ok', '✓');
+      resultBox.style.display = 'block';
+      resultBox.innerHTML = `✓ COS URL：<a href="${json.url}" target="_blank" style="color:#67e8f9">${json.url}</a>`;
+    } else {
+      log('上传失败: ' + json.error, 'err', '✗');
+      resultBox.style.display = 'block';
+      resultBox.style.borderColor = 'var(--red)';
+      resultBox.style.color = '#fca5a5';
+      resultBox.textContent = '✗ ' + json.error;
+    }
+  } catch (e) {
+    log('上传错误: ' + e.message, 'err', '✗');
+  }
+  btn.disabled = false;
+  btn.textContent = '☁ 上传到 COS';
+}
+</script>
+
+</body>
+</html>

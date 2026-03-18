@@ -1,0 +1,3 @@
+@echo off
+echo Starting Game Animation Service on port 8333...
+"C:\Program Files\nodejs\node.exe" server.js
