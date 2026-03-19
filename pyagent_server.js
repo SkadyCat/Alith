@@ -91,6 +91,18 @@ function appendToChat(sessionId, text) {
 // ── 会话状态 ──────────────────────────────────────────────────────────────────
 const sessions = new Map();
 
+// 全局并发上限：同时运行 session 数
+const MAX_CONCURRENT = 3;
+
+// 计算当前正在运行的 session 数
+function countRunning() {
+  let n = 0;
+  for (const [, s] of sessions) {
+    if (s.status === 'running' && s.process) n++;
+  }
+  return n;
+}
+
 function getSession(id) {
   const sid = String(id || 'default');
   if (!sessions.has(sid)) {
@@ -176,7 +188,7 @@ function buildPrompt(params) {
   const { task = '', systemDocs = [], taskPrefixDoc = '', historyDoc = '', sessionId = '' } = params;
   const SYSDOC_BUDGET  = 5000;
   const PREFIX_BUDGET  = 12000;
-  const HIST_BUDGET    = 8000;
+  const HIST_BUDGET    = 4000;
 
   let parts = [];
 
@@ -306,7 +318,7 @@ function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, pa
       } else if (code === null) {
         stopReason = '退出码为 null（进程被信号终止或异常崩溃）';
       } else {
-        stopReason = `非零退出码 ${code}，${(sess.outputBuf || '').includes('transient API error') ? '检测到API瞬时错误，将延迟重启' : '停止自动重启'}`;
+        stopReason = `非零退出码 ${code}，${(sess.outputBuf || '').includes('transient API error') ? `检测到API瞬时错误(第${(sess.transientCount||0)+1}次)，将指数退避重启` : '停止自动重启'}`;
       }
       plog('INFO', `[doSpawn] 进程退出`, { sessionId, runId, pid: child.pid, code, signal, reason: stopReason, outputLen: (sess.outputBuf || '').length });
 
@@ -326,24 +338,43 @@ function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, pa
       // 重置 per-session 过滤状态（下次启动重新开始）
       _filterBlockState.delete(sessionId);
 
+      // 先保存 outputBuf，再清空（检测瞬时错误时需要）
+      const capturedOutput = sess.outputBuf || '';
       sess.outputBuf = '';
       sess.process   = null;
 
       // 正常退出（code=0）或 API 瞬时错误（code=1 且输出含 transient API error）
       // 且未被用户手动停止 → 自动 relaunch（最多 50 次）
       const isTransientApiError = code === 1 &&
-        (sess.outputBuf || '').includes('transient API error');
+        capturedOutput.includes('transient API error');
+
+      // 正常退出时重置瞬时错误计数
+      if (code === 0) sess.transientCount = 0;
+
       const shouldRelaunch = (code === 0 || isTransientApiError) &&
         sess.status !== 'stopped' && sess.relaunchCount < 50;
 
       if (shouldRelaunch) {
         sess.relaunchCount++;
+        let delayMs = 0;
+        let label;
+        if (isTransientApiError) {
+          // 指数退避：30s, 60s, 120s, 240s … 最多 300s
+          sess.transientCount = (sess.transientCount || 0) + 1;
+          delayMs = Math.min(30000 * Math.pow(2, sess.transientCount - 1), 300000);
+          label = `[API瞬时错误(第${sess.transientCount}次)，${Math.round(delayMs/1000)}s 后重启 #${sess.relaunchCount}]`;
+        } else {
+          // 正常退出：若当前并发已达上限，额外等待 5s 让其他 session 先跑
+          if (countRunning() >= MAX_CONCURRENT) {
+            delayMs = 5000;
+            label = `[自动重启 #${sess.relaunchCount}，并发限流等待 5s]`;
+          } else {
+            label = `[自动重启 #${sess.relaunchCount}]`;
+          }
+        }
         sess.status = 'running';
         const newRunId = Date.now().toString(36) + Math.random().toString(36).slice(2);
-        const delayMs  = isTransientApiError ? 10000 : 0;  // 瞬时错误延迟 10s 再重启
-        const label    = isTransientApiError ? `[API瞬时错误，${delayMs/1000}s 后重启 #${sess.relaunchCount}]`
-                                             : `[自动重启 #${sess.relaunchCount}]`;
-        plog('INFO', `[doSpawn] 自动重启`, { sessionId, newRunId, relaunchCount: sess.relaunchCount, isTransientApiError, delayMs });
+        plog('INFO', `[doSpawn] 自动重启`, { sessionId, newRunId, relaunchCount: sess.relaunchCount, isTransientApiError, transientCount: sess.transientCount || 0, delayMs });
         broadcast({ type: 'agent_output', sessionId, stream: 'stdout', text: `\n${label}\n` });
         setTimeout(() => {
           doSpawn(cmd, agentArgs, env, shell, sess, sessionId, newRunId, histDoc, params);

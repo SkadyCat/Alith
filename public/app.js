@@ -1804,6 +1804,20 @@ function toggleAgentPanel() {
   }
 }
 
+function toggleCanvasEditorPanel() {
+  const overlay = document.getElementById('canvasEditorOverlay');
+  const btn = document.getElementById('canvasEditorToggleBtn');
+  const frame = document.getElementById('canvasEditorFrame');
+  if (!overlay) return;
+  const isOpen = overlay.classList.toggle('open');
+  btn.classList.toggle('active', isOpen);
+  // Lazy-load the iframe src on first open
+  if (isOpen && frame && !frame.src) {
+    frame.src = 'http://localhost:8331';
+  }
+}
+
+
 function connectAgentStream(sessionId, noReplay) {
   const sid = sessionId || getActiveSessionId();
   // 只关闭同一 sessionId 的旧连接（重连），保留其他会话的 SSE 连接

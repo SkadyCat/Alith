@@ -24,7 +24,7 @@ function safePath(name) {
 
 /* ─── Document API ─── */
 
-const SUPPORTED_EXTS = ['.md', '.json', '.session'];
+const SUPPORTED_EXTS = ['.md', '.json', '.session', '.uidata'];
 
 function fileDisplayName(filename) {
   for (const ext of SUPPORTED_EXTS) {
@@ -254,6 +254,39 @@ app.get('/api/data-asset/:name', (req, res) => {
 // Session persistence
 const SESSIONS_DIR = path.join(DOCS_DIR, 'sessions');
 fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+
+// UiData persistence — data/docs/uidata/*.uidata
+const UIDATA_DIR = path.join(DOCS_DIR, 'uidata');
+fs.mkdirSync(UIDATA_DIR, { recursive: true });
+
+app.get('/api/uidata/:name', (req, res) => {
+  const name = safePath(req.params.name).replace(/\.uidata$/, '') + '.uidata';
+  const file = path.join(UIDATA_DIR, name);
+  if (!fs.existsSync(file)) return res.json({ success: true, data: null });
+  try {
+    res.json({ success: true, data: JSON.parse(fs.readFileSync(file, 'utf8')) });
+  } catch (e) { res.json({ success: false, error: e.message }); }
+});
+
+app.post('/api/uidata/:name', (req, res) => {
+  const name = safePath(req.params.name).replace(/\.uidata$/, '') + '.uidata';
+  const file = path.join(UIDATA_DIR, name);
+  try {
+    fs.writeFileSync(file, JSON.stringify(req.body, null, 2), 'utf8');
+    res.json({ success: true });
+  } catch (e) { res.json({ success: false, error: e.message }); }
+});
+
+app.get('/api/uidatas', (req, res) => {
+  try {
+    const files = fs.readdirSync(UIDATA_DIR).filter(f => f.endsWith('.uidata'))
+      .map(f => {
+        const stat = fs.statSync(path.join(UIDATA_DIR, f));
+        return { name: f.replace(/\.uidata$/, ''), updatedAt: stat.mtimeMs };
+      }).sort((a, b) => b.updatedAt - a.updatedAt);
+    res.json({ success: true, uidatas: files });
+  } catch (e) { res.json({ success: false, error: e.message }); }
+});
 
 app.get('/api/session/:name', (req, res) => {
   const name = safePath(req.params.name).replace(/\.session$/, '') + '.session';

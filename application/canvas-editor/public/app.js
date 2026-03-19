@@ -90,6 +90,32 @@ const WIDGET_GROUPS = {
   ExpandableArea: '特殊', WebBrowser: '特殊', Spacer: '特殊',
 };
 function getWidgetDef(type) { return ALL_WIDGET_TYPES.find(w => w.type === type) || null; }
+// Parse box ID from string: keeps string IDs (e.g. "titleBar") as-is, numeric strings become numbers
+function parseBoxId(s) { const n = Number(s); return Number.isFinite(n) && String(n) === s ? n : s; }
+
+// Global toast — usable from any scope (the closure-internal showToast is not globally accessible)
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#1e2028;color:#e8eaf0;padding:8px 18px;border-radius:8px;font-size:13px;z-index:9999;border:1px solid rgba(255,255,255,0.12);box-shadow:0 4px 16px rgba(0,0,0,0.4);pointer-events:none;transition:opacity 0.4s;white-space:nowrap';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2200);
+}
+
+// Frontend clipboard copy with execCommand fallback (works on HTTP)
+function copyToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text);
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+  return Promise.resolve();
+}
 
 async function loadElements() {
   try {
@@ -623,6 +649,47 @@ const INVISIBLE_CONTAINER_TYPES = new Set([
 ]);
 // Preview mode: hide layout container borders/backgrounds to simulate UE4 appearance
 let _previewMode = false;
+// UiData: flat map of { id → data-object } built from the loaded .uidata tree
+let _uidataMap = {};
+
+/* ── UiData helpers ── */
+function _buildUidataMap(node, out) {
+  if (!node) return;
+  if (node.id && node.data && Object.keys(node.data).length) out[node.id] = node.data;
+  (node.children || []).forEach(c => _buildUidataMap(c, out));
+}
+async function loadUiData(sessionName) {
+  _uidataMap = {};
+  try {
+    const res = await fetch('/api/uidata/' + encodeURIComponent(sessionName));
+    const json = await res.json();
+    if (json.success && json.data && json.data.root) {
+      _buildUidataMap(json.data.root, _uidataMap);
+    }
+  } catch (e) { /* no uidata — ok */ }
+}
+async function saveUiData(sessionName, rootNode) {
+  const body = {
+    version: '1.0', sessionName,
+    savedAt: new Date().toISOString(), root: rootNode
+  };
+  await fetch('/api/uidata/' + encodeURIComponent(sessionName), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+/* Build a uidata tree skeleton from the current boxes[], preserving existing data */
+function buildUidataTree(existingRoot) {
+  const existingMap = {};
+  if (existingRoot) { (function walk(n){ if(n.id) existingMap[n.id]=n.data||{}; (n.children||[]).forEach(walk); })(existingRoot); }
+  function makeNode(box) {
+    const children = boxes.filter(b => b.parentId === box.id).map(makeNode);
+    return { id: box.id, data: existingMap[box.id] || {}, children };
+  }
+  const roots = boxes.filter(b => b.parentId == null);
+  return roots.length === 1 ? makeNode(roots[0]) : { id: '__root__', data: {}, children: roots.map(makeNode) };
+}
+
 function togglePreviewMode() {
   _previewMode = !_previewMode;
   const btn = document.getElementById('btn-preview-mode');
@@ -653,12 +720,157 @@ function togglePreviewMode() {
   }
 
   renderAll();
+  if (_previewMode) {
+    // Load uidata for current session when entering preview mode
+    loadUiData(_sessionName).then(() => renderAll());
+    // Show data editor button
+    _showUidataBtn(true);
+  } else {
+    _uidataMap = {};
+    _showUidataBtn(false);
+  }
   // Inline toast (showToast is in a closure, use inline implementation here)
   const _t = document.createElement('div');
   _t.textContent = _previewMode ? '🎮 预览模式已开启' : '👁 布局视图已恢复';
   _t.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#1e2028;color:#e8eaf0;padding:8px 18px;border-radius:8px;font-size:13px;z-index:9999;border:1px solid rgba(255,255,255,0.12);box-shadow:0 4px 16px rgba(0,0,0,0.4);pointer-events:none;transition:opacity 0.4s;white-space:nowrap';
   document.body.appendChild(_t);
   setTimeout(() => { _t.style.opacity = '0'; setTimeout(() => _t.remove(), 400); }, 2200);
+}
+
+function _showUidataBtn(show) {
+  let btn = document.getElementById('_uidata-btn');
+  if (!show) { if (btn) btn.remove(); return; }
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = '_uidata-btn';
+    btn.title = '编辑/查看 UiData 数据绑定';
+    btn.textContent = '🗄 数据';
+    btn.style.cssText = 'position:fixed;top:88px;right:280px;z-index:9998;background:#1e2028;color:#7c6af7;border:1px solid #7c6af7;border-radius:4px;padding:4px 12px;font-size:12px;cursor:pointer;';
+    btn.onclick = showUidataEditor;
+    document.body.appendChild(btn);
+  }
+}
+
+function showUidataEditor() {
+  const existing = document.getElementById('_uidata-overlay');
+  if (existing) { existing.remove(); return; }
+
+  const overlay = document.createElement('div');
+  overlay.id = '_uidata-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;';
+
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:#1a1d23;border:1px solid #3a3d4a;border-radius:8px;width:600px;max-height:80vh;display:flex;flex-direction:column;font-size:12px;color:#e8eaf0;overflow:hidden;';
+
+  // Header
+  const header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid #3a3d4a;gap:8px;';
+  header.innerHTML = `<span style="font-weight:600;font-size:13px;">🗄 UiData — <span style="color:#7c6af7">${_sessionName}</span>.uidata</span>
+    <span style="margin-left:auto;font-size:10px;color:#666;">在此编辑数据节点，预览模式实时映射到 Session</span>`;
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕';
+  closeBtn.style.cssText = 'margin-left:8px;background:none;border:none;color:#888;cursor:pointer;font-size:14px;';
+  closeBtn.onclick = () => overlay.remove();
+  header.appendChild(closeBtn);
+  panel.appendChild(header);
+
+  // Tree view
+  const body = document.createElement('div');
+  body.style.cssText = 'flex:1;overflow-y:auto;padding:8px 0;';
+
+  function renderNode(node, depth) {
+    const row = document.createElement('div');
+    row.style.cssText = `display:flex;align-items:center;padding:3px 12px 3px ${12 + depth*16}px;gap:6px;cursor:pointer;`;
+    row.onmouseenter = () => row.style.background = '#252830';
+    row.onmouseleave = () => row.style.background = '';
+
+    const hasData = node.data && Object.keys(node.data).length > 0;
+    const idSpan = document.createElement('span');
+    idSpan.textContent = node.id;
+    idSpan.style.cssText = `color:${hasData ? '#7c6af7' : '#888'};font-family:monospace;`;
+
+    const dataSpan = document.createElement('span');
+    if (hasData) {
+      dataSpan.style.cssText = 'color:#a0c4ff;font-family:monospace;font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      dataSpan.textContent = JSON.stringify(node.data);
+    }
+    const editBtn = document.createElement('button');
+    editBtn.textContent = '✏';
+    editBtn.style.cssText = 'margin-left:auto;background:none;border:none;color:#555;cursor:pointer;font-size:11px;';
+    editBtn.onclick = (e) => { e.stopPropagation(); _editUidataNode(node, () => { overlay.remove(); showUidataEditor(); renderAll(); }); };
+
+    row.appendChild(idSpan);
+    row.appendChild(dataSpan);
+    row.appendChild(editBtn);
+    body.appendChild(row);
+    (node.children || []).forEach(c => renderNode(c, depth + 1));
+  }
+
+  // Build current uidata tree from session + existing data
+  (async () => {
+    const res = await fetch('/api/uidata/' + encodeURIComponent(_sessionName));
+    const json = await res.json();
+    const existingRoot = json.success && json.data ? json.data.root : null;
+    const tree = buildUidataTree(existingRoot);
+    renderNode(tree, 0);
+
+    // Footer buttons
+    const footer = document.createElement('div');
+    footer.style.cssText = 'display:flex;gap:8px;padding:10px 16px;border-top:1px solid #3a3d4a;';
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = '💾 保存 UiData';
+    saveBtn.style.cssText = 'background:#7c6af7;border:none;color:#fff;padding:5px 14px;border-radius:4px;cursor:pointer;font-size:12px;';
+    saveBtn.onclick = async () => {
+      await saveUiData(_sessionName, tree);
+      await loadUiData(_sessionName);
+      renderAll();
+      overlay.remove();
+      const t=document.createElement('div'); t.textContent='✅ UiData 已保存'; t.style.cssText='position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#1e2028;color:#7c6af7;padding:8px 18px;border-radius:8px;font-size:13px;z-index:9999;border:1px solid #7c6af7;pointer-events:none;'; document.body.appendChild(t); setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),400);},2000);
+    };
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '取消';
+    cancelBtn.style.cssText = 'background:none;border:1px solid #3a3d4a;color:#888;padding:5px 14px;border-radius:4px;cursor:pointer;font-size:12px;';
+    cancelBtn.onclick = () => overlay.remove();
+    footer.appendChild(saveBtn);
+    footer.appendChild(cancelBtn);
+    panel.appendChild(body);
+    panel.appendChild(footer);
+  })();
+
+  overlay.appendChild(panel);
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
+}
+
+function _editUidataNode(node, onSave) {
+  const dlg = document.createElement('div');
+  dlg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:10001;display:flex;align-items:center;justify-content:center;';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#1a1d23;border:1px solid #7c6af7;border-radius:8px;width:480px;padding:16px;font-size:12px;color:#e8eaf0;';
+  box.innerHTML = `<div style="font-weight:600;margin-bottom:10px;color:#7c6af7;">编辑节点数据 — <code>${node.id}</code></div>
+    <div style="color:#888;margin-bottom:6px;font-size:11px;">JSON 格式，如 {"text":"hello"} 或 {"percent":0.75}</div>`;
+  const ta = document.createElement('textarea');
+  ta.value = JSON.stringify(node.data || {}, null, 2);
+  ta.style.cssText = 'width:100%;height:120px;background:#0d0f12;border:1px solid #3a3d4a;color:#a0c4ff;font-family:monospace;font-size:12px;padding:8px;border-radius:4px;resize:vertical;box-sizing:border-box;';
+  box.appendChild(ta);
+  const btns = document.createElement('div');
+  btns.style.cssText = 'display:flex;gap:8px;margin-top:10px;';
+  const ok = document.createElement('button');
+  ok.textContent = '确定'; ok.style.cssText = 'background:#7c6af7;border:none;color:#fff;padding:5px 14px;border-radius:4px;cursor:pointer;';
+  ok.onclick = () => {
+    try {
+      node.data = JSON.parse(ta.value);
+      dlg.remove(); onSave();
+    } catch(e) { ta.style.border='1px solid #f55'; ta.title=e.message; }
+  };
+  const cancel = document.createElement('button');
+  cancel.textContent = '取消'; cancel.style.cssText = 'background:none;border:1px solid #3a3d4a;color:#888;padding:5px 14px;border-radius:4px;cursor:pointer;';
+  cancel.onclick = () => dlg.remove();
+  btns.appendChild(ok); btns.appendChild(cancel);
+  box.appendChild(btns);
+  dlg.appendChild(box);
+  document.body.appendChild(dlg);
+  ta.focus();
 }
 
 // ─────────────── Icon Picker ───────────────
@@ -1203,9 +1415,12 @@ function renderWidgetContent(box, el, def) {
     if (old) old.remove();
     return;
   }
-  // Skip rebuild if nothing that affects rendering has changed
-  const wp = box.widgetProps || {};
-  const contentKey = `${box.widgetType}|${box.w}|${box.h}|${JSON.stringify(wp)}`;
+  // Merge uidata overrides in preview mode (non-destructive — box.widgetProps is NOT mutated)
+  const _baseWp = box.widgetProps || {};
+  const wp = (_previewMode && _uidataMap[box.id])
+    ? Object.assign({}, _baseWp, _uidataMap[box.id])
+    : _baseWp;
+  const contentKey = `${box.widgetType}|${box.w}|${box.h}|${JSON.stringify(wp)}|${_previewMode}`;
   if (el.dataset.widgetContentKey === contentKey) return;
   el.dataset.widgetContentKey = contentKey;
 
@@ -1533,9 +1748,11 @@ function renderBox(box) {
     ancEl.style.display = 'none';
   }
 
-  // EntryClass preview
-  if (box.entryClassRef) {
-    renderEntryClassPreview(box, el);
+  // EntryClass preview — support both box.entryClassRef and widgetProps.entryClass
+  const _ecPath = box.entryClassRef || (box.widgetProps && box.widgetProps.entryClass) || '';
+  if (_ecPath) {
+    const _ecBox = _ecPath === box.entryClassRef ? box : Object.assign({}, box, { entryClassRef: _ecPath });
+    renderEntryClassPreview(_ecBox, el);
   } else {
     el.querySelectorAll('.ec-preview-box').forEach(x => x.remove());
   }
@@ -1570,7 +1787,7 @@ function showEntryClassEditor(tileBox) {
   ];
 
   let _ecSelId = null;
-  let _ecNextId = Math.max(..._ecBoxes.map(b => b.id), 1000) + 1;
+  let _ecNextId = Math.max(..._ecBoxes.map(b => b.id).filter(id => typeof id === 'number'), 1000) + 1;
 
   // ── Overlay ──
   const overlay = document.createElement('div');
@@ -1904,7 +2121,7 @@ async function openEntryClassInNewTab(tileBox, entryBox) {
   const content = JSON.stringify({
     version: '1.1',
     boxes: serializeBoxes(ecBoxes),
-    nextId: Math.max(...ecBoxes.map(b => b.id)) + 1,
+    nextId: Math.max(...ecBoxes.map(b => b.id).filter(id => typeof id === 'number'), 0) + 1,
     isEntryClass: true,
     entryClassLabel: tileBox.label,
     savedAt: new Date().toISOString()
@@ -1974,7 +2191,11 @@ function renderTileViewGrid(box, el) {
   }
 
   const entry = boxes.find(b => b.parentId === box.id && (b.label === 'EntryClass' || b.isEntryClass));
-  if (!entry || entry.w <= 0 || entry.h <= 0) {
+
+  // Fallback dimensions from widgetProps when no inline EntryClass child exists
+  const itemW = entry ? entry.w : (wp.entryWidth || 0);
+  const itemH = entry ? entry.h : (wp.entryHeight || 0);
+  if (itemW <= 0 || itemH <= 0) {
     el.querySelectorAll('.tile-grid-item').forEach(x => x.remove());
     delete el.dataset.tileGridKey;
     return;
@@ -1984,18 +2205,18 @@ function renderTileViewGrid(box, el) {
   const gapX = Math.max(0, ph.x || 0);
   const gapY = Math.max(0, ph.y || 0);
 
+  // Start position: from inline entry coords, or (0,0) relative to TileView when using fallback
+  const startX = entry ? (entry.x - box.x) : 0;
+  const startY = entry ? (entry.y - box.y) : 0;
+  const entryBorderColor = entry ? entry.borderColor : null;
+  const entryBgColor = entry ? entry.bgColor : null;
+
   // Skip rebuild if nothing has changed
-  const tileKey = `${count}|${entry.w}|${entry.h}|${entry.x}|${entry.y}|${gapX}|${gapY}|${box.w}|${box.h}|${entry.borderColor}|${entry.bgColor}`;
+  const tileKey = `${count}|${itemW}|${itemH}|${startX}|${startY}|${gapX}|${gapY}|${box.w}|${box.h}|${entryBorderColor}|${entryBgColor}`;
   if (el.dataset.tileGridKey === tileKey) return;
   el.dataset.tileGridKey = tileKey;
 
   el.querySelectorAll('.tile-grid-item').forEach(x => x.remove());
-  const itemW = entry.w;
-  const itemH = entry.h;
-
-  // Start position relative to TileView top-left
-  const startX = entry.x - box.x;
-  const startY = entry.y - box.y;
 
   const cellW = itemW + gapX;
   const cellH = itemH + gapY;
@@ -2011,7 +2232,15 @@ function renderTileViewGrid(box, el) {
 
     const tile = document.createElement('div');
     tile.className = 'tile-grid-item';
-    tile.style.cssText = `position:absolute;left:${tx}px;top:${ty}px;width:${itemW}px;height:${itemH}px;border:1px dashed ${entry.borderColor || box.borderColor || '#888'};background:${entry.bgColor || 'rgba(255,255,255,0.04)'};opacity:0.45;pointer-events:none;box-sizing:border-box;border-radius:2px;`;
+    const isExternal = !entry && wp.entryClass;
+    tile.style.cssText = `position:absolute;left:${tx}px;top:${ty}px;width:${itemW}px;height:${itemH}px;border:1px dashed ${entryBorderColor || box.borderColor || '#888'};background:${entryBgColor || (isExternal ? 'rgba(124,106,247,0.07)' : 'rgba(255,255,255,0.04)')};opacity:${isExternal ? '0.55' : '0.45'};pointer-events:none;box-sizing:border-box;border-radius:2px;`;
+    // Show entryClass name badge on first tile when using external session reference
+    if (isExternal && i === 0) {
+      const badge = document.createElement('div');
+      badge.textContent = wp.entryClass;
+      badge.style.cssText = 'position:absolute;bottom:2px;left:2px;right:2px;font-size:8px;color:rgba(200,180,255,0.6);text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;pointer-events:none;';
+      tile.appendChild(badge);
+    }
     el.appendChild(tile);
   }
 }
@@ -2587,7 +2816,7 @@ function _renderAllNow() {
   // Remove deleted boxes from DOM
   const ids = new Set(boxes.map(b => b.id));
   boxLayer.querySelectorAll('.box-item').forEach(el => {
-    if (!ids.has(+el.id.replace('box-', ''))) el.remove();
+    if (!ids.has(parseBoxId(el.id.replace('box-', '')))) el.remove();
   });
 
   boxes.forEach(b => renderBox(b));
@@ -2610,6 +2839,33 @@ function renderPositionsOnly() {
   });
 }
 
+/* ───── Simple Context Menu (global, for hierarchy/layer panels) ───── */
+let _simpleCtxMenu = null;
+function showSimpleCtxMenu(x, y, items) {
+  if (_simpleCtxMenu) { _simpleCtxMenu.remove(); _simpleCtxMenu = null; }
+  const menu = document.createElement('div');
+  menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;background:#1e2028;border:1px solid rgba(255,255,255,0.12);border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,0.5);z-index:99999;min-width:140px;overflow:hidden`;
+  items.forEach(item => {
+    if (item.divider) {
+      const d = document.createElement('div');
+      d.style.cssText = 'height:1px;background:rgba(255,255,255,0.08);margin:3px 0';
+      menu.appendChild(d);
+      return;
+    }
+    const btn = document.createElement('div');
+    btn.style.cssText = 'padding:7px 14px;cursor:pointer;font-size:13px;color:#e8eaf0;white-space:nowrap;transition:background 0.1s';
+    btn.textContent = item.label;
+    btn.onmouseenter = () => btn.style.background = 'rgba(255,255,255,0.08)';
+    btn.onmouseleave = () => btn.style.background = '';
+    btn.addEventListener('click', () => { menu.remove(); _simpleCtxMenu = null; item.action(); });
+    menu.appendChild(btn);
+  });
+  document.body.appendChild(menu);
+  _simpleCtxMenu = menu;
+  const dismiss = e => { if (!menu.contains(e.target)) { menu.remove(); _simpleCtxMenu = null; document.removeEventListener('mousedown', dismiss); } };
+  setTimeout(() => document.addEventListener('mousedown', dismiss), 0);
+}
+
 function renderLayers() {
   // Left sidebar layer list — event delegation (attach listener once)
   if (layerList) {
@@ -2618,7 +2874,7 @@ function renderLayers() {
       layerList.addEventListener('click', e => {
         const li = e.target.closest('li[data-id]');
         if (!li) return;
-        selectBox(+li.dataset.id); renderAll();
+        selectBox(parseBoxId(li.dataset.id)); renderAll();
       });
     }
     layerList.innerHTML = '';
@@ -2626,15 +2882,20 @@ function renderLayers() {
     [...boxes].filter(b => !b.parentId).reverse().forEach(box => {
       const def = getWidgetDef(box.widgetType);
       const icon = def ? def.icon : '⬜';
-      const typeStr = box.widgetType || 'Box';
-      const typeZh = def ? (def.label_zh || def.label || typeStr) : typeStr;
+      const typeStr = box.widgetType || 'CanvasPanel';
       const li = document.createElement('li');
-      li.title = `${box.label} · ${typeZh} #${box.id}`;
-      li.innerHTML = `<span style="color:${def ? def.color : 'var(--text-dim)'}">${icon}</span>`;
+      li.title = `${box.label} · ${typeStr} #${box.id}`;
+      const displayLabel = box.label || typeStr;
+      li.innerHTML = `<span style="color:${def ? def.color : 'var(--text-dim)'}">${icon}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:2px">${displayLabel}</span><span style="color:var(--text-dim);font-size:10px;flex-shrink:0">(${typeStr})</span>`;
       li.dataset.id = box.id;
       if (box.id === selectedId) li.classList.add('selected');
       layerList.appendChild(li);
     });
+    // Scroll selected item into view
+    if (selectedId !== null) {
+      const sel = layerList.querySelector('li.selected');
+      if (sel) sel.scrollIntoView({ block: 'nearest' });
+    }
   }
 
   // Right panel hierarchy list — tree view
@@ -2644,7 +2905,7 @@ function renderLayers() {
       hierarchyList.addEventListener('click', e => {
         const li = e.target.closest('li[data-id]');
         if (!li) return;
-        const clickedBox = _boxById[+li.dataset.id];
+        const clickedBox = _boxById[parseBoxId(li.dataset.id)];
         if (!clickedBox) return;
         const lockedEc = getLockedEntryClassAncestor(clickedBox);
         const target = lockedEc ? lockedEc : clickedBox;
@@ -2652,6 +2913,30 @@ function renderLayers() {
         renderAll();
         const propsTab = document.querySelector('.right-tab[data-tab="props"]');
         if (propsTab) propsTab.click();
+      });
+      hierarchyList.addEventListener('contextmenu', e => {
+        const li = e.target.closest('li[data-id]');
+        if (!li) return;
+        e.preventDefault();
+        const box = _boxById[parseBoxId(li.dataset.id)];
+        if (!box) return;
+        showSimpleCtxMenu(e.clientX, e.clientY, [
+          { label: '📋 复制节点信息 (JSON)', action: () => {
+            const info = { id: box.id, label: box.label, widgetType: box.widgetType,
+              x: box.x, y: box.y, w: box.w, h: box.h,
+              parentId: box.parentId || null, widgetProps: box.widgetProps || {} };
+            copyToClipboard(JSON.stringify(info, null, 2))
+              .then(() => showToast('📋 节点信息已复制'));
+          }},
+          { label: '📐 复制位置 (x,y,w,h)', action: () => {
+            copyToClipboard(`x:${box.x} y:${box.y} w:${box.w} h:${box.h}`)
+              .then(() => showToast('📐 位置已复制'));
+          }},
+          { label: '🏷 复制 ID', action: () => {
+            copyToClipboard(String(box.id))
+              .then(() => showToast('🏷 ID 已复制: ' + box.id));
+          }},
+        ]);
       });
     }
     hierarchyList.innerHTML = '';
@@ -2689,15 +2974,22 @@ function renderLayers() {
         li.style.paddingLeft = `${12 + depth * 14}px`;
         if (box.id === selectedId) li.classList.add('selected');
         // Label hidden from tree; shown in right-info props panel on selection
-        const typeStr = box.widgetType || 'Box';
-        const typeZh = def ? (def.label_zh || def.label || typeStr) : typeStr;
-        li.title = `${box.label} · ${typeZh} #${box.id}`;
-        li.innerHTML = `<span style="color:var(--text-dim);margin-right:2px;font-size:10px">${hasChildren ? '▾' : '·'}</span><span style="color:${def ? def.color : 'var(--text-dim)'}">${icon}</span>`;
+        const typeStr = box.widgetType || 'CanvasPanel';
+        li.title = `${box.label} · ${typeStr} #${box.id}`;
+        const displayLabel = box.label || typeStr;
+        li.innerHTML = `<span style="color:var(--text-dim);margin-right:2px;font-size:10px">${hasChildren ? '▾' : '·'}</span><span style="color:${def ? def.color : 'var(--text-dim)'}">${icon}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:4px">${displayLabel}</span><span style="color:var(--text-dim);font-size:10px;flex-shrink:0;margin-left:2px">(${typeStr})</span>`;
         hierarchyList.appendChild(li);
         appendNodes(box.id, depth + 1);
       });
     }
     appendNodes('__root__', 0);
+    // Scroll selected item into view
+    if (selectedId !== null) {
+      requestAnimationFrame(() => {
+        const sel = hierarchyList.querySelector('li.selected');
+        if (sel) sel.scrollIntoView({ block: 'nearest' });
+      });
+    }
   }
 }
 
@@ -3081,7 +3373,7 @@ function onBoxMouseDown(e) {
   if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
 
   const el = e.currentTarget;
-  const id = +el.id.replace('box-', '');
+  const id = parseBoxId(el.id.replace('box-', ''));
   const box = boxes.find(b => b.id === id);
 
   // Locked EntryClass (inside TileView etc.): allow selection only, no independent drag
@@ -3154,7 +3446,7 @@ function onResizeStart(e) {
 
   const dir = e.currentTarget.dataset.dir;
   const el  = e.currentTarget.closest('.box-item');
-  const id  = +el.id.replace('box-', '');
+  const id  = parseBoxId(el.id.replace('box-', ''));
   const box = boxes.find(b => b.id === id);
 
   // Descendants of a locked EntryClass are locked (but the EntryClass itself can be resized)
@@ -4682,6 +4974,151 @@ if (typeof ResizeObserver !== 'undefined') {
 })();
 
 /* ═══════════════════════════════════════════════════════
+   Batch Create Dialog — TileView/ListView quick-create
+   ═══════════════════════════════════════════════════════ */
+function openBatchCreateDialog() {
+  // Remove any existing dialog
+  const existing = document.getElementById('batch-create-overlay');
+  if (existing) { existing.remove(); return; }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'batch-create-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center';
+
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:#1a1b26;border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:24px 28px;min-width:320px;max-width:400px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.6);font-size:13px;color:#e8eaf0';
+
+  panel.innerHTML = `
+    <div style="font-size:15px;font-weight:600;margin-bottom:18px;color:#c9b8ff">🔲 批量控件创建</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px">
+      <label style="display:flex;flex-direction:column;gap:4px">
+        <span style="color:#888;font-size:11px">容器类型</span>
+        <select id="bc-type" style="background:#12121e;border:1px solid #333;border-radius:4px;color:#e8eaf0;padding:5px 8px;font-size:13px">
+          <option value="TileView">TileView（网格）</option>
+          <option value="ListView">ListView（列表）</option>
+        </select>
+      </label>
+      <label style="display:flex;flex-direction:column;gap:4px">
+        <span style="color:#888;font-size:11px">标签前缀</span>
+        <input id="bc-label" type="text" placeholder="如 beltQuick" value="Item" style="background:#12121e;border:1px solid #333;border-radius:4px;color:#e8eaf0;padding:5px 8px;font-size:13px">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:4px">
+        <span style="color:#888;font-size:11px">项目数量</span>
+        <input id="bc-count" type="number" value="8" min="1" max="200" style="background:#12121e;border:1px solid #333;border-radius:4px;color:#e8eaf0;padding:5px 8px;font-size:13px">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:4px">
+        <span style="color:#888;font-size:11px">列数（0=自动）</span>
+        <input id="bc-cols" type="number" value="0" min="0" max="50" style="background:#12121e;border:1px solid #333;border-radius:4px;color:#e8eaf0;padding:5px 8px;font-size:13px">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:4px">
+        <span style="color:#888;font-size:11px">项目宽 (px)</span>
+        <input id="bc-iw" type="number" value="60" min="10" style="background:#12121e;border:1px solid #333;border-radius:4px;color:#e8eaf0;padding:5px 8px;font-size:13px">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:4px">
+        <span style="color:#888;font-size:11px">项目高 (px)</span>
+        <input id="bc-ih" type="number" value="60" min="10" style="background:#12121e;border:1px solid #333;border-radius:4px;color:#e8eaf0;padding:5px 8px;font-size:13px">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:4px">
+        <span style="color:#888;font-size:11px">水平间距 (px)</span>
+        <input id="bc-gx" type="number" value="4" min="0" style="background:#12121e;border:1px solid #333;border-radius:4px;color:#e8eaf0;padding:5px 8px;font-size:13px">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:4px">
+        <span style="color:#888;font-size:11px">垂直间距 (px)</span>
+        <input id="bc-gy" type="number" value="4" min="0" style="background:#12121e;border:1px solid #333;border-radius:4px;color:#e8eaf0;padding:5px 8px;font-size:13px">
+      </label>
+    </div>
+    <div id="bc-preview-info" style="margin:14px 0 0;padding:8px 10px;background:#0d0d1a;border-radius:5px;color:#888;font-size:11px;line-height:1.6"></div>
+    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">
+      <button id="bc-cancel" style="padding:7px 18px;background:none;border:1px solid #333;border-radius:5px;color:#888;cursor:pointer;font-size:13px">取消</button>
+      <button id="bc-confirm" style="padding:7px 18px;background:#7c6af7;border:none;border-radius:5px;color:#fff;cursor:pointer;font-size:13px;font-weight:600">创建</button>
+    </div>
+  `;
+
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  const typeEl  = panel.querySelector('#bc-type');
+  const labelEl = panel.querySelector('#bc-label');
+  const countEl = panel.querySelector('#bc-count');
+  const colsEl  = panel.querySelector('#bc-cols');
+  const iwEl    = panel.querySelector('#bc-iw');
+  const ihEl    = panel.querySelector('#bc-ih');
+  const gxEl    = panel.querySelector('#bc-gx');
+  const gyEl    = panel.querySelector('#bc-gy');
+  const infoEl  = panel.querySelector('#bc-preview-info');
+
+  function calcLayout() {
+    const count = Math.max(1, parseInt(countEl.value) || 1);
+    const iw = Math.max(10, parseInt(iwEl.value) || 60);
+    const ih = Math.max(10, parseInt(ihEl.value) || 60);
+    const gx = Math.max(0, parseInt(gxEl.value) || 0);
+    const gy = Math.max(0, parseInt(gyEl.value) || 0);
+    const userCols = parseInt(colsEl.value) || 0;
+    const cols = userCols > 0 ? userCols : count; // 0=auto → single row
+    const rows = Math.ceil(count / cols);
+    const pw = 12 + cols * iw + Math.max(0, cols - 1) * gx + 12;
+    const ph = 12 + rows * ih + Math.max(0, rows - 1) * gy + 12;
+    return { count, iw, ih, gx, gy, cols, rows, pw, ph };
+  }
+
+  function updatePreview() {
+    const { count, iw, ih, gx, gy, cols, rows, pw, ph } = calcLayout();
+    infoEl.innerHTML = `容器尺寸: <b style="color:#9b8af7">${pw} × ${ph}</b>&nbsp;&nbsp;|&nbsp;&nbsp;${cols} 列 × ${rows} 行&nbsp;&nbsp;|&nbsp;&nbsp;每格 ${iw}×${ih}&nbsp;&nbsp;间距 ${gx}/${gy}&nbsp;&nbsp;共 <b style="color:#56cfba">${count}</b> 项`;
+  }
+
+  [typeEl, labelEl, countEl, colsEl, iwEl, ihEl, gxEl, gyEl].forEach(el => el.addEventListener('input', updatePreview));
+  updatePreview();
+
+  panel.querySelector('#bc-cancel').onclick = () => overlay.remove();
+  overlay.addEventListener('mousedown', e => { if (e.target === overlay) overlay.remove(); });
+
+  panel.querySelector('#bc-confirm').onclick = () => {
+    const { count, iw, ih, gx, gy, cols, pw, ph } = calcLayout();
+    const type  = typeEl.value;
+    const label = (labelEl.value.trim() || 'Item') + count;
+
+    saveState();
+
+    // Place at canvas center (viewport mid, accounting for scroll/zoom)
+    const canvas = document.getElementById('canvas');
+    const vw = canvas ? canvas.clientWidth  : 800;
+    const vh = canvas ? canvas.clientHeight : 600;
+    const cx = Math.round((vw / 2 - pw / 2) / 8) * 8;
+    const cy = Math.round((vh / 2 - ph / 2) / 8) * 8;
+
+    const container = createBox(cx, cy, pw, ph, label, type);
+    const def = getWidgetDef(type);
+    if (def) { container.borderColor = def.color; container.bgColor = def.bg; }
+    if (!container.widgetProps) container.widgetProps = {};
+    container.widgetProps.gridPreviewNum = count;
+    container.widgetProps.entryWidth  = iw;
+    container.widgetProps.entryHeight = ih;
+    container.widgetProps.placeHolder = { x: gx, y: gy };
+    boxes.push(container);
+
+    // Create EntryClass template child
+    const pad = 12;
+    const entry = createBox(cx + pad, cy + pad, iw, ih, 'EntryClass', null);
+    entry.borderColor = '#e8a020';
+    entry.bgColor = 'rgba(232,160,32,0.08)';
+    entry.isEntryClass = true;
+    entry.parentId = container.id;
+    boxes.push(entry);
+
+    recomputeAllParents();
+    selectBox(container.id);
+    renderAll();
+    autoSave();
+    overlay.remove();
+    showToast(`🔲 已创建 ${type} "${label}" (${count} 项)`);
+    log(`批量创建 ${type} "${label}" ${count}项, ${cols}列, 每格${iw}×${ih}`, 'ok');
+  };
+
+  // Focus count input
+  setTimeout(() => countEl.select && countEl.select(), 50);
+}
+
+/* ═══════════════════════════════════════════════════════
    Document System — Alice Style (with folder support)
    API: /docs/api/{list|tree|get|save|delete|mkdir}
    Docs stored in: application/canvas-editor/data/docs/
@@ -4745,6 +5182,22 @@ if (typeof ResizeObserver !== 'undefined') {
       const res = await fetch(API + '/tree');
       const data = await res.json();
       if (data.success) {
+        // Merge uidata files into the uidata folder node (server.js doesn't know .uidata ext yet)
+        try {
+          const udRes = await fetch('/api/uidatas');
+          const udData = await udRes.json();
+          if (udData.success && udData.uidatas && udData.uidatas.length) {
+            const udFolder = data.tree.find(n => n.type === 'folder' && n.name === 'uidata');
+            if (udFolder) {
+              udFolder.children = udData.uidatas.map(u => ({
+                type: 'file', name: u.name + '.uidata',
+                path: 'uidata/' + u.name + '.uidata',
+                displayName: u.name, ext: '.uidata', updatedAt: u.updatedAt, size: 0
+              }));
+            }
+          }
+        } catch (_) { /* uidata fetch failed — ok */ }
+
         renderTree(data.tree, fileTree, searchInput.value.toLowerCase());
         renderSidebarTree(data.tree);
         // Keep allDocs flat list for compatibility
@@ -5043,6 +5496,7 @@ if (typeof ResizeObserver !== 'undefined') {
             e.preventDefault();
             e.stopPropagation();
             const isSessionsFolder = item.name === 'sessions';
+            const isUiDataFolder = item.name === 'uidata';
             const menuItems = [
               { label: '✏️ 重命名文件夹', action: () => {
                 const newName = prompt('重命名文件夹：', item.name);
@@ -5068,6 +5522,19 @@ if (typeof ResizeObserver !== 'undefined') {
             if (isSessionsFolder) {
               menuItems.unshift({ label: '💾 保存当前画布', action: () => saveCanvasAsSession(item.path) });
             }
+            if (isUiDataFolder) {
+              menuItems.unshift({ label: '🗄 为当前画布创建/更新 UiData', action: async () => {
+                if (!_sessionName) { alert('请先加载一个画布 Session'); return; }
+                const res = await fetch('/api/uidata/' + encodeURIComponent(_sessionName));
+                const json = await res.json();
+                const existingRoot = json.success && json.data ? json.data.root : null;
+                const tree = buildUidataTree(existingRoot);
+                await saveUiData(_sessionName, tree);
+                await loadUiData(_sessionName);
+                loadTree();
+                showToast('🗄 UiData 已创建/更新：' + _sessionName + '.uidata');
+              }});
+            }
             showCtxMenu(e.clientX, e.clientY, menuItems);
           });
 
@@ -5075,10 +5542,11 @@ if (typeof ResizeObserver !== 'undefined') {
 
         } else {
           const isSession = item.name.endsWith('.session');
+          const isUiData = item.name.endsWith('.uidata');
           const li = document.createElement('li');
           li.style.cssText = `padding-left:${10 + depth * 10}px;display:flex;align-items:center;gap:4px;`;
-          li.title = isSession ? '双击加载此画布存档' : item.path;
-          if (!isSession && currentDoc && currentDoc.name === item.path) li.classList.add('active');
+          li.title = isSession ? '点击加载此画布存档' : isUiData ? '点击打开数据编辑器' : item.path;
+          if (!isSession && !isUiData && currentDoc && currentDoc.name === item.path) li.classList.add('active');
 
           if (isSession) {
             const nameSpan = document.createElement('span');
@@ -5100,6 +5568,41 @@ if (typeof ResizeObserver !== 'undefined') {
 
             li.appendChild(nameSpan);
             li.appendChild(viewBtn);
+          } else if (isUiData) {
+            const nameSpan = document.createElement('span');
+            nameSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c89ef7;cursor:pointer';
+            nameSpan.textContent = '🗄 ' + item.name;
+            nameSpan.addEventListener('click', async () => {
+              // Load uidata by name and open editor
+              const udName = item.name.replace(/\.uidata$/, '');
+              await loadUiData(udName);
+              // Try to also load the matching session if exists
+              const sessionPath = 'sessions/' + udName + '.session';
+              const checkRes = await fetch('/docs/api/get?name=' + encodeURIComponent(sessionPath)).catch(() => null);
+              if (checkRes) {
+                const checkData = await checkRes.json().catch(() => null);
+                if (checkData && checkData.success) {
+                  await loadSessionFile(sessionPath);
+                }
+              }
+              showUidataEditor();
+            });
+
+            const editBtn = document.createElement('button');
+            editBtn.textContent = '✏';
+            editBtn.title = '编辑数据绑定';
+            editBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:1px 4px;font-size:11px;color:#888;flex-shrink:0;border-radius:3px';
+            editBtn.addEventListener('mouseenter', () => editBtn.style.color = '#c89ef7');
+            editBtn.addEventListener('mouseleave', () => editBtn.style.color = '#888');
+            editBtn.addEventListener('click', async e => {
+              e.stopPropagation();
+              const udName = item.name.replace(/\.uidata$/, '');
+              await loadUiData(udName);
+              showUidataEditor();
+            });
+
+            li.appendChild(nameSpan);
+            li.appendChild(editBtn);
           } else {
             li.textContent = '📄 ' + item.name;
             li.style.cursor = 'pointer';
@@ -5111,6 +5614,13 @@ if (typeof ResizeObserver !== 'undefined') {
               ...(isSession ? [
                 { label: '🎨 加载到画布', action: () => loadSessionFile(item.path) },
                 { label: '📄 用文档打开', action: () => { openOverlay(); openDoc(item.path); } },
+              ] : isUiData ? [
+                { label: '🗄 打开数据编辑器', action: async () => {
+                  const udName = item.name.replace(/\.uidata$/, '');
+                  await loadUiData(udName);
+                  showUidataEditor();
+                }},
+                { label: '📄 用文档查看原始JSON', action: () => { openOverlay(); openDoc(item.path); } },
               ] : [{ label: '✏️ 重命名', action: () => {
                 const newName = prompt(`重命名（含后缀）：`, item.name);
                 if (!newName || newName === item.name) return;
@@ -5128,7 +5638,7 @@ if (typeof ResizeObserver !== 'undefined') {
                 const res = await fetch(API + '/delete?name=' + encodeURIComponent(item.path), { method: 'DELETE' });
                 const data = await res.json();
                 if (data.success) {
-                  if (!isSession && currentDoc && currentDoc.name === item.path) { currentDoc = null; textarea.value = ''; docTitle.textContent = '未选择'; }
+                  if (!isSession && !isUiData && currentDoc && currentDoc.name === item.path) { currentDoc = null; textarea.value = ''; docTitle.textContent = '未选择'; }
                   loadTree();
                   showToast('🗑 已删除：' + item.name);
                 } else { alert('删除失败：' + (data.error || '')); }
@@ -5195,8 +5705,8 @@ if (typeof ResizeObserver !== 'undefined') {
       textarea.value = data.content;
       docTitle.textContent = data.name.split('/').pop();
       showDocArea();
-      if (currentDoc.ext === '.json' || currentDoc.ext === '.session') {
-        preview.textContent = data.content; // show raw for JSON/session
+      if (currentDoc.ext === '.json' || currentDoc.ext === '.session' || currentDoc.ext === '.uidata') {
+        preview.textContent = data.content; // show raw for JSON/session/uidata
       } else {
         renderPreview(data.content);
       }
@@ -5415,6 +5925,21 @@ if (typeof ResizeObserver !== 'undefined') {
       const res = await fetch(API + '/tree');
       const data = await res.json();
       if (data.success) {
+        // Merge uidata files into the uidata folder node
+        try {
+          const udRes = await fetch('/api/uidatas');
+          const udData = await udRes.json();
+          if (udData.success && udData.uidatas && udData.uidatas.length) {
+            const udFolder = data.tree.find(n => n.type === 'folder' && n.name === 'uidata');
+            if (udFolder) {
+              udFolder.children = udData.uidatas.map(u => ({
+                type: 'file', name: u.name + '.uidata',
+                path: 'uidata/' + u.name + '.uidata',
+                displayName: u.name, ext: '.uidata', updatedAt: u.updatedAt, size: 0
+              }));
+            }
+          }
+        } catch (_) {}
         renderSidebarTree(data.tree);
         allDocs = [];
         function flattenDocs(items) {

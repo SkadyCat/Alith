@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>角色立绘展示 — Character Gallery</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --bg2: #12121a;
+      --bg3: #1a1a28;
+      --accent: #7c5cff;
+      --accent2: #ff6b35;
+      --gold: #f5c842;
+      --text: #e8e8f0;
+      --text-muted: #888;
+      --hero: #4fc3f7;
+      --monster: #ef5350;
+      --radius: 12px;
+      --shadow: 0 8px 32px rgba(0,0,0,0.6);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', 'PingFang SC', '微软雅黑', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #1a0a3e 0%, #0f1a3e 50%, #1a0a1e 100%);
+      border-bottom: 2px solid var(--accent);
+      padding: 24px 40px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .header-icon {
+      font-size: 48px;
+      filter: drop-shadow(0 0 12px var(--accent));
+    }
+
+    .header-info h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--hero), var(--accent), var(--gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 2px;
+    }
+
+    .header-info p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      padding: 16px 40px;
+      background: var(--bg2);
+      border-bottom: 1px solid #2a2a40;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg3);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 13px;
+      border: 1px solid #2a2a40;
+    }
+
+    .stat-pill .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .dot-hero { background: var(--hero); box-shadow: 0 0 6px var(--hero); }
+    .dot-monster { background: var(--monster); box-shadow: 0 0 6px var(--monster); }
+    .dot-all { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+
+    /* ── Filter buttons ── */
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      padding: 20px 40px 0;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      cursor: pointer;
+      padding: 8px 20px;
+      border-radius: 20px;
+      border: 1px solid #3a3a55;
+      background: var(--bg2);
+      color: var(--text-muted);
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 16px rgba(124,92,255,0.4);
+    }
+
+    .filter-btn.hero-btn.active {
+      background: var(--hero);
+      border-color: var(--hero);
+      box-shadow: 0 0 16px rgba(79,195,247,0.4);
+    }
+
+    .filter-btn.monster-btn.active {
+      background: var(--monster);
+      border-color: var(--monster);
+      box-shadow: 0 0 16px rgba(239,83,80,0.4);
+    }
+
+    /* ── Grid ── */
+    .gallery-container {
+      padding: 24px 40px 60px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      margin: 24px 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #2a2a40;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--bg2);
+      border-radius: var(--radius);
+      border: 1px solid #2a2a3a;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.8);
+      border-color: var(--accent);
+    }
+
+    .card.hero:hover { border-color: var(--hero); }
+    .card.monster:hover { border-color: var(--monster); }
+
+    .card-img-wrap {
+      width: 100%;
+      aspect-ratio: 2/3;
+      background: linear-gradient(135deg, #0d0d1a, #1a1a2e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .card-img-wrap.square { aspect-ratio: 1; }
+
+    .card img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      transition: transform 0.3s;
+    }
+
+    .card:hover img { transform: scale(1.05); }
+
+    .card-type-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 3px 10px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    .hero .card-type-badge {
+      background: rgba(79,195,247,0.2);
+      color: var(--hero);
+      border: 1px solid var(--hero);
+    }
+
+    .monster .card-type-badge {
+      background: rgba(239,83,80,0.2);
+      color: var(--monster);
+      border: 1px solid var(--monster);
+    }
+
+    .card-info {
+      padding: 12px 14px;
+    }
+
+    .card-name {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    .card-id {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .card-model {
+      font-size: 11px;
+      color: var(--gold);
+      margin-top: 5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .card-model::before {
+      content: '🤖';
+      font-size: 10px;
+    }
+
+    /* Error card */
+    .card.error {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .card.error .card-img-wrap {
+      font-size: 40px;
+      color: var(--monster);
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .error-msg {
+      font-size: 11px;
+      color: var(--monster);
+      text-align: center;
+      padding: 0 12px;
+    }
+
+    /* Loading state */
+    .loading {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+
+    .loading .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid #2a2a40;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Empty state */
+    .empty {
+      text-align: center;
+      padding: 80px 20px;
+    }
+
+    .empty-icon { font-size: 64px; margin-bottom: 16px; }
+    .empty h2 { font-size: 20px; color: var(--text-muted); margin-bottom: 8px; }
+    .empty p { color: var(--text-muted); font-size: 14px; max-width: 460px; margin: 0 auto; line-height: 1.7; }
+    .empty code {
+      background: var(--bg3);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: var(--gold);
+    }
+
+    /* ── Lightbox ── */
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .lightbox.open { display: flex; }
+
+    .lightbox-inner {
+      max-width: 700px;
+      width: 100%;
+      background: var(--bg2);
+      border-radius: 16px;
+      border: 1px solid #3a3a55;
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.9);
+      animation: fadeUp 0.25s ease;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .lightbox-img-wrap {
+      background: linear-gradient(135deg, #080814, #141428);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      padding: 20px;
+    }
+
+    .lightbox-img-wrap img {
+      max-width: 100%;
+      max-height: 60vh;
+      object-fit: contain;
+    }
+
+    .lightbox-info {
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .lightbox-name { font-size: 20px; font-weight: 700; }
+    .lightbox-meta { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+    .lightbox-close {
+      background: var(--bg3);
+      border: 1px solid #3a3a55;
+      color: var(--text);
+      cursor: pointer;
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .lightbox-close:hover { background: #3a3a55; }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .header, .stats-bar, .filter-bar, .gallery-container { padding-left: 16px; padding-right: 16px; }
+      .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">⚔️</div>
+  <div class="header-info">
+    <h1>角色立绘展示</h1>
+    <p>Character Gallery — AI Generated by waiIllustriousSDXL &amp; GameIcon SD1.5</p>
+  </div>
+</div>
+
+<div class="stats-bar" id="statsBar">
+  <div class="stat-pill"><span class="dot dot-all"></span><span id="statTotal">加载中...</span></div>
+  <div class="stat-pill"><span class="dot dot-hero"></span><span id="statHero">英雄: --</span></div>
+  <div class="stat-pill"><span class="dot dot-monster"></span><span id="statMonster">怪物: --</span></div>
+</div>
+
+<div class="filter-bar">
+  <button class="filter-btn active" data-filter="all">全部</button>
+  <button class="filter-btn hero-btn" data-filter="hero">⚔️ 英雄角色</button>
+  <button class="filter-btn monster-btn" data-filter="monster">👹 怪物</button>
+</div>
+
+<div class="gallery-container" id="gallery">
+  <div class="loading">
+    <div class="spinner"></div>
+    <div>正在加载角色数据...</div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <div class="lightbox-inner">
+    <div class="lightbox-img-wrap">
+      <img id="lbImg" src="" alt="" />
+    </div>
+    <div class="lightbox-info">
+      <div>
+        <div class="lightbox-name" id="lbName"></div>
+        <div class="lightbox-meta" id="lbMeta"></div>
+      </div>
+      <button class="lightbox-close" onclick="closeLightbox()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let allChars = [];
+let currentFilter = 'all';
+
+async function loadCharacters() {
+  try {
+    const res = await fetch('/api/characters');
+    const data = await res.json();
+
+    if (!data.success || !data.characters || data.characters.length === 0) {
+      showEmpty(data.message);
+      return;
+    }
+
+    allChars = data.characters;
+    updateStats();
+    renderGallery(allChars);
+  } catch (e) {
+    showEmpty('无法连接到服务器，请确认服务已启动（端口 8335）');
+  }
+}
+
+function updateStats() {
+  const ok = allChars.filter(c => c.url);
+  const heroes = ok.filter(c => c.type === 'hero');
+  const monsters = ok.filter(c => c.type === 'monster');
+  document.getElementById('statTotal').textContent = `共 ${ok.length} 张立绘`;
+  document.getElementById('statHero').textContent = `英雄: ${heroes.length}`;
+  document.getElementById('statMonster').textContent = `怪物: ${monsters.length}`;
+}
+
+function renderGallery(chars) {
+  const container = document.getElementById('gallery');
+  const filtered = currentFilter === 'all' ? chars : chars.filter(c => c.type === currentFilter);
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="loading" style="color:var(--text-muted)">没有符合条件的角色</div>`;
+    return;
+  }
+
+  const heroes = filtered.filter(c => c.type === 'hero');
+  const monsters = filtered.filter(c => c.type === 'monster');
+
+  let html = '';
+
+  if (heroes.length > 0 && currentFilter !== 'monster') {
+    html += `<div class="section-title">⚔️ 英雄角色 (${heroes.length})</div>`;
+    html += `<div class="grid">` + heroes.map(renderCard).join('') + `</div>`;
+  }
+
+  if (monsters.length > 0 && currentFilter !== 'hero') {
+    html += `<div class="section-title">👹 怪物 (${monsters.length})</div>`;
+    html += `<div class="grid">` + monsters.map(renderCard).join('') + `</div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function renderCard(c) {
+  const typeName = c.type === 'hero' ? '英雄' : '怪物';
+
+  if (!c.url) {
+    return `
+      <div class="card error ${c.type}">
+        <div class="card-img-wrap">
+          <span>❌</span>
+          <div class="error-msg">${c.error || '生成失败'}</div>
+        </div>
+        <div class="card-info">
+          <div class="card-name">${c.name}</div>
+          <div class="card-id">${c.id}</div>
+        </div>
+      </div>`;
+  }
+
+  const isSquare = c.width === c.height;
+  return `
+    <div class="card ${c.type}" onclick="openLightbox('${c.url}','${c.name}','${c.id}','${c.type}','${c.model_display || c.model || ''}')">
+      <div class="card-img-wrap ${isSquare ? 'square' : ''}">
+        <span class="card-type-badge">${typeName}</span>
+        <img src="${c.url}" alt="${c.name}" loading="lazy" />
+      </div>
+      <div class="card-info">
+        <div class="card-name">${c.name}</div>
+        <div class="card-id">${c.id}</div>
+        ${c.model_display ? `<div class="card-model">${c.model_display}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function showEmpty(msg) {
+  document.getElementById('gallery').innerHTML = `
+    <div class="empty">
+      <div class="empty-icon">🎨</div>
+      <h2>还没有角色立绘</h2>
+      <p>${msg || '请先运行生成脚本：'}<br/>
+      <code>python E:\\AIGC\\GameIcon\\generate_characters.py</code></p>
+    </div>`;
+  document.getElementById('statTotal').textContent = '共 0 张立绘';
+}
+
+function openLightbox(url, name, id, type, model) {
+  document.getElementById('lbImg').src = url;
+  document.getElementById('lbName').textContent = name;
+  document.getElementById('lbMeta').textContent = `${id}  ·  ${type === 'hero' ? '⚔️ 英雄角色' : '👹 怪物'}${model ? '  ·  🤖 ' + model : ''}`;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox(e) {
+  if (!e || e.target === document.getElementById('lightbox') || e.currentTarget === document.querySelector('.lightbox-close')) {
+    document.getElementById('lightbox').classList.remove('open');
+  }
+}
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderGallery(allChars);
+  });
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+
+loadCharacters();
+</script>
+</body>
+</html>

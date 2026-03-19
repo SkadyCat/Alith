@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>怪物角色立绘生成器</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a14;
+    color: #e8e0d0;
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    min-height: 100vh;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #1a0a2e 0%, #16032a 50%, #0d0820 100%);
+    border-bottom: 1px solid #4a1a6e;
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .header-left h1 {
+    font-size: 28px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #c084fc, #f0abfc, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 2px;
+  }
+
+  .model-badge {
+    background: rgba(124, 58, 237, 0.2);
+    border: 1px solid #7c3aed;
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 12px;
+    color: #c4b5fd;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .model-badge::before {
+    content: '🤖';
+  }
+
+  .main { padding: 32px 40px; }
+
+  .control-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+    background: rgba(30, 15, 50, 0.6);
+    border: 1px solid #2d1a4a;
+    border-radius: 12px;
+    padding: 16px 24px;
+  }
+
+  .btn-generate {
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    padding: 12px 28px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+
+  .btn-generate:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,58,237,0.5); }
+  .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .status-text {
+    font-size: 14px;
+    color: #9d8bc0;
+    flex: 1;
+  }
+
+  .progress-bar-wrap {
+    width: 160px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #7c3aed, #a855f7);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+
+  .progress-label { font-size: 12px; color: #7c6fa0; min-width: 40px; text-align: right; }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #c084fc;
+    margin-bottom: 20px;
+    padding-left: 12px;
+    border-left: 3px solid #7c3aed;
+  }
+
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+  }
+
+  .card {
+    background: rgba(20, 10, 40, 0.8);
+    border: 1px solid #2d1a4a;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s;
+    position: relative;
+  }
+
+  .card:hover {
+    border-color: #7c3aed;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(124, 58, 237, 0.3);
+  }
+
+  .card-image-wrap {
+    width: 100%;
+    aspect-ratio: 832 / 1216;
+    background: radial-gradient(circle at center, #1a0a2e 0%, #050510 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-image-wrap.transparent-bg {
+    background: repeating-conic-gradient(#1a1a2e 0% 25%, #12122a 0% 50%) 0 0 / 20px 20px;
+  }
+
+  .card-image-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .card-image-wrap .placeholder {
+    color: #3d2a5a;
+    font-size: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-image-wrap .placeholder span { font-size: 13px; color: #4a3a6a; }
+
+  .card-toggle {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 20px;
+    color: white;
+    font-size: 11px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 2;
+  }
+
+  .card-toggle:hover { background: rgba(124,58,237,0.6); }
+
+  .card-info {
+    padding: 16px 18px;
+  }
+
+  .card-name-zh {
+    font-size: 17px;
+    font-weight: 700;
+    color: #f0e8ff;
+    margin-bottom: 2px;
+  }
+
+  .card-name-en {
+    font-size: 12px;
+    color: #7c6fa0;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+  }
+
+  .card-model {
+    background: rgba(124, 58, 237, 0.15);
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: #c4b5fd;
+    display: inline-block;
+  }
+
+  .log-section {
+    margin-top: 32px;
+    background: rgba(10, 5, 20, 0.8);
+    border: 1px solid #1d0f30;
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+
+  .log-section h3 {
+    font-size: 13px;
+    color: #5a4a7a;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .log-box {
+    font-family: 'Consolas', monospace;
+    font-size: 12px;
+    color: #7a6a9a;
+    max-height: 180px;
+    overflow-y: auto;
+    line-height: 1.7;
+  }
+
+  .log-box::-webkit-scrollbar { width: 4px; }
+  .log-box::-webkit-scrollbar-track { background: transparent; }
+  .log-box::-webkit-scrollbar-thumb { background: #3d2a5a; border-radius: 2px; }
+
+  .loading-pulse {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #a855f7;
+    animation: pulse 1.2s ease-in-out infinite;
+    margin-right: 6px;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: #3d2a5a;
+  }
+
+  .empty-state .icon { font-size: 64px; margin-bottom: 16px; }
+  .empty-state p { font-size: 15px; color: #5a4a7a; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>⚔️ 怪物角色立绘生成器</h1>
+    <div style="font-size:13px; color:#6a5a8a; margin-top:4px;">基于 Stable Diffusion XL · 角色立绘 · 自动抠图</div>
+  </div>
+  <div class="model-badge" id="modelBadge">waiIllustriousSDXL v1.60</div>
+</div>
+
+<div class="main">
+  <div class="control-bar">
+    <button class="btn-generate" id="btnGenerate" onclick="startGenerate()">🎨 开始生成立绘</button>
+    <div class="status-text" id="statusText">点击按钮生成 6 个怪物角色立绘（含自动抠图）</div>
+    <div class="progress-bar-wrap" id="progressWrap" style="display:none">
+      <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+    </div>
+    <div class="progress-label" id="progressLabel" style="display:none">0/6</div>
+  </div>
+
+  <div class="section-title">🧟 怪物角色立绘</div>
+  <div class="cards-grid" id="cardsGrid">
+    <div class="empty-state">
+      <div class="icon">🗡️</div>
+      <p>尚未生成立绘，点击上方按钮开始生成</p>
+      <p style="margin-top:8px; font-size:13px;">将使用 waiIllustriousSDXL v1.60 生成 6 个怪物角色，每张约 30-60 秒</p>
+    </div>
+  </div>
+
+  <div class="log-section" id="logSection" style="display:none">
+    <h3>📋 生成日志</h3>
+    <div class="log-box" id="logBox"></div>
+  </div>
+</div>
+
+<script>
+const MONSTERS_META = [
+  { id: 'dark_knight', name: '暗黑骑士', en_name: 'Dark Knight' },
+  { id: 'demon_sorceress', name: '恶魔女巫', en_name: 'Demon Sorceress' },
+  { id: 'werewolf', name: '狂暴狼人', en_name: 'Werewolf Berserker' },
+  { id: 'sea_serpent_priestess', name: '深海女祭司', en_name: 'Deep Sea Priestess' },
+  { id: 'flame_dragon_knight', name: '炎龙骑士', en_name: 'Flame Dragon Knight' },
+  { id: 'shadow_assassin', name: '暗影刺客', en_name: 'Shadow Assassin' },
+];
+
+let polling = false;
+let showNobg = {}; // per card toggle state
+
+function startGenerate() {
+  fetch('/api/generate', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.success) { alert(d.error); return; }
+      document.getElementById('btnGenerate').disabled = true;
+      document.getElementById('statusText').innerHTML = '<span class="loading-pulse"></span> 正在加载模型并生成立绘，请耐心等待...';
+      document.getElementById('progressWrap').style.display = '';
+      document.getElementById('progressLabel').style.display = '';
+      document.getElementById('logSection').style.display = '';
+      renderSkeletonCards();
+      startPolling();
+    });
+}
+
+function renderSkeletonCards() {
+  const grid = document.getElementById('cardsGrid');
+  grid.innerHTML = MONSTERS_META.map(m => `
+    <div class="card" id="card-${m.id}">
+      <div class="card-image-wrap">
+        <div class="placeholder">
+          <span>⏳</span>
+          <span>生成中...</span>
+        </div>
+      </div>
+      <div class="card-info">
+        <div class="card-name-zh">${m.name}</div>
+        <div class="card-name-en">${m.en_name}</div>
+        <div class="card-model">waiIllustriousSDXL v1.60</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function startPolling() {
+  if (polling) return;
+  polling = true;
+  pollLoop();
+}
+
+async function pollLoop() {
+  while (polling) {
+    try {
+      const r = await fetch('/api/status');
+      const d = await r.json();
+      updateUI(d);
+      if (!d.running && d.manifest) {
+        polling = false;
+        loadImages();
+        break;
+      }
+      if (!d.running && !d.manifest && d.done === 0 && d.log.length === 0) {
+        // Check if images already exist
+        loadImages();
+        polling = false;
+        break;
+      }
+    } catch {}
+    await new Promise(res => setTimeout(res, 2000));
+  }
+}
+
+function updateUI(d) {
+  const done = d.progress ? d.progress.done : d.done;
+  const total = d.progress ? d.progress.total : d.total;
+  const pct = total > 0 ? Math.round(done / total * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${done}/${total}`;
+
+  if (d.running) {
+    document.getElementById('statusText').innerHTML = 
+      `<span class="loading-pulse"></span> 正在生成 ${done}/${total} · ${d.model}`;
+  }
+
+  if (d.log && d.log.length) {
+    const box = document.getElementById('logBox');
+    box.innerHTML = d.log.map(l => `<div>${escHtml(l)}</div>`).join('');
+    box.scrollTop = box.scrollHeight;
+  }
+
+  // Update individual cards if progress available
+  if (d.progress && d.progress.results) {
+    d.progress.results.forEach(m => updateCard(m));
+  }
+}
+
+function updateCard(m, showBg) {
+  const card = document.getElementById('card-' + m.id);
+  if (!card) return;
+  const showing = showBg !== undefined ? showBg : (showNobg[m.id] !== false ? true : false);
+  const imgFile = showing ? m.nobg : m.orig;
+  const imgUrl = `/images/${imgFile}?t=${Date.now()}`;
+  
+  card.innerHTML = `
+    <div class="card-image-wrap ${showing ? 'transparent-bg' : ''}">
+      <img src="${imgUrl}" alt="${m.en_name}" onerror="this.style.opacity=0.3">
+      <button class="card-toggle" onclick="toggleBg('${m.id}', ${!showing})">${showing ? '显示原图' : '显示抠图'}</button>
+    </div>
+    <div class="card-info">
+      <div class="card-name-zh">${m.name}</div>
+      <div class="card-name-en">${m.en_name}</div>
+      <div class="card-model">🤖 waiIllustriousSDXL v1.60</div>
+    </div>
+  `;
+}
+
+function toggleBg(id, showBg) {
+  showNobg[id] = showBg;
+  fetch('/api/images').then(r => r.json()).then(d => {
+    if (!d.monsters) return;
+    const m = d.monsters.find(x => x.id === id);
+    if (m) updateCard(m, showBg);
+  });
+}
+
+async function loadImages() {
+  try {
+    const r = await fetch('/api/images');
+    const d = await r.json();
+    if (!d.success || !d.monsters || !d.monsters.length) {
+      document.getElementById('statusText').textContent = '暂无已生成图片，点击按钮开始生成';
+      document.getElementById('btnGenerate').disabled = false;
+      return;
+    }
+
+    document.getElementById('btnGenerate').disabled = false;
+    document.getElementById('progressWrap').style.display = 'none';
+    document.getElementById('progressLabel').style.display = 'none';
+    document.getElementById('statusText').textContent = `✅ 已生成 ${d.monsters.length} 个怪物角色 · 模型: ${d.model}`;
+    document.getElementById('modelBadge').textContent = d.model;
+
+    const grid = document.getElementById('cardsGrid');
+    if (!document.getElementById('card-' + d.monsters[0].id)) {
+      grid.innerHTML = d.monsters.map(m => `<div class="card" id="card-${m.id}"></div>`).join('');
+    }
+    d.monsters.forEach(m => {
+      showNobg[m.id] = true;
+      updateCard(m, true);
+    });
+  } catch {}
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// On load, check if images already exist
+window.addEventListener('load', () => {
+  loadImages();
+});
+</script>
+</body>
+</html>

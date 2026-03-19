@@ -1029,8 +1029,7 @@ body.zone-highlight-mode #zoneOverlay { display: block; }
 
 #sidebar-doc-list {
   list-style: none; overflow-y: auto; flex: 1;
-  min-height: 60px; max-height: 200px; padding: 3px 0;
-  border-bottom: 1px solid var(--border);
+  padding: 3px 0;
 }
 #sidebar-doc-list li {
   padding: 5px 10px 5px 12px; cursor: pointer;
@@ -1069,7 +1068,7 @@ body.zone-highlight-mode #zoneOverlay { display: block; }
 }
 #sidebar-doc-list .sidebar-doc-folder:hover .sb-folder-add { display: inline; }
 #sidebar-doc-list .sb-folder-add:hover { background: rgba(255,255,255,0.1); color: var(--accent); }
-#sidebar-doc-list .sb-children { list-style: none; padding: 0; margin: 0; }
+#sidebar-doc-list .sb-children { list-style: none; padding: 0; margin: 0; max-height: none; }
 
 /* ── Full-screen overlay ── */
 #docs-overlay {

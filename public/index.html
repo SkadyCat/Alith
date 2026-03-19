@@ -62,6 +62,12 @@
         </svg>
         3D展示
       </a>
+      <button class="agent-toggle-btn" id="canvasEditorToggleBtn" onclick="toggleCanvasEditorPanel()" title="背包编辑器 — Canvas Editor">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2M8 7V5a2 2 0 0 0-4 0v2M12 12v4M10 14h4"/>
+        </svg>
+        背包编辑
+      </button>
       <button class="agent-toggle-btn icon-only-btn" id="zoneHighlightBtn" onclick="toggleZoneHighlight()" title="区域高亮模式 — 悬停识别界面区域">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
@@ -852,6 +858,19 @@
         </button>
       </div>
     </div>
+  </div>
+  <!-- Canvas Editor Overlay -->
+  <div class="canvas-editor-overlay" id="canvasEditorOverlay">
+    <div class="canvas-editor-overlay-header">
+      <span class="canvas-editor-overlay-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px">
+          <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2M8 7V5a2 2 0 0 0-4 0v2M12 12v4M10 14h4"/>
+        </svg>
+        背包编辑器
+      </span>
+      <button class="canvas-editor-overlay-close" onclick="toggleCanvasEditorPanel()" title="关闭 (Esc)">✕</button>
+    </div>
+    <iframe id="canvasEditorFrame" src="" class="canvas-editor-frame" allowfullscreen></iframe>
   </div>
 </body>
 </html>

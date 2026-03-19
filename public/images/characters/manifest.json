@@ -1,0 +1,92 @@
+[
+  {
+    "id": "hero_warrior",
+    "name": "铁甲战士",
+    "url": "/images/characters/hero_warrior_nobg_20260319_222257_14db5bbe.png",
+    "width": 640, "height": 960, "type": "hero",
+    "file": "hero_warrior_nobg_20260319_222257_14db5bbe.png",
+    "model": "waiIllustriousSDXL_v160",
+    "model_display": "Wai Illustrious SDXL v1.60"
+  },
+  {
+    "id": "hero_mage",
+    "name": "神秘法师",
+    "url": "/images/characters/hero_mage_nobg_20260319_222316_3368171b.png",
+    "width": 640, "height": 960, "type": "hero",
+    "file": "hero_mage_nobg_20260319_222316_3368171b.png",
+    "model": "waiIllustriousSDXL_v160",
+    "model_display": "Wai Illustrious SDXL v1.60"
+  },
+  {
+    "id": "hero_archer",
+    "name": "精灵弓手",
+    "url": "/images/characters/hero_archer_nobg_20260319_222323_671a402d.png",
+    "width": 640, "height": 960, "type": "hero",
+    "file": "hero_archer_nobg_20260319_222323_671a402d.png",
+    "model": "waiIllustriousSDXL_v160",
+    "model_display": "Wai Illustrious SDXL v1.60"
+  },
+  {
+    "id": "hero_rogue",
+    "name": "暗影刺客",
+    "url": "/images/characters/hero_rogue_nobg_20260319_222329_ab793aa7.png",
+    "width": 640, "height": 960, "type": "hero",
+    "file": "hero_rogue_nobg_20260319_222329_ab793aa7.png",
+    "model": "waiIllustriousSDXL_v160",
+    "model_display": "Wai Illustrious SDXL v1.60"
+  },
+  {
+    "id": "hero_paladin",
+    "name": "圣光骑士",
+    "url": "/images/characters/hero_paladin_nobg_20260319_222336_f088404f.png",
+    "width": 640, "height": 960, "type": "hero",
+    "file": "hero_paladin_nobg_20260319_222336_f088404f.png",
+    "model": "waiIllustriousSDXL_v160",
+    "model_display": "Wai Illustrious SDXL v1.60"
+  },
+  {
+    "id": "monster_dragon",
+    "name": "黑翼龙",
+    "url": "/images/characters/monster_dragon_nobg_20260319_222342_e3cfae0d.png",
+    "width": 768, "height": 960, "type": "monster",
+    "file": "monster_dragon_nobg_20260319_222342_e3cfae0d.png",
+    "model": "waiIllustriousSDXL_v160",
+    "model_display": "Wai Illustrious SDXL v1.60"
+  },
+  {
+    "id": "monster_undead",
+    "name": "骷髅剑客",
+    "url": "/images/characters/monster_undead_nobg_20260319_222349_ac5ab8ee.png",
+    "width": 640, "height": 960, "type": "monster",
+    "file": "monster_undead_nobg_20260319_222349_ac5ab8ee.png",
+    "model": "waiIllustriousSDXL_v160",
+    "model_display": "Wai Illustrious SDXL v1.60"
+  },
+  {
+    "id": "monster_demon",
+    "name": "地狱恶魔",
+    "url": "/images/characters/monster_demon_nobg_20260319_222355_0a771771.png",
+    "width": 640, "height": 960, "type": "monster",
+    "file": "monster_demon_nobg_20260319_222355_0a771771.png",
+    "model": "waiIllustriousSDXL_v160",
+    "model_display": "Wai Illustrious SDXL v1.60"
+  },
+  {
+    "id": "monster_orc",
+    "name": "兽人酋长",
+    "url": "/images/characters/monster_orc_nobg_20260319_222401_da8f0050.png",
+    "width": 640, "height": 960, "type": "monster",
+    "file": "monster_orc_nobg_20260319_222401_da8f0050.png",
+    "model": "waiIllustriousSDXL_v160",
+    "model_display": "Wai Illustrious SDXL v1.60"
+  },
+  {
+    "id": "monster_slime",
+    "name": "魔法史莱姆",
+    "url": "/images/characters/monster_slime_nobg_20260319_222408_f51a3067.png",
+    "width": 640, "height": 640, "type": "monster",
+    "file": "monster_slime_nobg_20260319_222408_f51a3067.png",
+    "model": "waiIllustriousSDXL_v160",
+    "model_display": "Wai Illustrious SDXL v1.60"
+  }
+]
