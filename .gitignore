@@ -20,6 +20,10 @@ docs/application_doc/
 # Runtime data
 data/
 
+# Exception: canvas-editor design data must be tracked
+!application/canvas-editor/data/
+!application/canvas-editor/data/**
+
 # Tools runtimes (large binaries)
 tools/pwsh7/
 
