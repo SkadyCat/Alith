@@ -27,15 +27,18 @@ for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr ":7439 "') do (
   taskkill /PID %%a /F >nul 2>&1
 )
 
-:: ── 启动 Flux 后端（端口 8331）──────────────────────────────
-echo 正在检查 Flux 后端 (8331)...
+:: ── 启动 Canvas Editor（端口 8331）────────────────────────────
+echo 正在检查 Canvas Editor (8331)...
 for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr ":8331 "') do (
-  echo   Flux 后端已在运行 PID=%%a，跳过启动。
-  goto skip_flux
+  echo   Canvas Editor 已在运行 PID=%%a，跳过启动。
+  goto skip_canvas
 )
-echo   正在启动 Flux 后端...
-start "Flux-Backend" /min cmd /c "E:\AIGC\Flux\backend\venv\Scripts\python.exe E:\AIGC\Flux\backend\main.py"
-:skip_flux
+echo   正在启动 Canvas Editor...
+start "Canvas-Editor" /min cmd /c "cd /d %~dp0application\canvas-editor && node server.js"
+:skip_canvas
+
+:: ── 启动 Flux 后端（需要时手动启动，端口8331已被Canvas Editor占用）──
+:: start "Flux-Backend" /min cmd /c "E:\AIGC\Flux\backend\venv\Scripts\python.exe E:\AIGC\Flux\backend\main.py"
 
 :: ── 启动 ComfyUI Service（端口 8188）────────────────────────
 echo 正在检查 ComfyUI Service (8188)...
