@@ -1,0 +1,49 @@
+{
+  "done": 6,
+  "total": 6,
+  "model": "waiIllustriousSDXL v1.60",
+  "results": [
+    {
+      "id": "dark_knight",
+      "name": "暗黑骑士",
+      "en_name": "Dark Knight",
+      "orig": "dark_knight_orig.png",
+      "nobg": "dark_knight_nobg.png"
+    },
+    {
+      "id": "demon_sorceress",
+      "name": "恶魔女巫",
+      "en_name": "Demon Sorceress",
+      "orig": "demon_sorceress_orig.png",
+      "nobg": "demon_sorceress_nobg.png"
+    },
+    {
+      "id": "werewolf",
+      "name": "狂暴狼人",
+      "en_name": "Werewolf Berserker",
+      "orig": "werewolf_orig.png",
+      "nobg": "werewolf_nobg.png"
+    },
+    {
+      "id": "sea_serpent_priestess",
+      "name": "深海女祭司",
+      "en_name": "Deep Sea Priestess",
+      "orig": "sea_serpent_priestess_orig.png",
+      "nobg": "sea_serpent_priestess_nobg.png"
+    },
+    {
+      "id": "flame_dragon_knight",
+      "name": "炎龙骑士",
+      "en_name": "Flame Dragon Knight",
+      "orig": "flame_dragon_knight_orig.png",
+      "nobg": "flame_dragon_knight_nobg.png"
+    },
+    {
+      "id": "shadow_assassin",
+      "name": "暗影刺客",
+      "en_name": "Shadow Assassin",
+      "orig": "shadow_assassin_orig.png",
+      "nobg": "shadow_assassin_nobg.png"
+    }
+  ]
+}

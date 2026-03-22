@@ -401,7 +401,8 @@ router.get('/status', async (req, res) => {
  */
 router.post('/start', async (req, res) => {
   const params = req.body || {};
-  if (!params.task) {
+  // POLL 模式（有 taskPrefixDoc）允许 task 为空，服务端会自动以 'POLL' 作为占位任务
+  if (!params.task && !params.taskPrefixDoc) {
     return res.status(400).json({ error: 'task 字段不能为空' });
   }
   // 若 body 包含 ip 字段，转发到远程 PyAgent（绕过本地 TCP）

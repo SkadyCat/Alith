@@ -134,5 +134,13 @@
     "status": "idle",
     "launchedAt": null,
     "updatedAt": 1773323208589
+  },
+  "session-1774104938226.md": {
+    "isLaunched": false,
+    "pid": null,
+    "port": 7439,
+    "status": "idle",
+    "launchedAt": null,
+    "updatedAt": 1774176590625
   }
 }

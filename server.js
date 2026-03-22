@@ -35,7 +35,12 @@ function loadRoute(key) {
     if (mod.router && typeof mod.router.cleanup === 'function') {
       try { mod.router.cleanup(); } catch (_) {}
     }
-    delete require.cache[fullPath];
+    // Windows: require.cache 키는 드라이브 레터가 대문자(C:\...)이나
+    // chokidar 이벤트 경로는 소문자(c:\...)일 수 있음 → 대소문자 무관 삭제
+    const cacheKey = Object.keys(require.cache).find(
+      k => k.toLowerCase() === fullPath.toLowerCase()
+    ) || fullPath;
+    delete require.cache[cacheKey];
     mod.router = require(mod.file);
     console.log(`🔄 [hot-reload] reloaded: ${mod.file}`);
   } catch (err) {

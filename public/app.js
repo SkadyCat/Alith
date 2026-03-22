@@ -2041,6 +2041,21 @@ function connectAgentStream(sessionId, noReplay) {
     } else {
       if (hintBtn) hintBtn.style.display = 'none';
     }
+    // 同步 PyAgent 面板状态栏（跨 SSE 通道补丁）
+    // POLL 走 /agent/stream，pyagentStatusText 原本只监听 /pyagent/stream，此处补全
+    const _pyTxtEl = document.getElementById('pyagentStatusText');
+    const _pyDotEl = document.getElementById('pyagentStatusDot');
+    if (_pyTxtEl) {
+      const _pyTextMap = { running: '运行中', waiting: 'POLL等待', working: '执行中', done: '已完成', error: '出错' };
+      const _pyMapped = _pyTextMap[status];
+      if (_pyMapped) _pyTxtEl.textContent = _pyMapped;
+      else if (status === 'idle') _pyTxtEl.textContent = '空闲';
+    }
+    if (_pyDotEl) {
+      const _pyDotRunning = status === 'running' || status === 'waiting' || status === 'working';
+      _pyDotEl.className = 'agent-status-dot' +
+        (_pyDotRunning ? ' running' : status === 'error' ? ' error' : status === 'done' ? ' done' : '');
+    }
   });
 
   es.addEventListener('history-saved', (e) => {
@@ -4666,6 +4681,25 @@ async function submitErrorReport() {
         const d = await r.json();
         const running = !!d.isRunning;
         if (running !== pyagentRunning) setPyAgentRunning(running);
+        // 保底机制：当 pyagent 本身没在运行时，从 /agent/status 同步 pyagentStatusText
+        // 解决 POLL 状态走 /agent/stream 而 pyagentStatusText 只读 /pyagent/stream 的通道隔离问题
+        if (!pyagentRunning) {
+          const agSt   = d.status || 'idle';
+          const _pyTxt = document.getElementById('pyagentStatusText');
+          const _pyDot = document.getElementById('pyagentStatusDot');
+          if (_pyTxt) {
+            const _m = { running: '运行中', waiting: 'POLL等待', working: '执行中', done: '已完成', error: '出错' };
+            if (_m[agSt]) {
+              _pyTxt.textContent = _m[agSt];
+              if (_pyDot) _pyDot.className = 'agent-status-dot' +
+                (agSt === 'running' || agSt === 'waiting' || agSt === 'working' ? ' running'
+                  : agSt === 'error' ? ' error' : agSt === 'done' ? ' done' : '');
+            } else if (agSt === 'idle' && _pyTxt.textContent !== '空闲') {
+              _pyTxt.textContent = '空闲';
+              if (_pyDot) _pyDot.className = 'agent-status-dot';
+            }
+          }
+        }
       } catch (_) {}
       // 2. 进程真实状态：查 pyagent_server
       try {
@@ -4902,7 +4936,10 @@ async function submitErrorReport() {
 
   // ── Start a PyAgent task ──────────────────────────────────────
   window.startPyAgent = async function () {
-    const task = (document.getElementById('pyagentTask').value || '').trim();
+    let task = (document.getElementById('pyagentTask').value || '').trim();
+    const hasPrefixDoc = !!((document.getElementById('pyagentTaskPrefix') || {}).value || '').trim();
+    // POLL 模式（有 taskPrefixDoc）允许空 task，自动补默认占位
+    if (!task && hasPrefixDoc) { task = 'POLL'; }
     if (!task) { showToast('请输入任务描述', 'error'); return; }
     if (!activePyAgentSession) { showToast('请先选择一个 PyAgent 会话', 'error'); return; }
 

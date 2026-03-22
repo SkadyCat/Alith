@@ -1442,9 +1442,12 @@ function renderWidgetContent(box, el, def) {
     const wrap = wp[r.wrap] !== false;
     wr.style.justifyContent = align === 'right' ? 'flex-end' : align === 'center' ? 'center' : 'flex-start';
     wr.style.alignItems = 'center';
-    wr.style.padding = '4px 6px';
+    const _tPadV = Math.min(4, Math.max(0, Math.floor(box.h * 0.1)));
+    const _tPadH = Math.min(6, Math.max(0, Math.floor(box.w * 0.05)));
+    wr.style.padding = `${_tPadV}px ${_tPadH}px`;
+    const _tFontSize = Math.min(size, (box.h - _tPadV * 2) * 0.9, box.h * 0.8);
     const span = document.createElement('span');
-    span.style.cssText = `font-size:${Math.min(size, box.h * 0.8)}px;color:${color};font-weight:${bold?'bold':'normal'};font-style:${italic?'italic':'normal'};white-space:${wrap?'pre-wrap':'nowrap'};text-align:${align};word-break:break-word;max-width:100%;`;
+    span.style.cssText = `font-size:${Math.max(6, _tFontSize)}px;color:${color};font-weight:${bold?'bold':'normal'};font-style:${italic?'italic':'normal'};white-space:${wrap?'pre-wrap':'nowrap'};text-align:${align};word-break:break-word;max-width:100%;overflow:hidden;`;
     span.textContent = txt || '';
     wr.appendChild(span);
 
@@ -1615,13 +1618,18 @@ function renderBox(box) {
   const isSelected = box.id === selectedId;
   // Preview mode: invisible containers show only a thin dashed guide (not selected)
   const isInvisibleContainer = INVISIBLE_CONTAINER_TYPES.has(box.widgetType);
-  if (_previewMode && isInvisibleContainer && !isSelected) {
+  // Allow uidata to override bgImage in preview mode (keeps edit mode clean)
+  const _bgImageOverride = (_previewMode && _uidataMap[box.id] && _uidataMap[box.id].bgImage) || null;
+  const _activeBgImage = _bgImageOverride || box.bgImage;
+  if (_previewMode && isInvisibleContainer && !isSelected && !_activeBgImage) {
     el.style.border = '1px dashed rgba(255,255,255,0.12)';
     el.style.background = 'transparent';
   } else {
-    el.style.border  = `${box.borderWidth}px solid ${box.borderColor}`;
-    if (box.bgImage) {
-      el.style.background = `url('${box.bgImage}') no-repeat center/${box.bgSize || 'cover'}, ${box.bgColor}`;
+    el.style.border = (_previewMode && isInvisibleContainer && !isSelected)
+      ? '1px dashed rgba(255,255,255,0.12)'
+      : `${box.borderWidth}px solid ${box.borderColor}`;
+    if (_activeBgImage) {
+      el.style.background = `url('${_activeBgImage}') no-repeat center/${box.bgSize || 'cover'}, ${box.bgColor}`;
     } else {
       el.style.background = box.bgColor;
     }
@@ -1757,8 +1765,8 @@ function renderBox(box) {
     el.querySelectorAll('.ec-preview-box').forEach(x => x.remove());
   }
 
-  // TileView grid preview
-  if (box.widgetType === 'TileView') {
+  // TileView / ListView grid preview
+  if (box.widgetType === 'TileView' || box.widgetType === 'ListView') {
     renderTileViewGrid(box, el);
   } else {
     el.querySelectorAll('.tile-grid-item').forEach(x => x.remove());
@@ -2182,7 +2190,11 @@ async function renderEntryClassPreview(box, el) {
 
 /* ───── TileView Grid Preview ───── */
 function renderTileViewGrid(box, el) {
-  const wp = box.widgetProps || {};
+  // Merge uidata overrides (same pattern as renderWidgetContent — non-destructive)
+  const _baseWp = box.widgetProps || {};
+  const wp = (_previewMode && _uidataMap[box.id])
+    ? Object.assign({}, _baseWp, _uidataMap[box.id])
+    : _baseWp;
   const count = Math.max(0, Math.floor(wp.gridPreviewNum || 0));
   if (!count) {
     el.querySelectorAll('.tile-grid-item').forEach(x => x.remove());
@@ -2211,8 +2223,33 @@ function renderTileViewGrid(box, el) {
   const entryBorderColor = entry ? entry.borderColor : null;
   const entryBgColor = entry ? entry.bgColor : null;
 
-  // Skip rebuild if nothing has changed
-  const tileKey = `${count}|${itemW}|${itemH}|${startX}|${startY}|${gapX}|${gapY}|${box.w}|${box.h}|${entryBorderColor}|${entryBgColor}`;
+  // Rarity → background color for preview items
+  const RARITY_BG = {
+    normal: 'rgba(40,40,40,0.85)',
+    magic:  'rgba(10,30,60,0.88)',
+    rare:   'rgba(50,42,0,0.88)',
+    unique: 'rgba(60,30,0,0.88)',
+    set:    'rgba(10,50,20,0.88)',
+  };
+  const RARITY_BORDER = {
+    normal: '#555',
+    magic:  '#4477cc',
+    rare:   '#ccaa00',
+    unique: '#cc6600',
+    set:    '#22aa44',
+  };
+
+  // Normalize rarity: uidata uses "common"/"uncommon", previewData uses "normal"/"magic" etc.
+  const RARITY_ALIAS = { common: 'normal', uncommon: 'magic' };
+  function resolveRarity(r) { const k = (r || 'normal').toLowerCase(); return RARITY_ALIAS[k] || k; }
+
+  // Accept both uidata-level items overlay and session-level previewData (uidata takes priority)
+  const rawItems = _previewMode ? (Array.isArray(wp.items)       && wp.items.length       ? wp.items :
+                                   Array.isArray(wp.previewData) && wp.previewData.length ? wp.previewData : null) : null;
+  const previewItems = rawItems;
+
+  // Skip rebuild if nothing has changed (include preview state in key)
+  const tileKey = `${count}|${itemW}|${itemH}|${startX}|${startY}|${gapX}|${gapY}|${box.w}|${box.h}|${entryBorderColor}|${entryBgColor}|${_previewMode}|${previewItems ? previewItems.length : 0}`;
   if (el.dataset.tileGridKey === tileKey) return;
   el.dataset.tileGridKey = tileKey;
 
@@ -2233,13 +2270,44 @@ function renderTileViewGrid(box, el) {
     const tile = document.createElement('div');
     tile.className = 'tile-grid-item';
     const isExternal = !entry && wp.entryClass;
-    tile.style.cssText = `position:absolute;left:${tx}px;top:${ty}px;width:${itemW}px;height:${itemH}px;border:1px dashed ${entryBorderColor || box.borderColor || '#888'};background:${entryBgColor || (isExternal ? 'rgba(124,106,247,0.07)' : 'rgba(255,255,255,0.04)')};opacity:${isExternal ? '0.55' : '0.45'};pointer-events:none;box-sizing:border-box;border-radius:2px;`;
-    // Show entryClass name badge on first tile when using external session reference
-    if (isExternal && i === 0) {
-      const badge = document.createElement('div');
-      badge.textContent = wp.entryClass;
-      badge.style.cssText = 'position:absolute;bottom:2px;left:2px;right:2px;font-size:8px;color:rgba(200,180,255,0.6);text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;pointer-events:none;';
-      tile.appendChild(badge);
+
+    // Preview mode: render actual item data if previewData is provided
+    if (previewItems && i < previewItems.length) {
+      const item = previewItems[i];
+      const rarity = resolveRarity(item.rarity);
+      const bg = RARITY_BG[rarity] || RARITY_BG.normal;
+      const bc = RARITY_BORDER[rarity] || RARITY_BORDER.normal;
+      tile.style.cssText = `position:absolute;left:${tx}px;top:${ty}px;width:${itemW}px;height:${itemH}px;border:1px solid ${bc};background:${bg};opacity:1;pointer-events:none;box-sizing:border-box;border-radius:2px;overflow:hidden;`;
+      if (item.icon) {
+        const img = document.createElement('img');
+        img.src = item.icon;
+        img.style.cssText = `position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px);object-fit:contain;pointer-events:none;`;
+        img.onerror = () => { img.style.display = 'none'; };
+        tile.appendChild(img);
+      }
+      const cnt = parseInt(item.count, 10);
+      if (cnt > 1) {
+        const countEl = document.createElement('div');
+        countEl.textContent = String(cnt);
+        countEl.style.cssText = 'position:absolute;bottom:2px;right:3px;font-size:9px;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none;line-height:1;';
+        tile.appendChild(countEl);
+      }
+      // Show hotkey badge (beltQuick-style items with "key" field)
+      if (item.key) {
+        const keyEl = document.createElement('div');
+        keyEl.textContent = String(item.key);
+        keyEl.style.cssText = 'position:absolute;top:2px;left:3px;font-size:8px;color:rgba(255,255,180,0.75);text-shadow:0 0 3px #000;pointer-events:none;line-height:1;';
+        tile.appendChild(keyEl);
+      }
+    } else {
+      tile.style.cssText = `position:absolute;left:${tx}px;top:${ty}px;width:${itemW}px;height:${itemH}px;border:1px dashed ${entryBorderColor || box.borderColor || '#888'};background:${entryBgColor || (isExternal ? 'rgba(124,106,247,0.07)' : 'rgba(255,255,255,0.04)')};opacity:${isExternal ? '0.55' : '0.45'};pointer-events:none;box-sizing:border-box;border-radius:2px;`;
+      // Show entryClass name badge on first tile when using external session reference
+      if (isExternal && i === 0) {
+        const badge = document.createElement('div');
+        badge.textContent = wp.entryClass;
+        badge.style.cssText = 'position:absolute;bottom:2px;left:2px;right:2px;font-size:8px;color:rgba(200,180,255,0.6);text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;pointer-events:none;';
+        tile.appendChild(badge);
+      }
     }
     el.appendChild(tile);
   }

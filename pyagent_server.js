@@ -243,8 +243,9 @@ function buildPrompt(params) {
 }
 
 // ── doSpawn：实际 spawn Copilot CLI ────────────────────────────────────────────
-function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, params) {
-  plog('INFO', `[doSpawn] 尝试启动进程`, { sessionId, runId, relaunchCount: sess.relaunchCount || 0, cmd, shell });
+function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, params, _spawnRetry) {
+  _spawnRetry = _spawnRetry || 0;
+  plog('INFO', `[doSpawn] 尝试启动进程`, { sessionId, runId, relaunchCount: sess.relaunchCount || 0, cmd, shell, _spawnRetry });
   try {
     let child;
     try {
@@ -254,7 +255,23 @@ function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, pa
         // windowsHide:true 在某些 Windows 环境下会导致 EPERM，降级重试
         plog('WARN', `[doSpawn] spawn EPERM (windowsHide:true)，降级重试`, { sessionId, runId, code: epermErr.code });
         console.warn('[PyAgent] spawn EPERM with windowsHide:true, retrying without...');
-        child = spawn(cmd, agentArgs, { env, shell, windowsHide: false, cwd: ROOT_DIR });
+        try {
+          child = spawn(cmd, agentArgs, { env, shell, windowsHide: false, cwd: ROOT_DIR });
+        } catch (epermErr2) {
+          if ((epermErr2.code === 'EPERM' || epermErr2.message.includes('EPERM')) && _spawnRetry < 3) {
+            // Windows 进程释放延迟：等待后重试（旧进程可能尚未完全退出）
+            const delay = (_spawnRetry + 1) * 600;
+            plog('WARN', `[doSpawn] spawn EPERM (windowsHide:false)，${delay}ms 后第${_spawnRetry + 1}次重试`, { sessionId, runId, _spawnRetry });
+            broadcast({ type: 'agent_output', sessionId, stream: 'stdout', text: `\n[spawn EPERM，${delay}ms 后重试 #${_spawnRetry + 1}]\n` });
+            setTimeout(() => {
+              if (sess.runId !== runId) return; // 已被新 start 替代，放弃重试
+              doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, params, _spawnRetry + 1);
+            }, delay);
+            return;
+          }
+          plog('ERROR', `[doSpawn] spawn 异常`, { sessionId, runId, err: epermErr2.message, code: epermErr2.code });
+          throw epermErr2;
+        }
       } else {
         plog('ERROR', `[doSpawn] spawn 异常`, { sessionId, runId, err: epermErr.message, code: epermErr.code });
         throw epermErr;
@@ -306,6 +323,13 @@ function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, pa
       broadcast({ type: 'agent_output', sessionId, stream: 'stderr', text: chunk.toString('utf8') });
     });
     child.on('close', (code, signal) => {
+      // ── 竞态保护：若此 runId 已被新的 start 请求替代，跳过状态重置 ──────────
+      // 场景：用户发起第二次 start 时，新 runId 在 doSpawn 执行前就已写入 sess.runId，
+      // 若旧进程 close 事件晚于新进程 doSpawn 触发，此处直接跳过，避免覆盖新进程状态。
+      if (sess.runId !== runId) {
+        plog('INFO', `[doSpawn] 旧进程退出(已被替代，跳过状态重置)`, { sessionId, runId, currentRunId: sess.runId, code, signal });
+        return;
+      }
       // ── 分析退出原因 ──────────────────────────────────────────────────────
       let stopReason;
       if (sess.status === 'stopped') {
@@ -389,6 +413,7 @@ function doSpawn(cmd, agentArgs, env, shell, sess, sessionId, runId, histDoc, pa
       broadcast({ type: 'agent_output', sessionId, stream: 'done', text: `\n[Agent 已退出，退出码: ${code}]\n` });
     });
     child.on('error', (err) => {
+      if (sess.runId !== runId) return;  // 已被替代，跳过
       plog('ERROR', `[doSpawn] 进程 error 事件`, { sessionId, runId, pid: child.pid, err: err.message, code: err.code });
       sess.process = null;
       sess.status  = 'error';
@@ -496,6 +521,12 @@ function handleAction(action, params, respond, socket) {
 
   if (action === 'start') {
     const sess = getSession(sessionId);
+
+    const histDoc = params.historyDoc || '';
+    const runId = Date.now().toString(36) + Math.random().toString(36).slice(2);
+    // ── 竞态保护：立即更新 runId，确保旧进程的 close handler 能检测到已被替代 ──────
+    sess.runId = runId;
+
     if (sess.process && sess.process.exitCode === null) {
       // 进程还活着，先强制终止再重启（而不是报错拒绝）
       try { sess.process.kill('SIGTERM'); } catch (_) {}
@@ -503,9 +534,6 @@ function handleAction(action, params, respond, socket) {
       sess.process = null;
       sess.status = 'idle';
     }
-
-    const histDoc = params.historyDoc || '';
-    const runId = Date.now().toString(36) + Math.random().toString(36).slice(2);
 
     // ── 首次任务写入 waitprocess/ 队列 ──────────────────────────────────────
     // pyagent 启动后以 POLL 模式自行读取任务，不直接注入 prompt
@@ -606,6 +634,10 @@ function handleAction(action, params, respond, socket) {
       const now       = new Date().toLocaleString('zh-CN', { hour12: false });
       const docContent = `# 用户留言\n\n**时间**: ${now}  \n**会话**: ${sessionId}\n\n---\n\n${inputText}`;
       fs.writeFileSync(path.join(waitDir, fname), docContent, 'utf-8');
+      // 立即唤醒正在 long-poll 等待的 GET /agent/input 连接
+      if (typeof process._wakeInputWaiters === 'function') {
+        try { process._wakeInputWaiters(sessionId); } catch (_) {}
+      }
     } catch (_) {}
 
     // 将用户输入立即追加到历史文档
