@@ -23,6 +23,15 @@
 2. 命中第一个 → 读取对应 SOP 文件作为执行参考
 3. 无匹配 → 不加载 SOP，正常执行，完成后创建新 SOP 并在此追加
 
+## ⚠️ 上下文管理规则（防止会话上限）
+
+**每次任务完成后，必须执行：**
+1. 将本次任务结果追加到 `docs/session_doc/{dirName}/context_progress.md`
+2. 格式：`| 序号 | 任务摘要 | 结果/commit |`
+3. **thinking 原则**：分析已知结论不重复，并行读取文件，优先直接定位而非逐步追踪
+
+**任务开始时**：读取 `context_progress.md`，快速了解历史状态，避免重复调查已解决问题。
+
 | 加载失败排查 | sop/load-debug.md | 加载失败|加载错误|elements|无法加载 |
 
 | UI设计规范 | sop/uieditor-thinking.md | ui规范|设计规范|uieditor|控件选择|进度条|重叠|布局 |
