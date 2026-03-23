@@ -294,3 +294,100 @@ TileView（ItemGrid）里面的 EntryClass ghost tiles 超出 ItemGrid 范围渲
 - [ ] EntryClass.y >= TileView.y + 8
 - [ ] EntryClass + size 在 TileView 内部：EntryClass.x + w <= TileView.x + TileView.w
 - [ ] EntryClass 的子节点坐标 >= EntryClass.x/y（不能"超出"EntryClass 边界）
+
+---
+
+## 问题 #4 — 动态文本的自适应布局
+
+**发现时间**：2026-03-23
+**触发场景**：文本内容为运行时动态值（如玩家名、物品名、数量）时，无法预先计算宽度
+
+---
+
+### 核心原则：用**布局容器**而非固定尺寸驱动自适应
+
+在 UMG 中，**Canvas Panel 的子节点使用绝对坐标**，无法自适应。  
+需要自适应尺寸的文本，必须放入布局容器（HorizontalBox / VerticalBox / WrapBox）。
+
+---
+
+### 场景对应方案
+
+#### 场景 A：单行文本，宽度随内容自动伸缩
+`
+HorizontalBox (auto-width at runtime)
+  └─ TextBlock (autoWrap=false, textAlign=left)
+`
+- HorizontalBox 运行时自动以 TextBlock 内容宽度为准  
+- 在 canvas-editor 中设计时，HBox 宽度填写**估计最大值**（仅用于预览）
+
+---
+
+#### 场景 B：固定宽度容器，字号自动缩小适配
+`
+TextBlock (w=固定值, h=固定值, autoFit=true)
+`
+- utoFit: true = UMG 的 AutoWrapText=false + 字号缩放至适配  
+- 适合：物品名标签、按钮文字、一行内必须塞下的文字
+
+---
+
+#### 场景 C：固定宽度，文字超长自动换行（多行）
+`
+SizeBox (widthOverride=固定宽)
+  └─ TextBlock (autoWrap=true, textAlign=left)
+`
+- SizeBox 锁定宽度，utoWrap=true 使文本自动折行，高度由内容决定  
+- 适合：描述文本、道具说明、tooltip 正文
+
+---
+
+#### 场景 D：多个标签/词条横排，超出换行
+`
+WrapBox
+  ├─ TextBlock (tag1)
+  ├─ TextBlock (tag2)
+  └─ TextBlock (tag3)
+`
+- WrapBox 自动换行排列子控件，子控件宽度各自独立  
+- 适合：标签组、属性词条列表
+
+---
+
+#### 场景 E：垂直堆叠的动态内容（每行高度不同）
+`
+VerticalBox
+  ├─ TextBlock (行1, autoWrap=true)
+  ├─ Border (分隔线, h=1)
+  └─ TextBlock (行2, autoWrap=true)
+`
+- VerticalBox 子控件按内容高度自动分配空间  
+- 各子控件 Slot 设为 Fill 或 Auto（Auto = 按内容高度）
+
+---
+
+### canvas-editor 设计规范
+
+| 情况 | canvas-editor 做法 |
+|------|------------------|
+| 需要 HBox 自适应宽 | HBox 宽度写估计最大值，备注"运行时自适应" |
+| TextBlock 字号自适应 | widgetProps.autoFit: true |
+| TextBlock 自动换行 | widgetProps.autoWrap: true |
+| 需要限制最大宽 | 外套 SizeBox，widgetProps.widthOverride: 值 |
+
+---
+
+### 规则
+
+> **动态文本不应直接放在 CanvasPanel 中**（绝对坐标无法自适应）。  
+> 应用 HorizontalBox（横向自适应）/ VerticalBox（纵向堆叠）/ WrapBox（换行排列）/ SizeBox（约束最大尺寸）包裹 TextBlock。  
+> 若容器尺寸固定，使用 utoFit: true 让字号自动缩小适配。
+
+---
+
+### 检查清单补充
+
+- [ ] 动态文本是否包在布局容器（HBox/VBox/WrapBox）中？
+- [ ] 需要字号自适应的 TextBlock 是否设置了 utoFit: true？
+- [ ] 多行文本是否设置了 utoWrap: true + SizeBox 限宽？
+- [ ] WrapBox 子项是否都有合理的固定宽度？
